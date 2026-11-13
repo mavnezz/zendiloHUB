@@ -1,0 +1,31 @@
+# Development: PostgreSQL, Redis and Mailpit on localhost, for `npm run dev:server`. Start with
+# `docker compose -f compose.dev.yaml up -d`. The ports are shifted (5443, 6390, …) so they do not collide with other
+# projects on the same machine.
+name: zendilohub-dev
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: zendilohub
+      POSTGRES_PASSWORD: zendilohub
+      POSTGRES_DB: zendilohub
+    ports:
+      - '127.0.0.1:${ZENDILOHUB_DEV_POSTGRES_PORT:-5443}:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql
+
+  redis:
+    image: redis:8-alpine
+    ports:
+      - '127.0.0.1:${ZENDILOHUB_DEV_REDIS_PORT:-6390}:6379'
+
+  # Catches every e-mail; web UI on http://localhost:8036. Use ZENDILOHUB_SMTP_HOST=localhost,
+  # ZENDILOHUB_SMTP_PORT=1036, ZENDILOHUB_SMTP_SECURITY=none, ZENDILOHUB_PUBLIC_URL=http://localhost:5173.
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - '127.0.0.1:${ZENDILOHUB_DEV_SMTP_PORT:-1036}:1025'
+      - '${ZENDILOHUB_DEV_MAILPIT_BIND:-127.0.0.1}:${ZENDILOHUB_DEV_MAILPIT_PORT:-8036}:8025'
+
+volumes:
+  postgres-data:

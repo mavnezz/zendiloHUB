@@ -1,0 +1,88 @@
+# zendiloHUB: the app (web UI + API), the background workers, PostgreSQL and Redis.
+# Copy .env.example to .env, set at least POSTGRES_PASSWORD, then `docker compose up -d --build`. On the first start the
+# app writes a setup code to its log (`docker compose logs zendilohub`); open the app and enter it in the setup wizard.
+x-zendilohub: &zendilohub
+  build:
+    context: .
+    dockerfile: docker/Dockerfile
+  # Built locally with `--build`, or pulled (see ZENDILOHUB_IMAGE in .env.example).
+  image: ${ZENDILOHUB_IMAGE:-zendilohub:latest}
+  restart: unless-stopped
+  init: true
+  env_file:
+    - path: .env
+      required: false
+  environment:
+    ZENDILOHUB_DATABASE_URL: postgresql://${POSTGRES_USER:-zendilohub}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-zendilohub}
+    ZENDILOHUB_REDIS_URL: redis://redis:6379/0
+  volumes:
+    # Local files (the generated secret key, the setup code, later attachments); the app and the workers share them.
+    - ${ZENDILOHUB_DATA_PATH:-zendilohub-data}:/data
+  # Every container has a memory limit, so one that runs away cannot take the whole host down.
+  mem_limit: ${ZENDILOHUB_MEMORY_LIMIT:-512m}
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+
+services:
+  zendilohub:
+    <<: *zendilohub
+    ports:
+      - '${ZENDILOHUB_HTTP_PORT:-8080}:8080'
+
+  # Background jobs (e-mails, later mail fetching and webhooks); scale with `docker compose up -d --scale worker=3`.
+  worker:
+    <<: *zendilohub
+    command: ['zendilohub', 'worker']
+    # Lets a running job finish on `docker compose down`.
+    stop_grace_period: 1m
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import os, sys, time; sys.exit(time.time() - os.path.getmtime('/tmp/zendilohub-worker.heartbeat') > 120)"
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+    depends_on:
+      zendilohub:
+        # The app runs the database migrations.
+        condition: service_healthy
+
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-zendilohub}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-zendilohub}
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    mem_limit: ${POSTGRES_MEMORY_LIMIT:-1g}
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    # The job queue must never lose jobs: append-only file, no eviction.
+    command: ['redis-server', '--appendonly', 'yes', '--maxmemory-policy', 'noeviction']
+    volumes:
+      - redis-data:/data
+    mem_limit: ${REDIS_MEMORY_LIMIT:-256m}
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  zendilohub-data:
+  postgres-data:
+  redis-data:

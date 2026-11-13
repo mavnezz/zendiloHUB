@@ -1,0 +1,42 @@
+# uv workspace: the API and the workers (apps/server).
+[tool.uv.workspace]
+members = ["apps/server"]
+
+[dependency-groups]
+dev = [
+  "httpx>=0.28.1",
+  "mypy>=1.18",
+  "pytest>=8.4",
+  "pytest-asyncio>=1.2",
+  "pytest-cov>=7.0",
+  "ruff>=0.14",
+  "testcontainers[postgres,redis]>=4.15.0",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py314"
+
+[tool.ruff.format]
+quote-style = "single"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "N", "B", "UP", "SIM", "C4", "PT", "RUF", "ASYNC", "Q", "TID", "PIE", "RET", "PERF"]
+ignore = [
+  # Conflicts with the formatter.
+  "Q000", "Q003", "E501",
+  # Within a module, relative imports (also from parent packages) keep its boundary visible:
+  # everything absolute (zendilo.core…) comes from outside.
+  "TID252",
+]
+
+[tool.ruff.lint.flake8-quotes]
+inline-quotes = "single"
+
+[tool.ruff.lint.isort]
+known-first-party = ["zendilohub", "support"]
+
+[tool.mypy]
+python_version = "3.14"
+strict = true
+warn_unreachable = true

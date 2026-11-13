@@ -1,0 +1,67 @@
+# zendiloHUB
+
+The open-source helpdesk of the zendilo family: tickets, queues and e-mail for your team, self-hosted with Docker.
+AI assistants such as Claude join later through a built-in MCP server.
+
+> **Status:** phase 0 of the [plan](docs/PLAN.md). What runs today: the setup wizard, accounts, the organization with its
+> team, roles, invitations, API keys and audit log. Queues, tickets and e-mail follow in phases 1 to 3.
+
+## Quick start
+
+```bash
+cp .env.example .env
+# Set POSTGRES_PASSWORD in .env, e.g. with: openssl rand -hex 24
+docker compose up -d --build
+docker compose logs zendilohub | grep "setup code"
+```
+
+Open <http://localhost:8080>, enter the setup code from the log and create the administrator and your organization.
+Everyone else joins by invitation (**Team → Invite**). Without SMTP settings, e-mails only go to the log
+(`docker compose logs zendilohub`), which is fine for a first look.
+
+Behind your reverse proxy, point it at `ZENDILOHUB_HTTP_PORT` and set `ZENDILOHUB_PUBLIC_URL` to the public address.
+All settings are in [`.env.example`](.env.example).
+
+## Self-hosted or SaaS
+
+- **Self-hosted** (default): one organization, made by the setup wizard; only invited people can create an account.
+- **SaaS** (`ZENDILOHUB_MULTI_TENANT=true`): everyone signs up and creates organizations of their own.
+
+## Operations
+
+- **Data** lives in Docker volumes: `postgres-data` (the database) and `zendilohub-data` (the secret key, later
+  attachments). Back up both; without the secret key stored secrets cannot be decrypted.
+- **Updates**: `docker compose pull` (or `--build`) and `docker compose up -d`; migrations run on start.
+- **Memory**: every container has a limit (`ZENDILOHUB_MEMORY_LIMIT`, `POSTGRES_MEMORY_LIMIT`, `REDIS_MEMORY_LIMIT`).
+  The whole stack runs on a host with 2 GB of RAM.
+- **Workers**: `docker compose up -d --scale worker=3`.
+- **API**: keys under **API keys**; the reference is at `/api/reference`.
+
+## Development
+
+Python 3.14 with [uv](https://docs.astral.sh/uv/), Node 24, Docker (the server's tests start PostgreSQL and Redis with
+testcontainers).
+
+```bash
+uv sync --all-packages
+npm install
+docker compose -f compose.dev.yaml up -d   # PostgreSQL, Redis and Mailpit on localhost
+npm run dev:server                     # API on :8096
+npm run dev:web                        # web app with hot reload
+```
+
+Checks (CI runs the same):
+
+```bash
+npm run check:server                   # ruff, mypy strict, pytest with coverage
+npm run lint && npm run format:check && npm run typecheck && npm run test:coverage
+npm run api:types                      # after changing the API: regenerate the web app's types
+```
+
+The structure follows hexagonal design with DDD: modules in `apps/server/src/zendilohub/modules/<module>/` with the
+layers `domain`, `application`, `infrastructure` and `ui`, a small core, and an architecture test that keeps the
+boundaries. See [docs/PLAN.md](docs/PLAN.md) for the architecture and the roadmap.
+
+## License
+
+[AGPL-3.0](LICENSE). Security issues: see [SECURITY.md](SECURITY.md).

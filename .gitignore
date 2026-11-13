@@ -1,0 +1,17 @@
+node_modules/
+dist/
+coverage/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+.venv/
+__pycache__/
+*.py[cod]
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+apps/server/data/
+.npm-cache/
+.env
+*.log

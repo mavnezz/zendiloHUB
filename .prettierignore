@@ -1,0 +1,8 @@
+node_modules
+dist
+coverage
+htmlcov
+.venv
+apps/server
+package-lock.json
+uv.lock

@@ -1,0 +1,15 @@
+**/node_modules
+**/dist
+**/coverage
+**/htmlcov
+**/.venv
+**/__pycache__
+**/.mypy_cache
+**/.ruff_cache
+**/.pytest_cache
+apps/server/data
+.git
+.github
+.npm-cache
+.env
+*.log

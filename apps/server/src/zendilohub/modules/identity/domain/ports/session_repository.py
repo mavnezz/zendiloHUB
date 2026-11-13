@@ -1,0 +1,16 @@
+from datetime import datetime
+from typing import Protocol
+
+from ..models.session import Session
+
+
+class SessionRepository(Protocol):
+    async def find(self, session_id: str) -> Session | None: ...
+
+    async def save(self, session: Session) -> None: ...
+
+    async def delete(self, session_id: str) -> None: ...
+
+    async def delete_for_user(self, user_id: str, *, except_session: str | None = None) -> None: ...
+
+    async def delete_expired(self, now: datetime) -> None: ...
