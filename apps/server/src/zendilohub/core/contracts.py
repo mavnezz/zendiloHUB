@@ -7,6 +7,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Protocol
 
+from .domain.inbox import InboundEmail, OutgoingEmail, ReceivedTicket
 from .domain.permissions import Permission
 from .domain.queue_rights import QueueRight
 
@@ -110,6 +111,38 @@ class Contacts(Protocol):
         ...
 
 
+class TicketInbox(Protocol):
+    """Provided by tickets, used by channels: e-mails become tickets and messages, replies go out as e-mails."""
+
+    async def thread(self, tenant_id: str, email_ids: list[str], number: int | None) -> str | None:
+        """The ticket an e-mail answers: by its `In-Reply-To`/`References`, else by the number in its subject."""
+        ...
+
+    async def receive(self, email: InboundEmail) -> ReceivedTicket: ...
+
+    async def outgoing(self, tenant_id: str, message_id: str) -> OutgoingEmail | None:
+        """None for messages that are no reply of the team."""
+        ...
+
+    async def mark_sent(
+        self, tenant_id: str, message_id: str, *, email_message_id: str, from_address: str, to: tuple[str, ...]
+    ) -> None:
+        """Keeps the e-mail's id with the message, so the customer's answer finds the ticket."""
+        ...
+
+
+class OrganizationNames(Protocol):
+    """Provided by tenancy: an organization's name (for signatures and auto replies)."""
+
+    async def name_of(self, tenant_id: str) -> str | None: ...
+
+
+class QueueNames(Protocol):
+    """Provided by access: a queue's name (for signatures and auto replies)."""
+
+    async def name_of(self, tenant_id: str, queue_id: str) -> str | None: ...
+
+
 class TicketUsage(Protocol):
     """Provided by tickets, used by access and customers: what still has tickets cannot simply be deleted."""
 
@@ -127,6 +160,9 @@ class Contracts:
     queue_access: Slot[QueueAccess] = field(default_factory=lambda: Slot('QueueAccess'))
     contacts: Slot[Contacts] = field(default_factory=lambda: Slot('Contacts'))
     ticket_usage: Slot[TicketUsage] = field(default_factory=lambda: Slot('TicketUsage'))
+    ticket_inbox: Slot[TicketInbox] = field(default_factory=lambda: Slot('TicketInbox'))
+    organizations: Slot[OrganizationNames] = field(default_factory=lambda: Slot('OrganizationNames'))
+    queue_names: Slot[QueueNames] = field(default_factory=lambda: Slot('QueueNames'))
 
     @classmethod
     def empty(cls) -> Contracts:

@@ -2,8 +2,10 @@ from collections.abc import Mapping
 
 from zendilohub.core.bus.command_bus import CommandBus
 from zendilohub.core.contracts import Contracts
+from zendilohub.core.domain.inbox import InboundEmail, OutgoingEmail, ReceivedTicket
 from zendilohub.core.domain.queue_rights import QueueRight
 
+from ..application.commands.email import MarkSent, OutgoingOf, ReceiveEmail, ThreadEmail
 from ..application.queries.tickets import TicketUsageQuery
 from ..domain.models.actor import Actor
 
@@ -56,6 +58,12 @@ class ContractCustomers:
     async def of_company(self, tenant_id: str, company_id: str) -> list[str]:
         return await self._contracts.contacts.get().of_company(tenant_id, company_id)
 
+    async def address_of(self, tenant_id: str, contact_id: str | None) -> tuple[str | None, str]:
+        if contact_id is None:
+            return None, ''
+        card = (await self._contracts.contacts.get().cards(tenant_id, [contact_id])).get(contact_id)
+        return (card.email, card.name) if card else (None, '')
+
 
 class BusTicketUsage:
     """Tickets' side of the `TicketUsage` contract."""
@@ -68,3 +76,32 @@ class BusTicketUsage:
 
     async def of_customer(self, tenant_id: str, contact_id: str) -> int:
         return await self._bus.query(TicketUsageQuery(tenant_id=tenant_id, contact_id=contact_id))
+
+
+class BusTicketInbox:
+    """Tickets' side of the `TicketInbox` contract."""
+
+    def __init__(self, bus: CommandBus) -> None:
+        self._bus = bus
+
+    async def thread(self, tenant_id: str, email_ids: list[str], number: int | None) -> str | None:
+        return await self._bus.query(ThreadEmail(tenant_id=tenant_id, email_ids=tuple(email_ids), number=number))
+
+    async def receive(self, email: InboundEmail) -> ReceivedTicket:
+        return await self._bus.execute(ReceiveEmail(email))
+
+    async def outgoing(self, tenant_id: str, message_id: str) -> OutgoingEmail | None:
+        return await self._bus.query(OutgoingOf(tenant_id=tenant_id, message_id=message_id))
+
+    async def mark_sent(
+        self, tenant_id: str, message_id: str, *, email_message_id: str, from_address: str, to: tuple[str, ...]
+    ) -> None:
+        await self._bus.execute(
+            MarkSent(
+                tenant_id=tenant_id,
+                message_id=message_id,
+                email_message_id=email_message_id,
+                from_address=from_address,
+                to=to,
+            )
+        )

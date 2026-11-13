@@ -572,6 +572,142 @@ export interface paths {
     patch: operations['update_contact_api_v1_tenants__tenant_id__contacts__contact_id__patch']
     trace?: never
   }
+  '/api/v1/tenants/{tenant_id}/email-accounts': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Accounts */
+    get: operations['accounts_api_v1_tenants__tenant_id__email_accounts_get']
+    put?: never
+    /**
+     * Create Account
+     * @description A mailbox (IMAP to fetch, SMTP to send); its passwords are stored encrypted and never shown again.
+     */
+    post: operations['create_account_api_v1_tenants__tenant_id__email_accounts_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/email-accounts/{account_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /** Delete Account */
+    delete: operations['delete_account_api_v1_tenants__tenant_id__email_accounts__account_id__delete']
+    options?: never
+    head?: never
+    /** Update Account */
+    patch: operations['update_account_api_v1_tenants__tenant_id__email_accounts__account_id__patch']
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/email-accounts/{account_id}/fetch': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Fetch Now
+     * @description Fetches new mail now instead of within the next minute.
+     */
+    post: operations['fetch_now_api_v1_tenants__tenant_id__email_accounts__account_id__fetch_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/email-accounts/{account_id}/test': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Test Account
+     * @description Logs in to the IMAP and the SMTP server with the stored settings.
+     */
+    post: operations['test_account_api_v1_tenants__tenant_id__email_accounts__account_id__test_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/failed-emails': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Failed Emails
+     * @description Received e-mails that could not become tickets, newest first.
+     */
+    get: operations['failed_emails_api_v1_tenants__tenant_id__failed_emails_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/failed-emails/{failed_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /** Delete Failed */
+    delete: operations['delete_failed_api_v1_tenants__tenant_id__failed_emails__failed_id__delete']
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/failed-emails/{failed_id}/retry': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Retry Failed
+     * @description Processes the e-mail again (e.g. after fixing a filter); if it fails again, it is listed again.
+     */
+    post: operations['retry_failed_api_v1_tenants__tenant_id__failed_emails__failed_id__retry_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/v1/tenants/{tenant_id}/groups': {
     parameters: {
       query?: never
@@ -666,6 +802,83 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/v1/tenants/{tenant_id}/mail-filters': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Filters
+     * @description In the order they run.
+     */
+    get: operations['filters_api_v1_tenants__tenant_id__mail_filters_get']
+    put?: never
+    /** Create Filter */
+    post: operations['create_filter_api_v1_tenants__tenant_id__mail_filters_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/mail-filters-order': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    /** Reorder Filters */
+    put: operations['reorder_filters_api_v1_tenants__tenant_id__mail_filters_order_put']
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/mail-filters/{filter_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /** Delete Filter */
+    delete: operations['delete_filter_api_v1_tenants__tenant_id__mail_filters__filter_id__delete']
+    options?: never
+    head?: never
+    /** Update Filter */
+    patch: operations['update_filter_api_v1_tenants__tenant_id__mail_filters__filter_id__patch']
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/me/email-settings': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Personal
+     * @description The caller's name, title and personal signature lines for this organization.
+     */
+    get: operations['personal_api_v1_tenants__tenant_id__me_email_settings_get']
+    /** Set Personal */
+    put: operations['set_personal_api_v1_tenants__tenant_id__me_email_settings_put']
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/v1/tenants/{tenant_id}/members': {
     parameters: {
       query?: never
@@ -702,6 +915,43 @@ export interface paths {
     head?: never
     /** Change Role */
     patch: operations['change_role_api_v1_tenants__tenant_id__members__user_id__patch']
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/queue-channels': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Queue Channels
+     * @description How each queue writes (queues without settings are left out).
+     */
+    get: operations['queue_channels_api_v1_tenants__tenant_id__queue_channels_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/queue-channels/{queue_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    /** Set Queue Channel */
+    put: operations['set_queue_channel_api_v1_tenants__tenant_id__queue_channels__queue_id__put']
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
     trace?: never
   }
   '/api/v1/tenants/{tenant_id}/queue-rights': {
@@ -791,6 +1041,26 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/v1/tenants/{tenant_id}/queues/{queue_id}/reply-draft': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Reply Draft
+     * @description The queue's salutation and signature with the caller's details, to start a reply with.
+     */
+    get: operations['reply_draft_api_v1_tenants__tenant_id__queues__queue_id__reply_draft_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/v1/tenants/{tenant_id}/roles': {
     parameters: {
       query?: never
@@ -834,6 +1104,45 @@ export interface paths {
     head?: never
     /** Update Role */
     patch: operations['update_role_api_v1_tenants__tenant_id__roles__role_id__patch']
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/text-templates': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Templates
+     * @description Signatures and salutations with the placeholders they may use.
+     */
+    get: operations['templates_api_v1_tenants__tenant_id__text_templates_get']
+    put?: never
+    /** Create Template */
+    post: operations['create_template_api_v1_tenants__tenant_id__text_templates_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/text-templates/{template_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /** Delete Template */
+    delete: operations['delete_template_api_v1_tenants__tenant_id__text_templates__template_id__delete']
+    options?: never
+    head?: never
+    /** Update Template */
+    patch: operations['update_template_api_v1_tenants__tenant_id__text_templates__template_id__patch']
     trace?: never
   }
   '/api/v1/tenants/{tenant_id}/tickets': {
@@ -884,6 +1193,43 @@ export interface paths {
      * @description Changes what was sent; each change needs its right (`edit`, `assign`, `move` + `create` in the target).
      */
     patch: operations['update_api_v1_tenants__tenant_id__tickets__ticket_id__patch']
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/tickets/{ticket_id}/deliveries': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Deliveries
+     * @description Whether the replies in a ticket went out by e-mail.
+     */
+    get: operations['deliveries_api_v1_tenants__tenant_id__tickets__ticket_id__deliveries_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/tickets/{ticket_id}/deliveries/{message_id}/resend': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Resend */
+    post: operations['resend_api_v1_tenants__tenant_id__tickets__ticket_id__deliveries__message_id__resend_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
     trace?: never
   }
   '/api/v1/tenants/{tenant_id}/tickets/{ticket_id}/history': {
@@ -1095,6 +1441,76 @@ export interface paths {
 export type webhooks = Record<string, never>
 export interface components {
   schemas: {
+    /** AccountRequest */
+    AccountRequest: {
+      /**
+       * Active
+       * @default true
+       */
+      active: boolean
+      /** Address */
+      address: string
+      /**
+       * Display Name
+       * @default
+       */
+      display_name: string
+      /**
+       * Folder
+       * @default INBOX
+       */
+      folder: string
+      imap: components['schemas']['ServerRequest']
+      /** Name */
+      name: string
+      /** Queue Id */
+      queue_id: string
+      smtp: components['schemas']['ServerRequest']
+    }
+    /** AccountResponse */
+    AccountResponse: {
+      /** Active */
+      active: boolean
+      /** Address */
+      address: string
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string
+      /** Display Name */
+      display_name: string
+      /** Failing Since */
+      failing_since: string | null
+      /** Folder */
+      folder: string
+      /** Id */
+      id: string
+      imap: components['schemas']['ServerResponse']
+      /** Last Error */
+      last_error: string | null
+      /** Last Fetch At */
+      last_fetch_at: string | null
+      /** Name */
+      name: string
+      /** Queue Id */
+      queue_id: string
+      smtp: components['schemas']['ServerResponse']
+    }
+    /** ActionsModel */
+    ActionsModel: {
+      /**
+       * Ignore
+       * @default false
+       */
+      ignore: boolean
+      /** Priority */
+      priority?: ('low' | 'normal' | 'high' | 'urgent') | null
+      /** Queue Id */
+      queue_id?: string | null
+      /** Tags */
+      tags?: string[]
+    }
     /** AdminTenantPageResponse */
     AdminTenantPageResponse: {
       /** Items */
@@ -1263,6 +1679,18 @@ export interface components {
       /** Notes */
       notes: string
     }
+    /** ConditionModel */
+    ConditionModel: {
+      field: components['schemas']['FilterField']
+      /**
+       * Header
+       * @default
+       */
+      header: string
+      operator: components['schemas']['Operator']
+      /** Value */
+      value: string
+    }
     /** ContactPageResponse */
     ContactPageResponse: {
       /** Items */
@@ -1402,12 +1830,106 @@ export interface components {
       /** Phone */
       phone?: string | null
     }
+    /** DeliveryResponse */
+    DeliveryResponse: {
+      /** Attempts */
+      attempts: number
+      /** Error */
+      error: string | null
+      /** Message Id */
+      message_id: string
+      status: components['schemas']['DeliveryStatus']
+      /**
+       * Updated At
+       * Format: date-time
+       */
+      updated_at: string
+    }
+    /** @enum {string} */
+    DeliveryStatus: 'queued' | 'sent' | 'failed' | 'skipped'
     /** @enum {string} */
     Direction: 'in' | 'out'
+    /** DraftResponse */
+    DraftResponse: {
+      /** Text */
+      text: string
+    }
     /** EmailRequest */
     EmailRequest: {
       /** Email */
       email: string
+    }
+    /** FailedEmailResponse */
+    FailedEmailResponse: {
+      /** Account Id */
+      account_id: string | null
+      /** Error */
+      error: string
+      /** Id */
+      id: string
+      /**
+       * Received At
+       * Format: date-time
+       */
+      received_at: string
+      /** Sender */
+      sender: string
+      /** Size */
+      size: number
+      /** Subject */
+      subject: string
+    }
+    /** @enum {string} */
+    FilterField: 'from' | 'to' | 'cc' | 'subject' | 'body' | 'header'
+    /** FilterOrderRequest */
+    FilterOrderRequest: {
+      /** Filter Ids */
+      filter_ids: string[]
+    }
+    /** FilterRequest */
+    FilterRequest: {
+      actions: components['schemas']['ActionsModel']
+      /**
+       * Active
+       * @default true
+       */
+      active: boolean
+      /** Conditions */
+      conditions: components['schemas']['ConditionModel'][]
+      /**
+       * Match
+       * @default all
+       * @enum {string}
+       */
+      match: 'all' | 'any'
+      /** Name */
+      name: string
+      /**
+       * Stop
+       * @default false
+       */
+      stop: boolean
+    }
+    /** FilterResponse */
+    FilterResponse: {
+      actions: components['schemas']['ActionsModel']
+      /** Active */
+      active: boolean
+      /** Conditions */
+      conditions: components['schemas']['ConditionModel'][]
+      /** Id */
+      id: string
+      /**
+       * Match
+       * @enum {string}
+       */
+      match: 'all' | 'any'
+      /** Name */
+      name: string
+      /** Position */
+      position: number
+      /** Stop */
+      stop: boolean
     }
     /** @enum {string} */
     FirstMessage: 'customer' | 'reply' | 'note'
@@ -1618,6 +2140,8 @@ export interface components {
       /** To Addresses */
       to_addresses: string[]
     }
+    /** @enum {string} */
+    Operator: 'contains' | 'not_contains' | 'equals' | 'starts_with' | 'ends_with' | 'regex'
     /**
      * OwnTenantResponse
      * @description A tenant as the caller sees it: with their role and what it allows.
@@ -1659,10 +2183,86 @@ export interface components {
       | 'tickets.delete'
       | 'customers.view'
       | 'customers.manage'
+      | 'channels.manage'
       | 'integrations.manage'
       | 'audit.view'
+    /** PersonalRequest */
+    PersonalRequest: {
+      /**
+       * Name
+       * @default
+       */
+      name: string
+      /**
+       * Signature
+       * @default
+       */
+      signature: string
+      /**
+       * Title
+       * @default
+       */
+      title: string
+    }
+    /** PersonalResponse */
+    PersonalResponse: {
+      /** Name */
+      name: string
+      /** Signature */
+      signature: string
+      /** Title */
+      title: string
+    }
     /** @enum {string} */
     Priority: 'low' | 'normal' | 'high' | 'urgent'
+    /** ProbeResponse */
+    ProbeResponse: {
+      /** Imap */
+      imap: string | null
+      /** Smtp */
+      smtp: string | null
+    }
+    /** QueueChannelRequest */
+    QueueChannelRequest: {
+      /** Account Id */
+      account_id?: string | null
+      /**
+       * Auto Reply
+       * @default false
+       */
+      auto_reply: boolean
+      /**
+       * Auto Reply Body
+       * @default
+       */
+      auto_reply_body: string
+      /**
+       * Auto Reply Subject
+       * @default
+       */
+      auto_reply_subject: string
+      /** Salutation Id */
+      salutation_id?: string | null
+      /** Signature Id */
+      signature_id?: string | null
+    }
+    /** QueueChannelResponse */
+    QueueChannelResponse: {
+      /** Account Id */
+      account_id: string | null
+      /** Auto Reply */
+      auto_reply: boolean
+      /** Auto Reply Body */
+      auto_reply_body: string
+      /** Auto Reply Subject */
+      auto_reply_subject: string
+      /** Queue Id */
+      queue_id: string
+      /** Salutation Id */
+      salutation_id: string | null
+      /** Signature Id */
+      signature_id: string | null
+    }
     /** QueueRequest */
     QueueRequest: {
       /**
@@ -1715,6 +2315,14 @@ export interface components {
       password: string
       /** Token */
       token: string
+    }
+    /** RetryResponse */
+    RetryResponse: {
+      /**
+       * Outcome
+       * @enum {string}
+       */
+      outcome: 'created' | 'appended' | 'ignored' | 'duplicate' | 'own' | 'failed'
     }
     /** RightsMatrixResponse */
     RightsMatrixResponse: {
@@ -1771,6 +2379,36 @@ export interface components {
       /** Roles */
       roles: components['schemas']['RoleResponse'][]
     }
+    /** @enum {string} */
+    Security: 'ssl' | 'starttls' | 'none'
+    /** ServerRequest */
+    ServerRequest: {
+      /** Host */
+      host: string
+      /** Password */
+      password?: string | null
+      /** Port */
+      port: number
+      /** @default ssl */
+      security: components['schemas']['Security']
+      /**
+       * Username
+       * @default
+       */
+      username: string
+    }
+    /** ServerResponse */
+    ServerResponse: {
+      /** Has Password */
+      has_password: boolean
+      /** Host */
+      host: string
+      /** Port */
+      port: number
+      security: components['schemas']['Security']
+      /** Username */
+      username: string
+    }
     /** SessionResponse */
     SessionResponse: {
       user: components['schemas']['UserResponse'] | null
@@ -1808,6 +2446,38 @@ export interface components {
     }
     /** @enum {string} */
     StatusValue: 'active' | 'suspended'
+    /** @enum {string} */
+    TemplateKind: 'signature' | 'salutation'
+    /** TemplateRequest */
+    TemplateRequest: {
+      /** Body */
+      body: string
+      kind: components['schemas']['TemplateKind']
+      /** Name */
+      name: string
+    }
+    /** TemplateResponse */
+    TemplateResponse: {
+      /** Body */
+      body: string
+      /** Id */
+      id: string
+      kind: components['schemas']['TemplateKind']
+      /** Name */
+      name: string
+      /**
+       * Updated At
+       * Format: date-time
+       */
+      updated_at: string
+    }
+    /** TemplatesResponse */
+    TemplatesResponse: {
+      /** Placeholders */
+      placeholders: string[]
+      /** Templates */
+      templates: components['schemas']['TemplateResponse'][]
+    }
     /** TenantResponse */
     TenantResponse: {
       /**
@@ -3373,6 +4043,293 @@ export interface operations {
       }
     }
   }
+  accounts_api_v1_tenants__tenant_id__email_accounts_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['AccountResponse'][]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  create_account_api_v1_tenants__tenant_id__email_accounts_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AccountRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['AccountResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  delete_account_api_v1_tenants__tenant_id__email_accounts__account_id__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        account_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  update_account_api_v1_tenants__tenant_id__email_accounts__account_id__patch: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        account_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AccountRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['AccountResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  fetch_now_api_v1_tenants__tenant_id__email_accounts__account_id__fetch_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        account_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      202: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  test_account_api_v1_tenants__tenant_id__email_accounts__account_id__test_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        account_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ProbeResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  failed_emails_api_v1_tenants__tenant_id__failed_emails_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['FailedEmailResponse'][]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  delete_failed_api_v1_tenants__tenant_id__failed_emails__failed_id__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        failed_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  retry_failed_api_v1_tenants__tenant_id__failed_emails__failed_id__retry_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        failed_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['RetryResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
   groups_api_v1_tenants__tenant_id__groups_get: {
     parameters: {
       query?: never
@@ -3637,6 +4594,239 @@ export interface operations {
       }
     }
   }
+  filters_api_v1_tenants__tenant_id__mail_filters_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['FilterResponse'][]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  create_filter_api_v1_tenants__tenant_id__mail_filters_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['FilterRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['FilterResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  reorder_filters_api_v1_tenants__tenant_id__mail_filters_order_put: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['FilterOrderRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['FilterResponse'][]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  delete_filter_api_v1_tenants__tenant_id__mail_filters__filter_id__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        filter_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  update_filter_api_v1_tenants__tenant_id__mail_filters__filter_id__patch: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        filter_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['FilterRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['FilterResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  personal_api_v1_tenants__tenant_id__me_email_settings_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['PersonalResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  set_personal_api_v1_tenants__tenant_id__me_email_settings_put: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PersonalRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['PersonalResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
   members_api_v1_tenants__tenant_id__members_get: {
     parameters: {
       query?: never
@@ -3721,6 +4911,73 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['MemberResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  queue_channels_api_v1_tenants__tenant_id__queue_channels_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['QueueChannelResponse'][]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  set_queue_channel_api_v1_tenants__tenant_id__queue_channels__queue_id__put: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        queue_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['QueueChannelRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['QueueChannelResponse']
         }
       }
       /** @description Validation Error */
@@ -3964,6 +5221,43 @@ export interface operations {
       }
     }
   }
+  reply_draft_api_v1_tenants__tenant_id__queues__queue_id__reply_draft_get: {
+    parameters: {
+      query?: {
+        customer_email?: string
+        customer_name?: string
+        number?: number | null
+        subject?: string
+      }
+      header?: never
+      path: {
+        queue_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['DraftResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
   roles_api_v1_tenants__tenant_id__roles_get: {
     parameters: {
       query?: never
@@ -4083,6 +5377,138 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['RoleResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  templates_api_v1_tenants__tenant_id__text_templates_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['TemplatesResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  create_template_api_v1_tenants__tenant_id__text_templates_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['TemplateRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['TemplateResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  delete_template_api_v1_tenants__tenant_id__text_templates__template_id__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        template_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  update_template_api_v1_tenants__tenant_id__text_templates__template_id__patch: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        template_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['TemplateRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['TemplateResponse']
         }
       }
       /** @description Validation Error */
@@ -4262,6 +5688,69 @@ export interface operations {
         content: {
           'application/json': components['schemas']['TicketDetailResponse']
         }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  deliveries_api_v1_tenants__tenant_id__tickets__ticket_id__deliveries_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+        ticket_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['DeliveryResponse'][]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  resend_api_v1_tenants__tenant_id__tickets__ticket_id__deliveries__message_id__resend_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        message_id: string
+        tenant_id: string
+        ticket_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      202: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
       }
       /** @description Validation Error */
       422: {

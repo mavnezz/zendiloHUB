@@ -5,6 +5,16 @@ from zendilohub.core.database.migration import sql_migrations
 from zendilohub.core.events.integration_events import MemberRemoved, TenantDeleted, UserDeleted
 from zendilohub.core.module import AppModule, ModuleContext
 
+from .application.commands.email import (
+    MarkSent,
+    MarkSentHandler,
+    OutgoingOf,
+    OutgoingOfHandler,
+    ReceiveEmail,
+    ReceiveEmailHandler,
+    ThreadEmail,
+    ThreadEmailHandler,
+)
 from .application.commands.forget import (
     CloseDueTickets,
     CloseDueTicketsHandler,
@@ -59,7 +69,7 @@ from .application.queries.tickets import (
     TicketUsageQuery,
 )
 from .application.services.desk import Desk, TimeKeeper
-from .infrastructure.contract_adapters import BusTicketUsage, ContractCustomers, ContractQueueRights
+from .infrastructure.contract_adapters import BusTicketInbox, BusTicketUsage, ContractCustomers, ContractQueueRights
 from .infrastructure.postgres_tickets import (
     PostgresHistoryRepository,
     PostgresLinkRepository,
@@ -116,6 +126,10 @@ def create_tickets_module(context: ModuleContext) -> AppModule:
         .register(TicketTime, TicketTimeHandler(desk, times))
         .register(Assignees, AssigneesHandler(desk))
         .register(TicketUsageQuery, TicketUsageHandler(desk))
+        .register(ReceiveEmail, ReceiveEmailHandler(desk, messages, customers, db))
+        .register(ThreadEmail, ThreadEmailHandler(desk, messages))
+        .register(OutgoingOf, OutgoingOfHandler(desk, messages, customers))
+        .register(MarkSent, MarkSentHandler(messages))
     )
 
     async def member_removed(event: MemberRemoved) -> None:
@@ -131,6 +145,7 @@ def create_tickets_module(context: ModuleContext) -> AppModule:
     context.events.subscribe(UserDeleted, user_deleted)
     context.events.subscribe(TenantDeleted, tenant_deleted)
     context.contracts.ticket_usage.provide(BusTicketUsage(bus))
+    context.contracts.ticket_inbox.provide(BusTicketInbox(bus))
     context.scheduler.every(CLOSE_DUE_EVERY_SECONDS, 'tickets.close_due', lambda: bus.execute(CloseDueTickets()))
 
     return AppModule(

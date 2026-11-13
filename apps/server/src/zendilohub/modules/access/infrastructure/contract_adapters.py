@@ -5,6 +5,7 @@ from zendilohub.core.contracts import Contracts
 from zendilohub.core.domain.queue_rights import QueueRight
 
 from ..application.queries.access import PeopleWith, RightsOf
+from ..domain.ports.repositories import QueueRepository
 
 
 class TenancyMembers:
@@ -46,3 +47,14 @@ class BusQueueAccess:
 
     async def people_with(self, tenant_id: str, queue_id: str, right: QueueRight) -> frozenset[str]:
         return await self._bus.query(PeopleWith(tenant_id=tenant_id, queue_id=queue_id, right=right))
+
+
+class QueueDirectory:
+    """Access's side of the `QueueNames` contract."""
+
+    def __init__(self, queues: QueueRepository) -> None:
+        self._queues = queues
+
+    async def name_of(self, tenant_id: str, queue_id: str) -> str | None:
+        queue = await self._queues.find(tenant_id, queue_id)
+        return queue.name if queue else None

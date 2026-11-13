@@ -8,6 +8,7 @@ dependencies = [
     "argon2-cffi>=25.1.0",
     "cryptography>=50",
     "fastapi>=0.161.0",
+    "nh3>=0.3",
     "psycopg[binary,pool]>=3.3.6",
     "python-multipart>=0.0.32",
     "redis>=8.1.0",

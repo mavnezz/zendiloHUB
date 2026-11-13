@@ -1,6 +1,6 @@
 from zendilohub.core.contracts import MemberCard
 
-from ..domain.ports.repositories import MembershipRepository
+from ..domain.ports.repositories import MembershipRepository, TenantRepository
 
 
 class MembershipDirectory:
@@ -17,3 +17,14 @@ class MembershipDirectory:
             MemberCard(user_id=member.user_id, email=member.email, permissions=member.permissions)
             for member in await self._memberships.of_tenant(tenant_id)
         ]
+
+
+class TenantNames:
+    """Tenancy's side of the `OrganizationNames` contract."""
+
+    def __init__(self, tenants: TenantRepository) -> None:
+        self._tenants = tenants
+
+    async def name_of(self, tenant_id: str) -> str | None:
+        tenant = await self._tenants.find(tenant_id)
+        return tenant.name if tenant else None

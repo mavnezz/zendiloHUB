@@ -27,6 +27,7 @@ type Permission = Literal[
     'tickets.delete',
     'customers.view',
     'customers.manage',
+    'channels.manage',
     'integrations.manage',
     'audit.view',
 ]
@@ -48,6 +49,8 @@ PERMISSIONS: dict[Permission, frozenset[BuiltinRole]] = {
     'tickets.delete': _ADMINS,
     'customers.view': _ALL,
     'customers.manage': _ALL,
+    # E-mail accounts, signatures, auto replies, filters.
+    'channels.manage': _ADMINS,
     'integrations.manage': _ADMINS,
     'audit.view': _ADMINS,
 }

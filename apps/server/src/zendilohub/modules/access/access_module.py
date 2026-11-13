@@ -44,7 +44,7 @@ from .application.queries.access import (
     RightsOf,
     RightsOfHandler,
 )
-from .infrastructure.contract_adapters import BusQueueAccess, QueueTickets, TenancyMembers
+from .infrastructure.contract_adapters import BusQueueAccess, QueueDirectory, QueueTickets, TenancyMembers
 from .infrastructure.postgres_access import (
     PostgresGrantRepository,
     PostgresGroupRepository,
@@ -98,5 +98,6 @@ def create_access_module(context: ModuleContext) -> AppModule:
     events.subscribe(UserDeleted, user_deleted)
     events.subscribe(TenantDeleted, tenant_deleted)
     context.contracts.queue_access.provide(BusQueueAccess(bus))
+    context.contracts.queue_names.provide(QueueDirectory(queues))
 
     return AppModule(name='access', migrations=sql_migrations(MIGRATIONS), routers=[access_routes(bus)])

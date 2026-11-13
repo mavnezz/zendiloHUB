@@ -74,7 +74,7 @@ from .application.queries.tenants import (
 from .application.services.roles import RoleBook
 from .domain.models.tenant import Locale
 from .infrastructure.mail_notifier import MailInvitationNotifier
-from .infrastructure.membership_directory import MembershipDirectory
+from .infrastructure.membership_directory import MembershipDirectory, TenantNames
 from .infrastructure.pending_invitations import PendingInvitations
 from .infrastructure.postgres_api_keys import PostgresApiKeyRepository
 from .infrastructure.postgres_roles import PostgresRoleRepository
@@ -167,6 +167,7 @@ def create_tenancy_module(context: ModuleContext) -> AppModule:
     context.events.subscribe(InstanceSetUp, set_up)
     context.contracts.invitations.provide(PendingInvitations(invitations, clock))
     context.contracts.memberships.provide(MembershipDirectory(memberships))
+    context.contracts.organizations.provide(TenantNames(tenants))
 
     return AppModule(
         name='tenancy',

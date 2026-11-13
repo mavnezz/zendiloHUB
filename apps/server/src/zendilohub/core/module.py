@@ -9,6 +9,7 @@ from .config import AppConfig
 from .contracts import Contracts
 from .database.database import Database
 from .database.migration import Migration
+from .domain.cipher import Cipher
 from .domain.clock import Clock
 from .domain.http_fetch import PublicFetcher
 from .domain.id_generator import IdGenerator
@@ -44,6 +45,8 @@ class ModuleContext:
     contracts: Contracts
     scheduler: Scheduler
     """Periodic jobs; they run in the web process only."""
+    cipher: Cipher
+    """Seals secrets the app must use again (passwords of mail servers); keyed by the app's secret."""
 
 
 class CliOutput(Protocol):

@@ -16,6 +16,7 @@ from .domain.jobs import JobQueue
 from .domain.mailer import Mailer
 from .events.event_bus import EventBus
 from .http.http_kernel import HttpKernel
+from .infrastructure.aes_cipher import AesGcmCipher
 from .infrastructure.mailers import LogMailer, SmtpMailer
 from .infrastructure.public_fetcher import AiohttpPublicFetcher
 from .infrastructure.redis_rate_limiter import RedisRateLimiter
@@ -79,6 +80,7 @@ class Application:
             fetcher=fetcher or AiohttpPublicFetcher(),
             contracts=Contracts.empty(),
             scheduler=Scheduler(),
+            cipher=AesGcmCipher(lambda: secret.value),
         )
         context.http.use_audit_sink(context.events.publish)
         built = [factory(context) for factory in modules]

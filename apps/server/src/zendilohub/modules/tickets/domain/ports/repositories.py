@@ -68,6 +68,14 @@ class MessageRepository(Protocol):
         """Merging: the messages (and time) of one ticket go to the other."""
         ...
 
+    async def ticket_of_email(self, tenant_id: str, email_ids: Sequence[str]) -> str | None:
+        """The ticket of the newest message with one of these e-mail ids."""
+        ...
+
+    async def set_email(
+        self, tenant_id: str, message_id: str, *, email_message_id: str, from_address: str, to: Sequence[str]
+    ) -> None: ...
+
 
 class HistoryRepository(Protocol):
     async def add(self, entries: Sequence[HistoryEntry]) -> None: ...

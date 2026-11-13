@@ -10,11 +10,13 @@ import httpx
 from zendilohub.core.application import Application
 from zendilohub.core.config import AppConfig, load_config
 from zendilohub.core.module import AppModule, ModuleContext, ModuleFactory
+from zendilohub.modules.channels.channels_module import create_channels_module
 from zendilohub.modules.identity.identity_module import create_identity_module
 from zendilohub.modules.identity.infrastructure.security import Argon2PasswordHasher
 from zendilohub.providers import providers
 
 from .fakes import FakeClock, FakeWebsites, MemoryJobs, MemoryMailer, SequenceIds
+from .mail_server import FakeMailServer
 from .services import Services
 
 # Cheap Argon2 parameters; the real cost would make the suite slow.
@@ -25,9 +27,17 @@ def _fast_identity(context: ModuleContext) -> AppModule:
     return create_identity_module(context, hasher=FAST_HASHER)
 
 
-def fast_providers() -> list[ModuleFactory]:
-    """The real modules, with test doubles where the real thing is slow."""
-    replacements: dict[ModuleFactory, ModuleFactory] = {create_identity_module: _fast_identity}
+def fast_providers(mail_server: FakeMailServer | None = None) -> list[ModuleFactory]:
+    """The real modules, with test doubles where the real thing is slow (or a mail server)."""
+    server = mail_server or FakeMailServer()
+
+    def channels(context: ModuleContext) -> AppModule:
+        return create_channels_module(context, mailbox=server, outbox=server)
+
+    replacements: dict[ModuleFactory, ModuleFactory] = {
+        create_identity_module: _fast_identity,
+        create_channels_module: channels,
+    }
     return [replacements.get(factory, factory) for factory in providers]
 
 
@@ -67,6 +77,7 @@ class AppUnderTest:
     mailer: MemoryMailer
     jobs: MemoryJobs
     websites: FakeWebsites
+    mail: FakeMailServer
 
     async def run_jobs(self) -> None:
         """Runs the enqueued jobs (and the ones they enqueue), as a worker would."""
@@ -108,9 +119,10 @@ async def running_app(
     mailer = MemoryMailer()
     jobs = MemoryJobs()
     websites = FakeWebsites()
+    mail = FakeMailServer()
     app = Application.create(
         make_config(services, data_dir, name, **overrides),
-        modules=fast_providers() if modules is None else modules,
+        modules=fast_providers(mail) if modules is None else modules,
         clock=clock,
         ids=ids,
         mailer=mailer,
@@ -123,7 +135,7 @@ async def running_app(
     transport = httpx.ASGITransport(app=app.http.app, raise_app_exceptions=False)
     try:
         async with httpx.AsyncClient(transport=transport, base_url=BASE_URL) as client:
-            yield AppUnderTest(app, client, clock, ids, mailer, jobs, websites)
+            yield AppUnderTest(app, client, clock, ids, mailer, jobs, websites, mail)
     finally:
         await app.shutdown()
         services.drop_database(name)

@@ -1,5 +1,6 @@
 from .core.module import ModuleFactory
 from .modules.access.access_module import create_access_module
+from .modules.channels.channels_module import create_channels_module
 from .modules.compliance.compliance_module import create_compliance_module
 from .modules.customers.customers_module import create_customers_module
 from .modules.identity.identity_module import create_identity_module
@@ -13,5 +14,6 @@ providers: list[ModuleFactory] = [
     create_access_module,
     create_customers_module,
     create_tickets_module,
+    create_channels_module,
     create_compliance_module,
 ]

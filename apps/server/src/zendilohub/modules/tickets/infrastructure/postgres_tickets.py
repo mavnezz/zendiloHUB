@@ -310,6 +310,29 @@ class PostgresMessageRepository(_Sql):
                 (to_ticket, tenant_id, from_ticket),
             )
 
+    async def ticket_of_email(self, tenant_id: str, email_ids: Sequence[str]) -> str | None:
+        if not email_ids:
+            return None
+        row = await self.one(
+            """
+            SELECT ticket_id FROM ticket_messages WHERE tenant_id = %s AND email_message_id = ANY(%s)
+            ORDER BY created_at DESC LIMIT 1
+            """,
+            (tenant_id, list(email_ids)),
+        )
+        return str(row['ticket_id']) if row else None
+
+    async def set_email(
+        self, tenant_id: str, message_id: str, *, email_message_id: str, from_address: str, to: Sequence[str]
+    ) -> None:
+        await self.run(
+            """
+            UPDATE ticket_messages SET email_message_id = %s, from_address = %s, to_addresses = %s
+            WHERE tenant_id = %s AND id = %s
+            """,
+            (email_message_id, from_address, list(to), tenant_id, message_id),
+        )
+
 
 class PostgresHistoryRepository(_Sql):
     async def add(self, entries: Sequence[HistoryEntry]) -> None:
