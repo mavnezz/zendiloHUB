@@ -18,10 +18,22 @@ export type SettableState = NonNullable<TicketChanges['state']>
 export type Priority = Ticket['priority']
 export type LinkKind = Schemas['LinkRequest']['kind']
 export type FirstMessage = NonNullable<CreateTicketRequest['first']>
-export type TicketView = 'mine' | 'unassigned' | 'due' | 'open' | 'watching' | 'closed' | 'all'
+export type TicketView = 'mine' | 'unassigned' | 'due' | 'escalated' | 'open' | 'watching' | 'closed' | 'all'
 export type TicketSort = 'updated' | 'created' | 'priority' | 'number' | 'pending'
 
-export const VIEWS: readonly TicketView[] = ['mine', 'unassigned', 'due', 'open', 'watching', 'closed', 'all']
+export const VIEWS: readonly TicketView[] = [
+  'mine',
+  'unassigned',
+  'due',
+  'escalated',
+  'open',
+  'watching',
+  'closed',
+  'all',
+]
+export type TicketField = Schemas['FieldResponse']
+export type ChecklistItem = Schemas['ChecklistItemResponse']
+export type Viewer = Schemas['ViewerResponse']
 export const SETTABLE_STATES: readonly SettableState[] = ['new', 'open', 'pending_reminder', 'pending_close', 'closed']
 export const PENDING_STATES: readonly TicketState[] = ['pending_reminder', 'pending_close']
 export const PRIORITIES: readonly Priority[] = ['low', 'normal', 'high', 'urgent']
@@ -35,6 +47,7 @@ export interface TicketQuery {
   owner_id?: string
   customer_id?: string
   company_id?: string
+  ids?: string[]
   tag?: string
   q?: string
   sort?: TicketSort
@@ -77,6 +90,24 @@ export const ticketsApi = {
     http.post<TicketDetail>(`${one(tenantId, id)}/split`, { message_id: messageId, subject }),
 
   assignees: (tenantId: string, queueId: string) => http.get<string[]>(`${base(tenantId)}/queues/${queueId}/assignees`),
+
+  fields: (tenantId: string) => http.get<TicketField[]>(`${base(tenantId)}/ticket-fields`),
+  createField: (tenantId: string, body: Schemas['FieldRequest']) =>
+    http.post<TicketField>(`${base(tenantId)}/ticket-fields`, body),
+  updateField: (tenantId: string, id: string, body: Schemas['FieldRequest']) =>
+    http.patch<TicketField>(`${base(tenantId)}/ticket-fields/${id}`, body),
+  deleteField: (tenantId: string, id: string) => http.delete<void>(`${base(tenantId)}/ticket-fields/${id}`),
+
+  checklist: (tenantId: string, id: string) => http.get<ChecklistItem[]>(`${one(tenantId, id)}/checklist`),
+  addChecklistItem: (tenantId: string, id: string, text: string) =>
+    http.post<ChecklistItem>(`${one(tenantId, id)}/checklist`, { text }),
+  changeChecklistItem: (tenantId: string, id: string, itemId: string, body: { text?: string; done?: boolean }) =>
+    http.patch<ChecklistItem>(`${one(tenantId, id)}/checklist/${itemId}`, body),
+  deleteChecklistItem: (tenantId: string, id: string, itemId: string) =>
+    http.delete<void>(`${one(tenantId, id)}/checklist/${itemId}`),
+
+  presence: (tenantId: string, id: string, writing: boolean) =>
+    http.put<Viewer[]>(`${one(tenantId, id)}/presence`, { writing }),
 }
 
 /** `2026-11-13T09:00` (a datetime-local input) → an ISO date with the browser's offset. */

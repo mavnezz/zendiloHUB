@@ -5,8 +5,11 @@ import { identityRoutes } from '@/modules/identity/routes'
 import { installLocaleSync, useSession } from '@/modules/identity/session'
 import type { Permission } from '@/modules/tenancy/api'
 import { accessRoutes } from '@/modules/access/routes'
+import { automationRoutes } from '@/modules/automation/routes'
 import { channelRoutes } from '@/modules/channels/routes'
 import { customerRoutes } from '@/modules/customers/routes'
+import { knowledgeRoutes } from '@/modules/knowledge/routes'
+import { serviceRoutes } from '@/modules/service/routes'
 import { ticketRoutes } from '@/modules/tickets/routes'
 import { complianceAdminRoutes, complianceRoutes } from '@/modules/compliance/routes'
 import { tenancyRoutes, tenantRoutes } from '@/modules/tenancy/routes'
@@ -56,6 +59,9 @@ export function createAppRouter(history: RouterHistory = createWebHistory()): Ro
           ...ticketRoutes,
           ...customerRoutes,
           ...channelRoutes,
+          ...automationRoutes,
+          ...knowledgeRoutes,
+          ...serviceRoutes,
           ...tenantRoutes,
           ...accessRoutes,
           ...complianceRoutes,

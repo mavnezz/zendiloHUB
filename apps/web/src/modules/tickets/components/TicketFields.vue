@@ -6,6 +6,7 @@ import { RouterLink } from 'vue-router'
 import NativeSelect from '@/core/components/NativeSelect.vue'
 import { notify } from '@/core/notify'
 import { Button } from '@/core/ui/button'
+import { Checkbox } from '@/core/ui/checkbox'
 import { Input } from '@/core/ui/input'
 import { Label } from '@/core/ui/label'
 import { customersApi } from '@/modules/customers/api'
@@ -21,6 +22,7 @@ import {
   type SettableState,
   type TicketChanges,
   type TicketDetail,
+  type TicketField,
 } from '../api'
 import type { PickedCustomer } from '../customer'
 import { useDirectory } from '../directory'
@@ -38,6 +40,26 @@ const tenantId = computed(() => tenants.current.value!.id)
 const rights = computed(() => props.ticket.rights)
 const editable = computed(() => rights.value.includes('edit') && props.ticket.state !== 'merged')
 const me = computed(() => session.user.value?.id ?? '')
+
+const definitions = ref<TicketField[]>([])
+onMounted(async () => {
+  definitions.value = await ticketsApi.fields(tenantId.value).catch(() => [])
+})
+
+function fieldValue(field: TicketField): string {
+  const value = props.ticket.fields[field.key]
+  return value === undefined || value === null ? '' : String(value)
+}
+
+function changeField(field: TicketField, raw: string | boolean): void {
+  let value: string | number | boolean | null = raw
+  if (field.kind === 'number') {
+    value = raw === '' ? null : Number(raw)
+  } else if (raw === '') {
+    value = null
+  }
+  emit('change', { fields: { [field.key]: value } })
+}
 
 const assignees = ref<string[]>([])
 async function loadAssignees(): Promise<void> {
@@ -255,6 +277,35 @@ watch(picked, async (value) => {
         @keydown.enter.prevent="saveTags"
         @blur="saveTags"
       />
+    </div>
+    <div v-for="field in definitions" :key="field.id" class="grid gap-1.5" :data-test="`custom-${field.key}`">
+      <label v-if="field.kind === 'checkbox'" class="flex items-center gap-2">
+        <Checkbox
+          :model-value="ticket.fields[field.key] === true"
+          :disabled="!editable"
+          @update:model-value="(on) => changeField(field, on === true)"
+        />
+        {{ field.label }}
+      </label>
+      <template v-else>
+        <Label :for="`custom-${field.key}`">{{ field.label }}</Label>
+        <NativeSelect
+          v-if="field.kind === 'select'"
+          :id="`custom-${field.key}`"
+          :model-value="fieldValue(field)"
+          :options="[{ value: '', label: '–' }, ...field.options.map((option) => ({ value: option, label: option }))]"
+          :disabled="!editable"
+          @update:model-value="(value: string) => changeField(field, value)"
+        />
+        <Input
+          v-else
+          :id="`custom-${field.key}`"
+          :type="field.kind === 'date' ? 'date' : field.kind === 'number' ? 'number' : 'text'"
+          :model-value="fieldValue(field)"
+          :disabled="!editable"
+          @change="(event: Event) => changeField(field, (event.target as HTMLInputElement).value)"
+        />
+      </template>
     </div>
     <p class="text-xs text-muted-foreground" data-test="time-total">
       {{ $t('tickets.timeTotal', { minutes: ticket.time_minutes }) }}

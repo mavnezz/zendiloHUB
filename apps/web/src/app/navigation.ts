@@ -1,5 +1,11 @@
 import {
+  BookText,
   Building2,
+  Clock,
+  ListPlus,
+  Timer,
+  Workflow,
+  Zap,
   FileSignature,
   Filter,
   Mail,
@@ -31,7 +37,7 @@ export interface NavItem {
 }
 
 export interface NavGroup {
-  key: 'workspace' | 'helpdesk' | 'email' | 'organization'
+  key: 'workspace' | 'helpdesk' | 'email' | 'automation' | 'organization'
   items: NavItem[]
 }
 
@@ -44,6 +50,8 @@ export const navigation: NavGroup[] = [
       { name: 'tickets', path: 'tickets', icon: Ticket },
       { name: 'contacts', path: 'contacts', icon: Contact, permission: 'customers.view' },
       { name: 'companies', path: 'companies', icon: Building2, permission: 'customers.view' },
+      { name: 'textModules', path: 'text-modules', icon: BookText },
+      { name: 'serviceLevels', path: 'service-levels', icon: Timer },
       { name: 'mySignature', path: 'my-signature', icon: PenLine },
     ],
   },
@@ -53,6 +61,7 @@ export const navigation: NavGroup[] = [
       { name: 'queues', path: 'queues', icon: Inbox, permission: 'queues.manage' },
       { name: 'queueGroups', path: 'groups', icon: UsersRound, permission: 'queues.manage' },
       { name: 'queueRights', path: 'queue-rights', icon: UserCog, permission: 'queues.manage' },
+      { name: 'ticketFields', path: 'ticket-fields', icon: ListPlus, permission: 'queues.manage' },
     ],
   },
   {
@@ -63,6 +72,14 @@ export const navigation: NavGroup[] = [
       { name: 'textTemplates', path: 'text-templates', icon: FileSignature, permission: 'channels.manage' },
       { name: 'mailFilters', path: 'mail-filters', icon: Filter, permission: 'channels.manage' },
       { name: 'failedEmails', path: 'failed-emails', icon: MailX, permission: 'channels.manage' },
+    ],
+  },
+  {
+    key: 'automation',
+    items: [
+      { name: 'macros', path: 'macros', icon: Zap, permission: 'automation.manage' },
+      { name: 'triggers', path: 'triggers', icon: Workflow, permission: 'automation.manage' },
+      { name: 'scheduledJobs', path: 'scheduled-jobs', icon: Clock, permission: 'automation.manage' },
     ],
   },
   {

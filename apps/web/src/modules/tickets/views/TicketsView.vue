@@ -16,6 +16,7 @@ import { Button } from '@/core/ui/button'
 import { Card, CardContent } from '@/core/ui/card'
 import { Input } from '@/core/ui/input'
 import { useSession } from '@/modules/identity/session'
+import { serviceApi } from '@/modules/service/api'
 import { useTenants } from '@/modules/tenancy/tenants'
 import {
   PRIORITIES,
@@ -54,19 +55,32 @@ const counts = ref<TicketCounts | null>(null)
 const error = ref<string | null>(null)
 const selected = ref<string[]>([])
 
+/** "Escalated": tickets whose service level deadline passed or comes within the hour (from the service module). */
+const escalatedCount = ref<number | null>(null)
+
+async function listed(): Promise<TicketPage> {
+  const filters = {
+    q: search.value.trim() || undefined,
+    queue_id: queueFilter.value || undefined,
+    priority: priorityFilter.value || undefined,
+    offset: offset.value,
+    limit: PAGE_SIZE,
+  }
+  if (view.value !== 'escalated') {
+    return ticketsApi.list(tenantId.value, { view: view.value, ...filters })
+  }
+  const ids = [...new Set((await serviceApi.escalations(tenantId.value)).map((each) => each.ticket_id))]
+  return ids.length ? ticketsApi.list(tenantId.value, { view: 'open', ids, ...filters }) : { items: [], total: 0 }
+}
+
 async function load(): Promise<void> {
   try {
-    const [found, counted] = await Promise.all([
-      ticketsApi.list(tenantId.value, {
-        view: view.value,
-        q: search.value.trim() || undefined,
-        queue_id: queueFilter.value || undefined,
-        priority: priorityFilter.value || undefined,
-        offset: offset.value,
-        limit: PAGE_SIZE,
-      }),
+    const [found, counted, escalated] = await Promise.all([
+      listed(),
       ticketsApi.counts(tenantId.value),
+      serviceApi.escalations(tenantId.value).catch(() => null),
     ])
+    escalatedCount.value = escalated ? new Set(escalated.map((each) => each.ticket_id)).size : null
     page.value = found
     counts.value = counted
     error.value = null
@@ -105,6 +119,9 @@ function move(delta: number): void {
 }
 
 function count(each: TicketView): number | null {
+  if (each === 'escalated') {
+    return escalatedCount.value
+  }
   return counts.value && each in counts.value ? counts.value[each as keyof TicketCounts] : null
 }
 

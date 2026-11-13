@@ -17,6 +17,7 @@ import {
   type TicketDetail,
 } from '../api'
 import { channelsApi } from '@/modules/channels/api'
+import { fill, knowledgeApi, type TextModule } from '@/modules/knowledge/api'
 import { useTenants } from '@/modules/tenancy/tenants'
 import { useDirectory } from '../directory'
 
@@ -25,7 +26,7 @@ import { useDirectory } from '../directory'
  * customer said on the phone; the state can change along with it, and the time spent is recorded.
  */
 const props = defineProps<{ ticket: TicketDetail }>()
-const emit = defineEmits<{ sent: [] }>()
+const emit = defineEmits<{ sent: []; writing: [busy: boolean] }>()
 
 type Mode = 'reply' | 'note' | 'customer'
 
@@ -89,6 +90,29 @@ const stateOptions = computed(() => [
 ])
 const pending = computed(() => PENDING_STATES.includes(state.value as never))
 
+/** Text modules: `::keyword` at the end of the text offers the matching ones; picking one puts it in its place. */
+const modules = ref<TextModule[]>([])
+onMounted(async () => {
+  modules.value = await knowledgeApi.textModules(tenants.current.value!.id, props.ticket.queue_id).catch(() => [])
+})
+const typed = computed(() => /(?:^|\s)::([\w-]*)$/.exec(body.value)?.[1])
+const suggestions = computed(() =>
+  typed.value === undefined
+    ? []
+    : modules.value.filter((module) => module.keyword.startsWith(typed.value!.toLowerCase())).slice(0, 6),
+)
+function insert(module: TextModule): void {
+  const ticket = props.ticket
+  const text = fill(module.body, {
+    'customer.name': ticket.customer?.name ?? '',
+    'customer.email': ticket.customer?.email ?? '',
+    'ticket.number': String(ticket.number),
+    'ticket.subject': ticket.subject,
+  })
+  body.value = body.value.replace(/::[\w-]*$/, text)
+}
+watch(body, (text) => emit('writing', !!text.trim() && text !== draft.value))
+
 /** `@bob` or `@bob@example.org` in a note: members to notify. */
 function mentions(text: string): string[] {
   const names = [...text.matchAll(/@([\w.+-]+(?:@[\w.-]+)?)/g)].map((match) => (match[1] ?? '').toLowerCase())
@@ -138,6 +162,18 @@ async function send(): Promise<void> {
       :class="mode === 'note' ? 'bg-amber-50 dark:bg-amber-950/30' : ''"
       data-test="composer-body"
     />
+    <div v-if="suggestions.length" class="flex flex-wrap gap-1" data-test="suggestions">
+      <button
+        v-for="module in suggestions"
+        :key="module.id"
+        type="button"
+        class="rounded-md border px-2 py-1 text-xs hover:bg-muted"
+        :data-test="`suggest-${module.keyword}`"
+        @click="insert(module)"
+      >
+        <code>::{{ module.keyword }}</code> {{ module.name }}
+      </button>
+    </div>
     <div class="flex flex-wrap items-end gap-3">
       <div v-if="rights.includes('edit')" class="grid gap-1">
         <Label for="composer-state" class="text-xs">{{ $t('tickets.composer.stateAfter') }}</Label>

@@ -454,6 +454,18 @@ im Hintergrund raus, mit Status je Nachricht (gesendet, wird gesendet, nicht ges
 nach 1, 5, 15 und 60 Minuten. Die echten IMAP- und SMTP-Adapter sind gegen GreenMail getestet.
 Offen für später: OAuth2 (XOAUTH2) für Microsoft 365 und Google, Anhänge, mehrere Absenderadressen je Queue.
 
+**Phase 4 (2026-11-13, fertig):** Module `automation` (Makros für einen Klick im Ticket mit den Rechten des
+Anwenders; Trigger bei „Ticket angelegt“, „Kunde hat geantwortet“, „Ticket geändert“ mit Bedingungen auf Betreff,
+Kunden-E-Mail, Queue, Status, Priorität, Kanal, Tags, Bearbeiter; zeitgesteuerte Jobs alle fünf Minuten nach Status,
+Queue, Tags, Leerlauf und Alter; Aktionen setzen Status mit Wartezeit, Priorität, Queue, Bearbeiter, Tags und
+schreiben Notizen oder Nachrichten an den Kunden; was Regeln ändern, startet keine Trigger erneut), `knowledge`
+(Textbausteine mit `::kürzel` im Editor, je Queue einschränkbar), `service` (Kalender mit Geschäftszeiten, Zeitzone
+und Feiertagen; Service-Level je Queue und Priorität mit Fristen für erste Antwort und Lösung; Ansicht „Eskaliert“
+im Posteingang; `SlaBreached`) und `notifications` (Glocke in der Kopfzeile: zugewiesen, erwähnt, neue Nachricht in
+eigenen oder beobachteten Tickets, Service-Level verpasst; auf Wunsch per E-Mail). Im Tickets-Modul: eigene
+Ticketfelder (Text, Zahl, Auswahl, Ja/Nein, Datum), Checklisten und Kollisionserkennung („Bob schreibt gerade“, über
+Redis). Neue Berechtigungen `automation.manage`, `knowledge.manage`, `service.manage`, `reports.view`.
+
 ---
 
 ## 11. Übernahme aus OTOBO und Zammad (2026-11-13)

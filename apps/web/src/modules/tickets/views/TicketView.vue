@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ArrowLeft, Eye, EyeOff, GitMerge, Link2, Pencil, Trash2 } from '@lucide/vue'
-import { computed, onMounted, ref, watch } from 'vue'
+import { ArrowLeft, Eye, EyeOff, GitMerge, Link2, Pencil, Trash2, Users, Zap } from '@lucide/vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import ConfirmDialog from '@/core/components/ConfirmDialog.vue'
@@ -9,10 +9,13 @@ import { formatDateTime } from '@/core/format'
 import { errorText } from '@/core/i18n/i18n'
 import { notify } from '@/core/notify'
 import { Button } from '@/core/ui/button'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/core/ui/dropdown-menu'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/core/ui/dialog'
 import { Input } from '@/core/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/core/ui/tabs'
+import { automationApi, type Rule } from '@/modules/automation/api'
 import { channelsApi, type Delivery } from '@/modules/channels/api'
+import { useSession } from '@/modules/identity/session'
 import { useTenants } from '@/modules/tenancy/tenants'
 import {
   ticketsApi,
@@ -21,6 +24,7 @@ import {
   type TicketChanges,
   type TicketDetail,
   type TicketMessage,
+  type Viewer,
 } from '../api'
 import Composer from '../components/Composer.vue'
 import HistoryList from '../components/HistoryList.vue'
@@ -28,6 +32,8 @@ import MessageList from '../components/MessageList.vue'
 import NumberDialog from '../components/NumberDialog.vue'
 import PriorityBadge from '../components/PriorityBadge.vue'
 import StateBadge from '../components/StateBadge.vue'
+import ChecklistCard from '../components/ChecklistCard.vue'
+import SlaBox from '../components/SlaBox.vue'
 import TicketFields from '../components/TicketFields.vue'
 import { useDirectory } from '../directory'
 
@@ -36,6 +42,7 @@ const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const tenants = useTenants()
+const session = useSession()
 const directory = useDirectory()
 const tenantId = computed(() => tenants.current.value!.id)
 const ticketId = computed(() => String(route.params.ticketId))
@@ -71,6 +78,67 @@ onMounted(async () => {
 watch(ticketId, () => void load())
 
 const rights = computed(() => ticket.value?.rights ?? [])
+
+/** Who else has the ticket open (and writes), every 15 seconds (collision detection). */
+const viewers = ref<Viewer[]>([])
+const writing = ref(false)
+let presenceTimer: ReturnType<typeof setInterval> | undefined
+async function beHere(): Promise<void> {
+  if (tenants.current.value?.role === null) {
+    return
+  }
+  viewers.value = await ticketsApi.presence(tenantId.value, ticketId.value, writing.value).catch(() => [])
+}
+onMounted(() => {
+  void beHere()
+  presenceTimer = setInterval(() => void beHere(), 15_000)
+})
+onUnmounted(() => clearInterval(presenceTimer))
+watch(writing, () => void beHere())
+
+/** Macros: their changes in one go, as the caller (so their rights apply). */
+const macros = ref<Rule[]>([])
+onMounted(async () => {
+  macros.value = (await automationApi.list(tenantId.value, 'macro').catch(() => [])).filter((macro) => macro.active)
+})
+async function applyMacro(macro: Rule): Promise<void> {
+  const current = ticket.value!
+  const a = macro.actions
+  const changes: TicketChanges = {}
+  if (a.state) {
+    changes.state = a.state
+    if (a.state.startsWith('pending')) {
+      changes.pending_until = new Date(Date.now() + (a.pending_hours ?? 24) * 3_600_000).toISOString()
+    }
+  }
+  if (a.priority) {
+    changes.priority = a.priority
+  }
+  if (a.owner_me) {
+    changes.owner_id = session.user.value?.id ?? null
+  } else if (a.unassign) {
+    changes.owner_id = null
+  }
+  if (a.add_tags?.length || a.remove_tags?.length) {
+    const removed = new Set(a.remove_tags ?? [])
+    changes.tags = [...new Set([...current.tags, ...(a.add_tags ?? [])])].filter((tag) => !removed.has(tag))
+  }
+  if (a.queue_id) {
+    changes.queue_id = a.queue_id
+  }
+  try {
+    if (a.note) {
+      await ticketsApi.addMessage(tenantId.value, current.id, { kind: 'internal', body: a.note, direction: 'out' })
+    }
+    if (Object.keys(changes).length) {
+      ticket.value = await ticketsApi.update(tenantId.value, current.id, changes)
+    }
+    notify.success(t('tickets.macroApplied', { name: macro.name }))
+  } catch (caught) {
+    notify.error(caught)
+  }
+  await load()
+}
 const merged = computed(() => ticket.value?.state === 'merged')
 
 async function change(changes: TicketChanges): Promise<void> {
@@ -189,6 +257,22 @@ async function remove(): Promise<void> {
               ><Pencil class="size-4"
             /></Button>
           </h1>
+          <p
+            v-if="viewers.length"
+            class="flex items-center gap-1.5 text-sm text-amber-700 dark:text-amber-400"
+            data-test="viewers"
+          >
+            <Users class="size-4" />
+            {{
+              viewers
+                .map((viewer) =>
+                  $t(viewer.writing ? 'tickets.writing' : 'tickets.looking', {
+                    name: directory.memberName(viewer.user_id),
+                  }),
+                )
+                .join(', ')
+            }}
+          </p>
           <p v-if="ticket.merged_into" class="text-sm" data-test="merged-into">
             {{ $t('tickets.wasMerged') }}
             <RouterLink
@@ -199,6 +283,22 @@ async function remove(): Promise<void> {
           </p>
         </div>
         <div class="flex flex-wrap gap-2">
+          <DropdownMenu v-if="macros.length && !merged">
+            <DropdownMenuTrigger as-child>
+              <Button variant="outline" size="sm" data-test="macros"
+                ><Zap class="size-4" /> {{ $t('tickets.macros') }}</Button
+              >
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                v-for="macro in macros"
+                :key="macro.id"
+                :data-test="`macro-${macro.name}`"
+                @select="applyMacro(macro)"
+                >{{ macro.name }}</DropdownMenuItem
+              >
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button variant="outline" size="sm" data-test="watch" @click="toggleWatch">
             <EyeOff v-if="ticket.watching" class="size-4" /><Eye v-else class="size-4" />
             {{ ticket.watching ? $t('tickets.unwatch') : $t('tickets.watch') }}
@@ -239,14 +339,16 @@ async function remove(): Promise<void> {
               @split="split"
               @resend="resend"
             />
-            <Composer v-if="!merged" :ticket="ticket" @sent="load" />
+            <Composer v-if="!merged" :ticket="ticket" @sent="load" @writing="(busy) => (writing = busy)" />
           </TabsContent>
           <TabsContent value="history" class="pt-2">
             <HistoryList :entries="history" />
           </TabsContent>
         </Tabs>
-        <aside>
+        <aside class="grid content-start gap-4">
+          <SlaBox :ticket-id="ticket.id" :updated-at="ticket.updated_at" />
           <TicketFields :ticket="ticket" @change="change" @unlink="unlink" />
+          <ChecklistCard :ticket-id="ticket.id" :editable="rights.includes('edit') && !merged" />
         </aside>
       </div>
     </template>

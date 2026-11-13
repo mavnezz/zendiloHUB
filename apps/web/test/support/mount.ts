@@ -51,7 +51,20 @@ export function testRouter(): Router {
       { path: '/t/:tenantId/contacts/:contactId', name: 'contact', component: Page },
       { path: '/t/:tenantId/companies', name: 'companies', component: Page },
       { path: '/t/:tenantId/companies/:companyId', name: 'company', component: Page },
-      ...['emailAccounts', 'queueEmail', 'textTemplates', 'mailFilters', 'failedEmails', 'mySignature'].map((name) => ({
+      ...[
+        'emailAccounts',
+        'queueEmail',
+        'textTemplates',
+        'mailFilters',
+        'failedEmails',
+        'mySignature',
+        'ticketFields',
+        'macros',
+        'triggers',
+        'scheduledJobs',
+        'textModules',
+        'serviceLevels',
+      ].map((name) => ({
         path: `/t/:tenantId/${name}`,
         name,
         component: Page,

@@ -6,6 +6,7 @@ import ThemeToggle from '@/core/components/ThemeToggle.vue'
 import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/core/ui/breadcrumb'
 import { Separator } from '@/core/ui/separator'
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/core/ui/sidebar'
+import NotificationBell from '@/modules/notifications/components/NotificationBell.vue'
 import AppSidebar from './AppSidebar.vue'
 import { navGroupOf } from './navigation'
 
@@ -37,6 +38,7 @@ const group = computed(() => navGroupOf(page.value))
           </BreadcrumbList>
         </Breadcrumb>
         <div class="ml-auto flex items-center gap-1">
+          <NotificationBell :key="String($route.params.tenantId)" />
           <LocaleSwitcher />
           <ThemeToggle />
         </div>

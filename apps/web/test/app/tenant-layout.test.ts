@@ -27,6 +27,7 @@ describe('TenantLayout', () => {
       'nav-group-workspace',
       'nav-group-helpdesk',
       'nav-group-email',
+      'nav-group-automation',
       'nav-group-organization',
     ])
     expect($('[data-test=nav-queueRights]').attributes('href')).toBe(`/t/${TENANT_ID}/queue-rights`)
