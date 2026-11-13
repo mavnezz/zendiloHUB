@@ -97,6 +97,8 @@ class AddMessageHandler:
                     kind=message.kind,
                     direction=message.direction,
                     author_id=message.author_id,
+                    mentions=tuple(dict.fromkeys(command.mentions)),
+                    automated=actor.automated,
                 )
             )
         return message

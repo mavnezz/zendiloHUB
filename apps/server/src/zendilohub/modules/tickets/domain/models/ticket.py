@@ -15,6 +15,9 @@ OPEN_STATES: tuple[TicketState, ...] = ('new', 'open', 'pending_reminder', 'pend
 PENDING_STATES: tuple[TicketState, ...] = ('pending_reminder', 'pending_close')
 SETTABLE_STATES: tuple[TicketState, ...] = ('new', 'open', 'pending_reminder', 'pending_close', 'closed')
 
+type FieldValue = str | float | bool
+"""Text (also dates and choices), numbers, yes/no."""
+
 type Priority = Literal['low', 'normal', 'high', 'urgent']
 PRIORITIES: tuple[Priority, ...] = get_args(Priority.__value__)
 
@@ -84,6 +87,8 @@ class Ticket:
     first_response_at: datetime | None = None
     closed_at: datetime | None = None
     last_message_at: datetime | None = None
+    fields: dict[str, FieldValue] = field(default_factory=dict)
+    """Values of the organization's own fields, by key."""
     changes: list[Change] = field(default_factory=list, compare=False, repr=False)
     """What the last calls changed, for the history; the repository does not store it."""
 
@@ -171,6 +176,19 @@ class Ticket:
 
     def change_customer(self, customer_id: str | None, now: datetime) -> None:
         self._set('customer_id', customer_id, now)
+
+    def set_field(self, key: str, value: FieldValue | None, now: datetime) -> None:
+        old = self.fields.get(key)
+        if old == value:
+            return
+        fields = dict(self.fields)
+        if value is None:
+            fields.pop(key, None)
+        else:
+            fields[key] = value
+        self.fields = fields
+        self.changes.append(Change(f'fields.{key}', _text(old), _text(value)))
+        self.updated_at = now
 
     def received(self, now: datetime) -> None:
         """The customer wrote: a ticket that waited or was closed is open again."""

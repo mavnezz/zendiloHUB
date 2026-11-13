@@ -10,6 +10,7 @@ from zendilohub.core.http.ids import Id
 
 from ...application.commands.tickets import BulkResult, FirstMessage
 from ...application.queries.tickets import TicketDetail, TicketWithRights
+from ...domain.models.custom_field import ChecklistItem, CustomField, FieldKind
 from ...domain.models.history import HistoryAction, HistoryEntry
 from ...domain.models.link import LinkKind
 from ...domain.models.message import AuthorKind, Direction, Message, MessageKind
@@ -61,6 +62,8 @@ class TicketChangesRequest(Request):
     queue_id: Id | None = None
     tags: list[str] | None = Field(default=None, max_length=TAGS_MAX)
     customer_id: Id | None = None
+    fields: dict[str, str | float | bool | None] | None = Field(default=None, max_length=50)
+    """Own fields by key (only those sent change); null clears one."""
 
 
 class BulkRequest(Request):
@@ -136,6 +139,8 @@ class TicketResponse(BaseModel):
     first_response_at: datetime | None
     closed_at: datetime | None
     last_message_at: datetime | None
+    fields: dict[str, str | float | bool]
+    """Values of the organization's own fields, by key."""
     rights: list[QueueRight]
     """What the caller may do with the ticket (their rights in its queue)."""
 
@@ -161,6 +166,7 @@ class TicketResponse(BaseModel):
             first_response_at=ticket.first_response_at,
             closed_at=ticket.closed_at,
             last_message_at=ticket.last_message_at,
+            fields=dict(ticket.fields),
             rights=list(ordered(rights)),
         )
 
@@ -314,3 +320,61 @@ class BulkResponse(BaseModel):
     @classmethod
     def of(cls, result: BulkResult) -> BulkResponse:
         return cls(changed=result.changed, failed=result.failed)
+
+
+class FieldRequest(Request):
+    key: str = Field(max_length=40)
+    """Lower case letters, digits and _; fixed once the field exists."""
+    label: str = Field(max_length=80)
+    kind: FieldKind = 'text'
+    options: list[str] = Field(default_factory=list, max_length=100)
+    """The choices of a `select` field."""
+
+
+class FieldResponse(BaseModel):
+    id: str
+    key: str
+    label: str
+    kind: FieldKind
+    options: list[str]
+    position: int
+
+    @classmethod
+    def of(cls, custom: CustomField) -> FieldResponse:
+        return cls(
+            id=custom.id,
+            key=custom.key,
+            label=custom.label,
+            kind=custom.kind,
+            options=list(custom.options),
+            position=custom.position,
+        )
+
+
+class ChecklistItemRequest(Request):
+    text: str = Field(max_length=300)
+
+
+class ChecklistChangeRequest(Request):
+    text: str | None = Field(default=None, max_length=300)
+    done: bool | None = None
+
+
+class ChecklistItemResponse(BaseModel):
+    id: str
+    text: str
+    done: bool
+    position: int
+
+    @classmethod
+    def of(cls, item: ChecklistItem) -> ChecklistItemResponse:
+        return cls(id=item.id, text=item.text, done=item.done, position=item.position)
+
+
+class PresenceRequest(Request):
+    writing: bool = False
+
+
+class ViewerResponse(BaseModel):
+    user_id: str
+    writing: bool

@@ -28,6 +28,10 @@ type Permission = Literal[
     'customers.view',
     'customers.manage',
     'channels.manage',
+    'automation.manage',
+    'knowledge.manage',
+    'service.manage',
+    'reports.view',
     'integrations.manage',
     'audit.view',
 ]
@@ -35,6 +39,7 @@ type Permission = Literal[
 _ALL: frozenset[BuiltinRole] = frozenset(BUILTIN_ROLES)
 _ADMINS: frozenset[BuiltinRole] = frozenset({'owner', 'admin'})
 _OWNER: frozenset[BuiltinRole] = frozenset({'owner'})
+_MANAGERS: frozenset[BuiltinRole] = frozenset({'owner', 'admin', 'manager'})
 
 PERMISSIONS: dict[Permission, frozenset[BuiltinRole]] = {
     'tenant.manage': _ADMINS,
@@ -51,6 +56,12 @@ PERMISSIONS: dict[Permission, frozenset[BuiltinRole]] = {
     'customers.manage': _ALL,
     # E-mail accounts, signatures, auto replies, filters.
     'channels.manage': _ADMINS,
+    # Macros, triggers and scheduled jobs; text modules and the knowledge base.
+    'automation.manage': _ADMINS,
+    'knowledge.manage': _MANAGERS,
+    # Service levels (response and solution times, business hours); reports on the tickets of every queue.
+    'service.manage': _ADMINS,
+    'reports.view': _MANAGERS,
     'integrations.manage': _ADMINS,
     'audit.view': _ADMINS,
 }

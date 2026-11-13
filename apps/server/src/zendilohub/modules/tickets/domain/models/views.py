@@ -28,6 +28,7 @@ class TicketFilter:
     priority: Priority | None = None
     owner_id: str | None = None
     customer_ids: tuple[str, ...] | None = None
+    ticket_ids: tuple[str, ...] | None = None
     tag: str | None = None
     query: str = ''
     sort: TicketSort = 'updated'

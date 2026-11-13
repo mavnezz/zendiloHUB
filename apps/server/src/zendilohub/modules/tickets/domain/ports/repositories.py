@@ -3,6 +3,9 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Protocol
 
+from zendilohub.core.domain.automation import TicketCriteria
+
+from ..models.custom_field import ChecklistItem, CustomField
 from ..models.history import HistoryEntry
 from ..models.link import Link, LinkKind
 from ..models.message import Message
@@ -46,6 +49,10 @@ class TicketRepository(Protocol):
 
     async def due_to_close(self, now: datetime, limit: int) -> Sequence[Ticket]:
         """`pending_close` tickets of every organization whose date has come."""
+        ...
+
+    async def matching(self, tenant_id: str, criteria: TicketCriteria, now: datetime) -> list[str]:
+        """Open tickets that meet a scheduled job's criteria, oldest change first."""
         ...
 
     async def unassign(self, tenant_id: str | None, user_id: str, now: datetime) -> None:
@@ -111,3 +118,27 @@ class TimeRepository(Protocol):
     async def add(self, entry: TimeEntry) -> None: ...
 
     async def of_ticket(self, tenant_id: str, ticket_id: str) -> Sequence[TimeEntry]: ...
+
+
+class FieldRepository(Protocol):
+    async def of_tenant(self, tenant_id: str) -> Sequence[CustomField]:
+        """In their order."""
+        ...
+
+    async def find(self, tenant_id: str, field_id: str) -> CustomField | None: ...
+
+    async def save(self, custom_field: CustomField) -> None: ...
+
+    async def delete(self, tenant_id: str, field_id: str) -> None:
+        """With its values in every ticket."""
+        ...
+
+
+class ChecklistRepository(Protocol):
+    async def of_ticket(self, tenant_id: str, ticket_id: str) -> Sequence[ChecklistItem]: ...
+
+    async def find(self, tenant_id: str, item_id: str) -> ChecklistItem | None: ...
+
+    async def save(self, item: ChecklistItem) -> None: ...
+
+    async def delete(self, tenant_id: str, item_id: str) -> None: ...

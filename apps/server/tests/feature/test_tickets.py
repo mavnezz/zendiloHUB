@@ -169,6 +169,7 @@ async def test_finds_tickets_by_views_filters_and_text(app: AppUnderTest) -> Non
     assert await numbers(priority='urgent') == [1002]
     assert await numbers(company_id=company['id']) == [1001]
     assert await numbers(customer_id=first['customer']['id']) == [1001]
+    assert await numbers(view='all', ids=[second['id']]) == [1002]
     assert await numbers(sort='priority') == [1002, 1001]
     assert await numbers(sort='number', descending='false') == [1001, 1002]
     assert await numbers(owner_id=ada_id, queue_id=support, state='new') == [1002]

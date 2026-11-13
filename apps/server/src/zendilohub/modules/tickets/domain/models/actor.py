@@ -10,6 +10,8 @@ class Actor:
     all_queues: bool = False
     person: bool = True
     """False for API keys: they have no groups, only `queues.all`."""
+    automated: bool = False
+    """A trigger or scheduled job (its name is `name`)."""
 
 
 SYSTEM = Actor(user_id='', name='zendiloHUB', person=False)

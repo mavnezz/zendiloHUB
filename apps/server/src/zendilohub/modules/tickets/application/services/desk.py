@@ -89,6 +89,7 @@ class Desk:
                     ticket_id=ticket.id,
                     actor_id=actor.user_id or None,
                     changes=tuple((change.field, change.old, change.new) for change in changes),
+                    automated=actor.automated,
                 )
             )
 

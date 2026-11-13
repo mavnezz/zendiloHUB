@@ -5,10 +5,19 @@ from fastapi import APIRouter, Query, Request, Response
 
 from zendilohub.core.bus.command_bus import CommandBus
 from zendilohub.core.contracts import ContactCard, Contracts
-from zendilohub.core.http.access import CurrentMember, Member, member_with
+from zendilohub.core.http.access import CurrentMember, CurrentPerson, Member, member_with
 from zendilohub.core.http.audit import Unaudited, audited, note_audit
 from zendilohub.core.http.ids import Id
 
+from ...application.commands.fields import (
+    AddChecklistItem,
+    BeHere,
+    ChangeChecklistItem,
+    Checklist,
+    DeleteField,
+    ListFields,
+    SaveField,
+)
 from ...application.commands.messages import AddMessage
 from ...application.commands.relations import (
     LinkTickets,
@@ -42,12 +51,18 @@ from ...domain.models.views import TicketSort, TicketView
 from .schemas import (
     BulkRequest,
     BulkResponse,
+    ChecklistChangeRequest,
+    ChecklistItemRequest,
+    ChecklistItemResponse,
     CreateTicketRequest,
+    FieldRequest,
+    FieldResponse,
     HistoryEntryResponse,
     LinkRequest,
     MergeRequest,
     MessageRequest,
     MessageResponse,
+    PresenceRequest,
     SplitRequest,
     TicketChangesRequest,
     TicketCountsResponse,
@@ -56,7 +71,10 @@ from .schemas import (
     TicketResponse,
     TimeEntryResponse,
     TimeRequest,
+    ViewerResponse,
 )
+
+FieldManager = Annotated[Member, member_with('queues.manage')]
 
 
 def actor_of(member: Member) -> Actor:
@@ -96,6 +114,7 @@ def ticket_routes(bus: CommandBus, contracts: Contracts) -> APIRouter:
         owner_id: Annotated[Id | None, Query()] = None,
         customer_id: Annotated[Id | None, Query()] = None,
         company_id: Annotated[Id | None, Query()] = None,
+        ids: Annotated[list[Id] | None, Query(max_length=500)] = None,
         tag: Annotated[str | None, Query(max_length=50)] = None,
         q: Annotated[str, Query(max_length=200)] = '',
         sort: TicketSort = 'updated',
@@ -105,7 +124,7 @@ def ticket_routes(bus: CommandBus, contracts: Contracts) -> APIRouter:
     ) -> TicketPageResponse:
         """
         A view of the inbox (`mine`, `unassigned`, `due`, `open`, `watching`, `closed`, `all`), narrowed by the
-        filters; `q` searches number, subject and every message.
+        filters; `q` searches number, subject and every message, `ids` keeps only these tickets.
         """
         page = await bus.query(
             SearchTickets(
@@ -118,6 +137,7 @@ def ticket_routes(bus: CommandBus, contracts: Contracts) -> APIRouter:
                 owner_id=owner_id,
                 customer_id=customer_id,
                 company_id=company_id,
+                ticket_ids=tuple(ids) if ids is not None else None,
                 tag=tag,
                 query=q,
                 sort=sort,
@@ -302,6 +322,100 @@ def ticket_routes(bus: CommandBus, contracts: Contracts) -> APIRouter:
             RecordTime(tenant_id=member.tenant_id, actor=actor_of(member), ticket_id=ticket_id, minutes=body.minutes)
         )
         return TimeEntryResponse.of(entry)
+
+    @router.get('/ticket-fields')
+    async def fields(member: CurrentMember) -> list[FieldResponse]:
+        """The organization's own ticket fields, in their order."""
+        return [FieldResponse.of(each) for each in await bus.query(ListFields(member.tenant_id))]
+
+    @router.post('/ticket-fields', status_code=201, dependencies=[audited('ticket_field.created')])
+    async def create_field(body: FieldRequest, request: Request, member: FieldManager) -> FieldResponse:
+        saved = await bus.execute(
+            SaveField(
+                tenant_id=member.tenant_id,
+                key=body.key,
+                label=body.label,
+                kind=body.kind,
+                options=tuple(body.options),
+            )
+        )
+        note_audit(request, target=saved.key)
+        return FieldResponse.of(saved)
+
+    @router.patch('/ticket-fields/{field_id}', dependencies=[audited('ticket_field.updated')])
+    async def update_field(field_id: Id, body: FieldRequest, request: Request, member: FieldManager) -> FieldResponse:
+        """Label and choices; key and kind stay."""
+        saved = await bus.execute(
+            SaveField(
+                tenant_id=member.tenant_id,
+                key=body.key,
+                label=body.label,
+                kind=body.kind,
+                options=tuple(body.options),
+                field_id=field_id,
+            )
+        )
+        note_audit(request, target=saved.key)
+        return FieldResponse.of(saved)
+
+    @router.delete(
+        '/ticket-fields/{field_id}',
+        status_code=204,
+        response_class=Response,
+        dependencies=[audited('ticket_field.deleted')],
+    )
+    async def delete_field(field_id: Id, request: Request, member: FieldManager) -> None:
+        """With its values in every ticket."""
+        deleted = await bus.execute(DeleteField(tenant_id=member.tenant_id, field_id=field_id))
+        note_audit(request, target=deleted.key)
+
+    @router.get('/tickets/{ticket_id}/checklist')
+    async def checklist(ticket_id: Id, member: CurrentMember) -> list[ChecklistItemResponse]:
+        listed = await bus.query(Checklist(tenant_id=member.tenant_id, actor=actor_of(member), ticket_id=ticket_id))
+        return [ChecklistItemResponse.of(each) for each in listed]
+
+    @router.post('/tickets/{ticket_id}/checklist', status_code=201, dependencies=[Unaudited])
+    async def add_checklist_item(
+        ticket_id: Id, body: ChecklistItemRequest, member: CurrentMember
+    ) -> ChecklistItemResponse:
+        item = await bus.execute(
+            AddChecklistItem(tenant_id=member.tenant_id, actor=actor_of(member), ticket_id=ticket_id, text=body.text)
+        )
+        return ChecklistItemResponse.of(item)
+
+    @router.patch('/tickets/{ticket_id}/checklist/{item_id}', dependencies=[Unaudited])
+    async def change_checklist_item(
+        ticket_id: Id, item_id: Id, body: ChecklistChangeRequest, member: CurrentMember
+    ) -> ChecklistItemResponse:
+        item = await bus.execute(
+            ChangeChecklistItem(
+                tenant_id=member.tenant_id,
+                actor=actor_of(member),
+                ticket_id=ticket_id,
+                item_id=item_id,
+                text=body.text,
+                done=body.done,
+            )
+        )
+        return ChecklistItemResponse.of(item)
+
+    @router.delete(
+        '/tickets/{ticket_id}/checklist/{item_id}', status_code=204, response_class=Response, dependencies=[Unaudited]
+    )
+    async def delete_checklist_item(ticket_id: Id, item_id: Id, member: CurrentMember) -> None:
+        await bus.execute(
+            ChangeChecklistItem(
+                tenant_id=member.tenant_id, actor=actor_of(member), ticket_id=ticket_id, item_id=item_id, delete=True
+            )
+        )
+
+    @router.put('/tickets/{ticket_id}/presence', dependencies=[Unaudited])
+    async def presence(ticket_id: Id, body: PresenceRequest, member: CurrentPerson) -> list[ViewerResponse]:
+        """The caller has the ticket open (and writes); answers who else has (call it every 15 seconds)."""
+        others = await bus.execute(
+            BeHere(tenant_id=member.tenant_id, actor=actor_of(member), ticket_id=ticket_id, writing=body.writing)
+        )
+        return [ViewerResponse(user_id=user_id, writing=writing) for user_id, writing in others]
 
     @router.get('/queues/{queue_id}/assignees')
     async def assignees(queue_id: Id, member: CurrentMember) -> list[str]:

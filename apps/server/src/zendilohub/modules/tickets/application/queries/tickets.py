@@ -47,6 +47,7 @@ class SearchTickets(Query[TicketList]):
     owner_id: str | None = None
     customer_id: str | None = None
     company_id: str | None = None
+    ticket_ids: tuple[str, ...] | None = None
     tag: str | None = None
     query: str = ''
     sort: TicketSort = 'updated'
@@ -80,6 +81,7 @@ class SearchTicketsHandler:
                 priority=query.priority,
                 owner_id=query.owner_id,
                 customer_ids=customers,
+                ticket_ids=query.ticket_ids,
                 tag=query.tag.lower() if query.tag else None,
                 query=query.query.strip(),
                 sort=query.sort,

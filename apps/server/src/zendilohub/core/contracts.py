@@ -7,6 +7,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Protocol
 
+from .domain.automation import AutomationChanges, TicketCriteria, TicketFacts
 from .domain.inbox import InboundEmail, OutgoingEmail, ReceivedTicket
 from .domain.permissions import Permission
 from .domain.queue_rights import QueueRight
@@ -131,6 +132,20 @@ class TicketInbox(Protocol):
         ...
 
 
+class TicketAutomation(Protocol):
+    """Provided by tickets, used by automation, service and notifications: tickets as rules see and change them."""
+
+    async def facts(self, tenant_id: str, ticket_id: str) -> TicketFacts | None: ...
+
+    async def find(self, tenant_id: str, criteria: TicketCriteria) -> list[str]:
+        """Ids of the open tickets that meet the criteria."""
+        ...
+
+    async def apply(self, tenant_id: str, ticket_id: str, changes: AutomationChanges, *, by: str) -> bool:
+        """Changes the ticket as `by` (a rule's name), whatever anyone's rights; False if nothing changed."""
+        ...
+
+
 class OrganizationNames(Protocol):
     """Provided by tenancy: an organization's name (for signatures and auto replies)."""
 
@@ -161,6 +176,7 @@ class Contracts:
     contacts: Slot[Contacts] = field(default_factory=lambda: Slot('Contacts'))
     ticket_usage: Slot[TicketUsage] = field(default_factory=lambda: Slot('TicketUsage'))
     ticket_inbox: Slot[TicketInbox] = field(default_factory=lambda: Slot('TicketInbox'))
+    ticket_automation: Slot[TicketAutomation] = field(default_factory=lambda: Slot('TicketAutomation'))
     organizations: Slot[OrganizationNames] = field(default_factory=lambda: Slot('OrganizationNames'))
     queue_names: Slot[QueueNames] = field(default_factory=lambda: Slot('QueueNames'))
 

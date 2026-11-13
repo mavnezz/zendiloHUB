@@ -3,8 +3,12 @@ from collections.abc import Sequence
 from datetime import datetime
 from typing import Any, cast
 
-from zendilohub.core.database.database import Database
+from psycopg.types.json import Jsonb
 
+from zendilohub.core.database.database import Database
+from zendilohub.core.domain.automation import TicketCriteria
+
+from ..domain.models.custom_field import ChecklistItem, CustomField, FieldKind
 from ..domain.models.history import HistoryAction, HistoryEntry
 from ..domain.models.link import OPPOSITE, Link, LinkKind
 from ..domain.models.message import AuthorKind, Direction, Message, MessageKind
@@ -50,6 +54,7 @@ def _ticket(row: dict[str, Any]) -> Ticket:
         first_response_at=row['first_response_at'],
         closed_at=row['closed_at'],
         last_message_at=row['last_message_at'],
+        fields=dict(row.get('fields') or {}),
     )
 
 
@@ -130,6 +135,9 @@ def _where(criteria: TicketFilter, view: TicketView) -> tuple[str, dict[str, Any
     if criteria.customer_ids is not None:
         conditions.append('t.customer_id = ANY(%(customers)s::uuid[])')
         params['customers'] = list(criteria.customer_ids)
+    if criteria.ticket_ids is not None:
+        conditions.append('t.id = ANY(%(ids)s::uuid[])')
+        params['ids'] = list(criteria.ticket_ids)
     if criteria.tag is not None:
         conditions.append('%(tag)s = ANY(t.tags)')
         params['tag'] = criteria.tag
@@ -182,15 +190,16 @@ class PostgresTicketRepository(_Sql):
     async def save(self, ticket: Ticket) -> None:
         values = {key: value for key, value in vars(ticket).items() if key != 'changes'}
         values['tags'] = list(ticket.tags)
+        values['fields'] = Jsonb(ticket.fields)
         await self.run(
             """
             INSERT INTO tickets (id, tenant_id, number, subject, queue_id, state, priority, channel, customer_id,
                                  owner_id, responsible_id, tags, pending_until, merged_into_id, created_at, updated_at,
-                                 first_response_at, closed_at, last_message_at)
+                                 first_response_at, closed_at, last_message_at, fields)
             VALUES (%(id)s, %(tenant_id)s, %(number)s, %(subject)s, %(queue_id)s, %(state)s, %(priority)s,
                     %(channel)s, %(customer_id)s, %(owner_id)s, %(responsible_id)s, %(tags)s, %(pending_until)s,
                     %(merged_into_id)s, %(created_at)s, %(updated_at)s, %(first_response_at)s, %(closed_at)s,
-                    %(last_message_at)s)
+                    %(last_message_at)s, %(fields)s)
             ON CONFLICT (id) DO UPDATE SET
                 subject = EXCLUDED.subject,
                 queue_id = EXCLUDED.queue_id,
@@ -205,7 +214,8 @@ class PostgresTicketRepository(_Sql):
                 updated_at = EXCLUDED.updated_at,
                 first_response_at = EXCLUDED.first_response_at,
                 closed_at = EXCLUDED.closed_at,
-                last_message_at = EXCLUDED.last_message_at
+                last_message_at = EXCLUDED.last_message_at,
+                fields = EXCLUDED.fields
             """,
             values,
         )
@@ -255,6 +265,42 @@ class PostgresTicketRepository(_Sql):
             (now, limit),
         )
         return [_ticket(row) for row in rows]
+
+    async def matching(self, tenant_id: str, criteria: TicketCriteria, now: datetime) -> list[str]:
+        conditions = ['tenant_id = %(tenant)s', 'state = ANY(%(states)s)']
+        params: dict[str, Any] = {
+            'tenant': tenant_id,
+            'states': list(criteria.states or OPEN_STATES),
+            'now': now,
+            'limit': criteria.limit,
+        }
+        if criteria.queue_ids:
+            conditions.append('queue_id = ANY(%(queues)s::uuid[])')
+            params['queues'] = list(criteria.queue_ids)
+        if criteria.priorities:
+            conditions.append('priority = ANY(%(priorities)s)')
+            params['priorities'] = list(criteria.priorities)
+        if criteria.tags:
+            conditions.append('tags @> %(tags)s')
+            params['tags'] = list(criteria.tags)
+        if criteria.owner == 'none':
+            conditions.append('owner_id IS NULL')
+        elif criteria.owner == 'set':
+            conditions.append('owner_id IS NOT NULL')
+        if criteria.updated_before is not None:
+            conditions.append('updated_at < %(updated)s')
+            params['updated'] = criteria.updated_before
+        if criteria.created_before is not None:
+            conditions.append('created_at < %(created)s')
+            params['created'] = criteria.created_before
+        if criteria.pending_passed:
+            conditions.append('pending_until <= %(now)s')
+        rows = await self.rows(
+            f"SELECT id FROM tickets WHERE {' AND '.join(conditions)} AND state <> 'merged' "
+            'ORDER BY updated_at LIMIT %(limit)s',
+            params,
+        )
+        return [str(row['id']) for row in rows]
 
     async def unassign(self, tenant_id: str | None, user_id: str, now: datetime) -> None:
         await self.run(
@@ -469,3 +515,87 @@ class PostgresTimeRepository(_Sql):
             )
             for row in rows
         ]
+
+
+class PostgresFieldRepository(_Sql):
+    async def of_tenant(self, tenant_id: str) -> Sequence[CustomField]:
+        rows = await self.rows('SELECT * FROM ticket_fields WHERE tenant_id = %s ORDER BY position, key', (tenant_id,))
+        return [self._field(row) for row in rows]
+
+    async def find(self, tenant_id: str, field_id: str) -> CustomField | None:
+        row = await self.one('SELECT * FROM ticket_fields WHERE tenant_id = %s AND id = %s', (tenant_id, field_id))
+        return self._field(row) if row else None
+
+    async def save(self, custom_field: CustomField) -> None:
+        await self.run(
+            """
+            INSERT INTO ticket_fields (id, tenant_id, key, label, kind, options, position, created_at)
+            VALUES (%(id)s, %(tenant_id)s, %(key)s, %(label)s, %(kind)s, %(options)s, %(position)s, %(created_at)s)
+            ON CONFLICT (id) DO UPDATE SET
+                label = EXCLUDED.label, options = EXCLUDED.options, position = EXCLUDED.position
+            """,
+            vars(custom_field) | {'options': list(custom_field.options)},
+        )
+
+    async def delete(self, tenant_id: str, field_id: str) -> None:
+        found = await self.find(tenant_id, field_id)
+        if found is None:
+            return
+        await self.run(
+            'UPDATE tickets SET fields = fields - %s WHERE tenant_id = %s AND fields ? %s',
+            (found.key, tenant_id, found.key),
+        )
+        await self.run('DELETE FROM ticket_fields WHERE tenant_id = %s AND id = %s', (tenant_id, field_id))
+
+    @staticmethod
+    def _field(row: dict[str, Any]) -> CustomField:
+        return CustomField(
+            id=str(row['id']),
+            tenant_id=str(row['tenant_id']),
+            key=row['key'],
+            label=row['label'],
+            kind=cast(FieldKind, row['kind']),
+            options=tuple(row['options']),
+            position=int(row['position']),
+            created_at=row['created_at'],
+        )
+
+
+class PostgresChecklistRepository(_Sql):
+    async def of_ticket(self, tenant_id: str, ticket_id: str) -> Sequence[ChecklistItem]:
+        rows = await self.rows(
+            'SELECT * FROM ticket_checklist_items WHERE tenant_id = %s AND ticket_id = %s ORDER BY position, created_at',
+            (tenant_id, ticket_id),
+        )
+        return [self._item(row) for row in rows]
+
+    async def find(self, tenant_id: str, item_id: str) -> ChecklistItem | None:
+        row = await self.one(
+            'SELECT * FROM ticket_checklist_items WHERE tenant_id = %s AND id = %s', (tenant_id, item_id)
+        )
+        return self._item(row) if row else None
+
+    async def save(self, item: ChecklistItem) -> None:
+        await self.run(
+            """
+            INSERT INTO ticket_checklist_items (id, tenant_id, ticket_id, text, done, position, created_at)
+            VALUES (%(id)s, %(tenant_id)s, %(ticket_id)s, %(text)s, %(done)s, %(position)s, %(created_at)s)
+            ON CONFLICT (id) DO UPDATE SET text = EXCLUDED.text, done = EXCLUDED.done, position = EXCLUDED.position
+            """,
+            vars(item),
+        )
+
+    async def delete(self, tenant_id: str, item_id: str) -> None:
+        await self.run('DELETE FROM ticket_checklist_items WHERE tenant_id = %s AND id = %s', (tenant_id, item_id))
+
+    @staticmethod
+    def _item(row: dict[str, Any]) -> ChecklistItem:
+        return ChecklistItem(
+            id=str(row['id']),
+            tenant_id=str(row['tenant_id']),
+            ticket_id=str(row['ticket_id']),
+            text=row['text'],
+            done=row['done'],
+            position=int(row['position']),
+            created_at=row['created_at'],
+        )

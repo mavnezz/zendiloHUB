@@ -106,6 +106,8 @@ class TicketChanged(IntegrationEvent):
     ticket_id: str
     actor_id: str | None
     changes: tuple[tuple[str, str | None, str | None], ...]
+    automated: bool = False
+    """Made by a trigger or scheduled job: triggers do not react to it (no loops)."""
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -121,3 +123,18 @@ class MessageAdded(IntegrationEvent):
     kind: str
     direction: str
     author_id: str | None
+    mentions: tuple[str, ...] = ()
+    """Members mentioned in an internal note."""
+    automated: bool = False
+    first: bool = False
+    """The message opened the ticket (`TicketCreated` came just before)."""
+
+
+@dataclass(frozen=True, kw_only=True)
+class SlaBreached(IntegrationEvent):
+    """A ticket missed its first response or solution time."""
+
+    tenant_id: str
+    ticket_id: str
+    kind: str
+    """`first_response` or `solution`."""

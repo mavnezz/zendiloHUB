@@ -34,3 +34,11 @@ class CustomerDirectory(Protocol):
     async def address_of(self, tenant_id: str, contact_id: str | None) -> tuple[str | None, str]:
         """The contact's e-mail address (None without one) and name."""
         ...
+
+
+class Presence(Protocol):
+    """Who has a ticket open right now (collision detection, like Zammad's)."""
+
+    async def here(self, tenant_id: str, ticket_id: str, user_id: str, *, writing: bool) -> list[tuple[str, bool]]:
+        """Marks the user as looking at the ticket (for half a minute); returns the others there, writing or not."""
+        ...

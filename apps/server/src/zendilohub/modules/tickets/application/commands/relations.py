@@ -238,6 +238,7 @@ class SplitTicketHandler:
                     kind=copy.kind,
                     direction=copy.direction,
                     author_id=copy.author_id,
+                    first=True,
                 )
             )
         return ticket

@@ -101,6 +101,7 @@ class ReceiveEmailHandler:
                     kind='public',
                     direction='in',
                     author_id=customer_id,
+                    first=created,
                 )
             )
         return ReceivedTicket(ticket_id=ticket.id, number=ticket.number, created=created, customer_id=customer_id)

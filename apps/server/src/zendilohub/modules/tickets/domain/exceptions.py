@@ -49,3 +49,23 @@ class MergeIntoItselfError(ValidationError):
 class LinkToItselfError(ValidationError):
     def __init__(self) -> None:
         super().__init__('link_to_itself', 'A ticket cannot be linked to itself')
+
+
+class InvalidFieldError(ValidationError):
+    def __init__(self, field: str) -> None:
+        super().__init__('invalid_field', f'Please check the field ({field})', {'field': field})
+
+
+class FieldNotFoundError(NotFoundError):
+    def __init__(self) -> None:
+        super().__init__('field_not_found', 'The field does not exist')
+
+
+class FieldKeyTakenError(ConflictError):
+    def __init__(self) -> None:
+        super().__init__('field_key_taken', 'There is already a field with this key')
+
+
+class ChecklistItemNotFoundError(NotFoundError):
+    def __init__(self) -> None:
+        super().__init__('checklist_item_not_found', 'The checklist item does not exist')

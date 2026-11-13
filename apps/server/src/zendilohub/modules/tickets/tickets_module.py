@@ -5,6 +5,14 @@ from zendilohub.core.database.migration import sql_migrations
 from zendilohub.core.events.integration_events import MemberRemoved, TenantDeleted, UserDeleted
 from zendilohub.core.module import AppModule, ModuleContext
 
+from .application.commands.automation import (
+    ApplyAutomation,
+    ApplyAutomationHandler,
+    FactsOf,
+    FactsOfHandler,
+    FindTickets,
+    FindTicketsHandler,
+)
 from .application.commands.email import (
     MarkSent,
     MarkSentHandler,
@@ -14,6 +22,22 @@ from .application.commands.email import (
     ReceiveEmailHandler,
     ThreadEmail,
     ThreadEmailHandler,
+)
+from .application.commands.fields import (
+    AddChecklistItem,
+    AddChecklistItemHandler,
+    BeHere,
+    BeHereHandler,
+    ChangeChecklistItem,
+    ChangeChecklistItemHandler,
+    Checklist,
+    ChecklistHandler,
+    DeleteField,
+    DeleteFieldHandler,
+    ListFields,
+    ListFieldsHandler,
+    SaveField,
+    SaveFieldHandler,
 )
 from .application.commands.forget import (
     CloseDueTickets,
@@ -69,8 +93,16 @@ from .application.queries.tickets import (
     TicketUsageQuery,
 )
 from .application.services.desk import Desk, TimeKeeper
-from .infrastructure.contract_adapters import BusTicketInbox, BusTicketUsage, ContractCustomers, ContractQueueRights
+from .infrastructure.contract_adapters import (
+    BusTicketAutomation,
+    BusTicketInbox,
+    BusTicketUsage,
+    ContractCustomers,
+    ContractQueueRights,
+)
 from .infrastructure.postgres_tickets import (
+    PostgresChecklistRepository,
+    PostgresFieldRepository,
     PostgresHistoryRepository,
     PostgresLinkRepository,
     PostgresMessageRepository,
@@ -78,6 +110,7 @@ from .infrastructure.postgres_tickets import (
     PostgresTimeRepository,
     PostgresWatcherRepository,
 )
+from .infrastructure.redis_presence import RedisPresence
 from .ui.api.routes import ticket_routes
 
 MIGRATIONS = Path(__file__).parent / 'infrastructure' / 'migrations'
@@ -100,7 +133,9 @@ def create_tickets_module(context: ModuleContext) -> AppModule:
     customers = ContractCustomers(context.contracts)
     desk = Desk(tickets, history, rights, context.events, context.ids, context.clock)
     time = TimeKeeper(desk, times)
-    update = UpdateTicketHandler(desk, customers, db)
+    fields = PostgresFieldRepository(db)
+    checklist = PostgresChecklistRepository(db)
+    update = UpdateTicketHandler(desk, customers, db, fields)
     bus = (
         CommandBus()
         .register(CreateTicket, CreateTicketHandler(desk, messages, customers, db, time))
@@ -130,6 +165,16 @@ def create_tickets_module(context: ModuleContext) -> AppModule:
         .register(ThreadEmail, ThreadEmailHandler(desk, messages))
         .register(OutgoingOf, OutgoingOfHandler(desk, messages, customers))
         .register(MarkSent, MarkSentHandler(messages))
+        .register(SaveField, SaveFieldHandler(fields, context.ids, context.clock))
+        .register(DeleteField, DeleteFieldHandler(fields))
+        .register(ListFields, ListFieldsHandler(fields))
+        .register(AddChecklistItem, AddChecklistItemHandler(desk, checklist))
+        .register(ChangeChecklistItem, ChangeChecklistItemHandler(desk, checklist, db))
+        .register(Checklist, ChecklistHandler(desk, checklist))
+        .register(BeHere, BeHereHandler(desk, RedisPresence(context.redis, context.clock)))
+        .register(FactsOf, FactsOfHandler(desk, watchers, customers))
+        .register(FindTickets, FindTicketsHandler(desk))
+        .register(ApplyAutomation, ApplyAutomationHandler(desk, messages, db))
     )
 
     async def member_removed(event: MemberRemoved) -> None:
@@ -146,6 +191,7 @@ def create_tickets_module(context: ModuleContext) -> AppModule:
     context.events.subscribe(TenantDeleted, tenant_deleted)
     context.contracts.ticket_usage.provide(BusTicketUsage(bus))
     context.contracts.ticket_inbox.provide(BusTicketInbox(bus))
+    context.contracts.ticket_automation.provide(BusTicketAutomation(bus))
     context.scheduler.every(CLOSE_DUE_EVERY_SECONDS, 'tickets.close_due', lambda: bus.execute(CloseDueTickets()))
 
     return AppModule(

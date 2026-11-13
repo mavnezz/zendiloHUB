@@ -1,4 +1,4 @@
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Literal
@@ -9,12 +9,12 @@ from zendilohub.core.domain.queue_rights import QueueRight
 from zendilohub.core.domain.transaction import TransactionManager
 from zendilohub.core.events.integration_events import MessageAdded, TicketCreated
 
-from ...domain.exceptions import InvalidTicketError, TicketMergedError
+from ...domain.exceptions import InvalidFieldError, InvalidTicketError, TicketMergedError
 from ...domain.models.actor import Actor
 from ...domain.models.message import Message
 from ...domain.models.ticket import Channel, Priority, Ticket, TicketState
 from ...domain.models.unset import UNSET, Unset
-from ...domain.ports.repositories import MessageRepository
+from ...domain.ports.repositories import FieldRepository, MessageRepository
 from ...domain.ports.services import CustomerDirectory
 from ..services.desk import Desk, TimeKeeper, require
 
@@ -138,6 +138,7 @@ class CreateTicketHandler:
                     kind=message.kind,
                     direction=message.direction,
                     author_id=message.author_id,
+                    first=True,
                 )
             )
         return ticket
@@ -169,6 +170,8 @@ class TicketChanges:
     tags: tuple[str, ...] | Unset = UNSET
     add_tags: tuple[str, ...] = ()
     customer_id: str | Unset | None = UNSET
+    fields: Mapping[str, object] | Unset = UNSET
+    """Values of own fields by key; null (or empty) clears one."""
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -180,10 +183,17 @@ class UpdateTicket(Command[Ticket]):
 
 
 class UpdateTicketHandler:
-    def __init__(self, desk: Desk, customers: CustomerDirectory, transactions: TransactionManager) -> None:
+    def __init__(
+        self,
+        desk: Desk,
+        customers: CustomerDirectory,
+        transactions: TransactionManager,
+        fields: FieldRepository,
+    ) -> None:
         self._desk = desk
         self._customers = customers
         self._transactions = transactions
+        self._fields = fields
 
     async def handle(self, command: UpdateTicket) -> Ticket:
         async with self._transactions.transaction():
@@ -196,7 +206,7 @@ class UpdateTicketHandler:
         desk, now = self._desk, self._desk.clock.now()
         if ticket.is_merged:
             raise TicketMergedError()
-        edits = [changes.subject, changes.state, changes.priority, changes.tags, changes.customer_id]
+        edits = [changes.subject, changes.state, changes.priority, changes.tags, changes.customer_id, changes.fields]
         if any(not isinstance(value, Unset) for value in edits) or changes.add_tags:
             require(rights, 'edit')
         if not isinstance(changes.responsible_id, Unset):
@@ -208,6 +218,12 @@ class UpdateTicketHandler:
             ticket.make_responsible(changes.responsible_id, now)
         if not isinstance(changes.subject, Unset):
             ticket.rename(changes.subject, now)
+        if not isinstance(changes.fields, Unset):
+            definitions = {each.key: each for each in await self._fields.of_tenant(ticket.tenant_id)}
+            for key, raw in changes.fields.items():
+                if key not in definitions:
+                    raise InvalidFieldError(key)
+                ticket.set_field(key, definitions[key].value(raw), now)
         if not isinstance(changes.priority, Unset):
             ticket.set_priority(changes.priority, now)
         if not isinstance(changes.tags, Unset):

@@ -651,6 +651,26 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/v1/tenants/{tenant_id}/escalations': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Escalations
+     * @description Open deadlines that passed or come within the hour, soonest first (ids only: the ticket list shows them).
+     */
+    get: operations['escalations_api_v1_tenants__tenant_id__escalations_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/v1/tenants/{tenant_id}/failed-emails': {
     parameters: {
       query?: never
@@ -802,6 +822,42 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/v1/tenants/{tenant_id}/macros': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Macros */
+    get: operations['macros_api_v1_tenants__tenant_id__macros_get']
+    put?: never
+    /** Create Macro */
+    post: operations['create_macro_api_v1_tenants__tenant_id__macros_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/macros/{rule_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /** Delete Macro */
+    delete: operations['delete_macro_api_v1_tenants__tenant_id__macros__rule_id__delete']
+    options?: never
+    head?: never
+    /** Update Macro */
+    patch: operations['update_macro_api_v1_tenants__tenant_id__macros__rule_id__patch']
+    trace?: never
+  }
   '/api/v1/tenants/{tenant_id}/mail-filters': {
     parameters: {
       query?: never
@@ -879,6 +935,24 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/v1/tenants/{tenant_id}/me/notification-settings': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Settings */
+    get: operations['settings_api_v1_tenants__tenant_id__me_notification_settings_get']
+    /** Save Settings */
+    put: operations['save_settings_api_v1_tenants__tenant_id__me_notification_settings_put']
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/v1/tenants/{tenant_id}/members': {
     parameters: {
       query?: never
@@ -915,6 +989,43 @@ export interface paths {
     head?: never
     /** Change Role */
     patch: operations['change_role_api_v1_tenants__tenant_id__members__user_id__patch']
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/notifications': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Notifications
+     * @description The caller's notifications, newest first, with how many are unread.
+     */
+    get: operations['notifications_api_v1_tenants__tenant_id__notifications_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/notifications/read': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Read */
+    post: operations['read_api_v1_tenants__tenant_id__notifications_read_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
     trace?: never
   }
   '/api/v1/tenants/{tenant_id}/queue-channels': {
@@ -1106,6 +1217,168 @@ export interface paths {
     patch: operations['update_role_api_v1_tenants__tenant_id__roles__role_id__patch']
     trace?: never
   }
+  '/api/v1/tenants/{tenant_id}/scheduled-jobs': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** List Schedules */
+    get: operations['list_schedules_api_v1_tenants__tenant_id__scheduled_jobs_get']
+    put?: never
+    /** Create Schedule */
+    post: operations['create_schedule_api_v1_tenants__tenant_id__scheduled_jobs_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/scheduled-jobs/{rule_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /** Delete Schedule */
+    delete: operations['delete_schedule_api_v1_tenants__tenant_id__scheduled_jobs__rule_id__delete']
+    options?: never
+    head?: never
+    /** Update Schedule */
+    patch: operations['update_schedule_api_v1_tenants__tenant_id__scheduled_jobs__rule_id__patch']
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/service-calendars': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Create Calendar */
+    post: operations['create_calendar_api_v1_tenants__tenant_id__service_calendars_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/service-calendars/{calendar_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /** Delete Calendar */
+    delete: operations['delete_calendar_api_v1_tenants__tenant_id__service_calendars__calendar_id__delete']
+    options?: never
+    head?: never
+    /** Update Calendar */
+    patch: operations['update_calendar_api_v1_tenants__tenant_id__service_calendars__calendar_id__patch']
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/service-levels': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Setup */
+    get: operations['setup_api_v1_tenants__tenant_id__service_levels_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/service-policies': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Create Policy */
+    post: operations['create_policy_api_v1_tenants__tenant_id__service_policies_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/service-policies/{policy_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /** Delete Policy */
+    delete: operations['delete_policy_api_v1_tenants__tenant_id__service_policies__policy_id__delete']
+    options?: never
+    head?: never
+    /** Update Policy */
+    patch: operations['update_policy_api_v1_tenants__tenant_id__service_policies__policy_id__patch']
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/text-modules': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Text Modules
+     * @description Every member uses them; with `queue_id` only those for that queue.
+     */
+    get: operations['text_modules_api_v1_tenants__tenant_id__text_modules_get']
+    put?: never
+    /** Create */
+    post: operations['create_api_v1_tenants__tenant_id__text_modules_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/text-modules/{module_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /** Delete */
+    delete: operations['delete_api_v1_tenants__tenant_id__text_modules__module_id__delete']
+    options?: never
+    head?: never
+    /** Update */
+    patch: operations['update_api_v1_tenants__tenant_id__text_modules__module_id__patch']
+    trace?: never
+  }
   '/api/v1/tenants/{tenant_id}/text-templates': {
     parameters: {
       query?: never
@@ -1145,6 +1418,51 @@ export interface paths {
     patch: operations['update_template_api_v1_tenants__tenant_id__text_templates__template_id__patch']
     trace?: never
   }
+  '/api/v1/tenants/{tenant_id}/ticket-fields': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Fields
+     * @description The organization's own ticket fields, in their order.
+     */
+    get: operations['fields_api_v1_tenants__tenant_id__ticket_fields_get']
+    put?: never
+    /** Create Field */
+    post: operations['create_field_api_v1_tenants__tenant_id__ticket_fields_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/ticket-fields/{field_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /**
+     * Delete Field
+     * @description With its values in every ticket.
+     */
+    delete: operations['delete_field_api_v1_tenants__tenant_id__ticket_fields__field_id__delete']
+    options?: never
+    head?: never
+    /**
+     * Update Field
+     * @description Label and choices; key and kind stay.
+     */
+    patch: operations['update_field_api_v1_tenants__tenant_id__ticket_fields__field_id__patch']
+    trace?: never
+  }
   '/api/v1/tenants/{tenant_id}/tickets': {
     parameters: {
       query?: never
@@ -1155,7 +1473,7 @@ export interface paths {
     /**
      * Tickets
      * @description A view of the inbox (`mine`, `unassigned`, `due`, `open`, `watching`, `closed`, `all`), narrowed by the
-     *     filters; `q` searches number, subject and every message.
+     *     filters; `q` searches number, subject and every message, `ids` keeps only these tickets.
      */
     get: operations['tickets_api_v1_tenants__tenant_id__tickets_get']
     put?: never
@@ -1193,6 +1511,42 @@ export interface paths {
      * @description Changes what was sent; each change needs its right (`edit`, `assign`, `move` + `create` in the target).
      */
     patch: operations['update_api_v1_tenants__tenant_id__tickets__ticket_id__patch']
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/tickets/{ticket_id}/checklist': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Checklist */
+    get: operations['checklist_api_v1_tenants__tenant_id__tickets__ticket_id__checklist_get']
+    put?: never
+    /** Add Checklist Item */
+    post: operations['add_checklist_item_api_v1_tenants__tenant_id__tickets__ticket_id__checklist_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/tickets/{ticket_id}/checklist/{item_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /** Delete Checklist Item */
+    delete: operations['delete_checklist_item_api_v1_tenants__tenant_id__tickets__ticket_id__checklist__item_id__delete']
+    options?: never
+    head?: never
+    /** Change Checklist Item */
+    patch: operations['change_checklist_item_api_v1_tenants__tenant_id__tickets__ticket_id__checklist__item_id__patch']
     trace?: never
   }
   '/api/v1/tenants/{tenant_id}/tickets/{ticket_id}/deliveries': {
@@ -1324,6 +1678,46 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/v1/tenants/{tenant_id}/tickets/{ticket_id}/presence': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    /**
+     * Presence
+     * @description The caller has the ticket open (and writes); answers who else has (call it every 15 seconds).
+     */
+    put: operations['presence_api_v1_tenants__tenant_id__tickets__ticket_id__presence_put']
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/tickets/{ticket_id}/service-level': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Clock
+     * @description The ticket's deadlines (null without a service level).
+     */
+    get: operations['clock_api_v1_tenants__tenant_id__tickets__ticket_id__service_level_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/v1/tenants/{tenant_id}/tickets/{ticket_id}/split': {
     parameters: {
       query?: never
@@ -1437,6 +1831,42 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/v1/tenants/{tenant_id}/triggers': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** List Triggers */
+    get: operations['list_triggers_api_v1_tenants__tenant_id__triggers_get']
+    put?: never
+    /** Create Trigger */
+    post: operations['create_trigger_api_v1_tenants__tenant_id__triggers_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/triggers/{rule_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /** Delete Trigger */
+    delete: operations['delete_trigger_api_v1_tenants__tenant_id__triggers__rule_id__delete']
+    options?: never
+    head?: never
+    /** Update Trigger */
+    patch: operations['update_trigger_api_v1_tenants__tenant_id__triggers__rule_id__patch']
+    trace?: never
+  }
 }
 export type webhooks = Record<string, never>
 export interface components {
@@ -1496,20 +1926,6 @@ export interface components {
       /** Queue Id */
       queue_id: string
       smtp: components['schemas']['ServerResponse']
-    }
-    /** ActionsModel */
-    ActionsModel: {
-      /**
-       * Ignore
-       * @default false
-       */
-      ignore: boolean
-      /** Priority */
-      priority?: ('low' | 'normal' | 'high' | 'urgent') | null
-      /** Queue Id */
-      queue_id?: string | null
-      /** Tags */
-      tags?: string[]
     }
     /** AdminTenantPageResponse */
     AdminTenantPageResponse: {
@@ -1618,6 +2034,37 @@ export interface components {
         [key: string]: string
       }
     }
+    /** CalendarRequest */
+    CalendarRequest: {
+      /** Holidays */
+      holidays?: string[]
+      /** Hours */
+      hours: {
+        [key: string]: [string, string][]
+      }
+      /** Name */
+      name: string
+      /**
+       * Timezone
+       * @default Europe/Berlin
+       */
+      timezone: string
+    }
+    /** CalendarResponse */
+    CalendarResponse: {
+      /** Holidays */
+      holidays: string[]
+      /** Hours */
+      hours: {
+        [key: string]: [string, string][]
+      }
+      /** Id */
+      id: string
+      /** Name */
+      name: string
+      /** Timezone */
+      timezone: string
+    }
     /** ChangePasswordRequest */
     ChangePasswordRequest: {
       /** Current Password */
@@ -1635,6 +2082,46 @@ export interface components {
     }
     /** @enum {string} */
     Channel: 'web' | 'email' | 'phone' | 'api'
+    /** ChecklistChangeRequest */
+    ChecklistChangeRequest: {
+      /** Done */
+      done?: boolean | null
+      /** Text */
+      text?: string | null
+    }
+    /** ChecklistItemRequest */
+    ChecklistItemRequest: {
+      /** Text */
+      text: string
+    }
+    /** ChecklistItemResponse */
+    ChecklistItemResponse: {
+      /** Done */
+      done: boolean
+      /** Id */
+      id: string
+      /** Position */
+      position: number
+      /** Text */
+      text: string
+    }
+    /** ClockResponse */
+    ClockResponse: {
+      /** Breached */
+      breached: string[]
+      /** First Responded At */
+      first_responded_at: string | null
+      /** First Response Due */
+      first_response_due: string | null
+      /** Policy Id */
+      policy_id: string
+      /** Solution Due */
+      solution_due: string | null
+      /** Solved At */
+      solved_at: string | null
+      /** Ticket Id */
+      ticket_id: string
+    }
     /** CompanyPageResponse */
     CompanyPageResponse: {
       /** Items */
@@ -1679,18 +2166,10 @@ export interface components {
       /** Notes */
       notes: string
     }
-    /** ConditionModel */
-    ConditionModel: {
-      field: components['schemas']['FilterField']
-      /**
-       * Header
-       * @default
-       */
-      header: string
-      operator: components['schemas']['Operator']
-      /** Value */
-      value: string
-    }
+    /** @enum {string} */
+    ConditionField: 'queue_id' | 'state' | 'priority' | 'channel' | 'tags' | 'subject' | 'customer_email' | 'owner'
+    /** @enum {string} */
+    ConditionOperator: 'is' | 'is_not' | 'contains' | 'not_contains' | 'is_set' | 'is_not_set'
     /** ContactPageResponse */
     ContactPageResponse: {
       /** Items */
@@ -1880,6 +2359,33 @@ export interface components {
       subject: string
     }
     /** @enum {string} */
+    FieldKind: 'text' | 'number' | 'select' | 'checkbox' | 'date'
+    /** FieldRequest */
+    FieldRequest: {
+      /** Key */
+      key: string
+      /** @default text */
+      kind: components['schemas']['FieldKind']
+      /** Label */
+      label: string
+      /** Options */
+      options?: string[]
+    }
+    /** FieldResponse */
+    FieldResponse: {
+      /** Id */
+      id: string
+      /** Key */
+      key: string
+      kind: components['schemas']['FieldKind']
+      /** Label */
+      label: string
+      /** Options */
+      options: string[]
+      /** Position */
+      position: number
+    }
+    /** @enum {string} */
     FilterField: 'from' | 'to' | 'cc' | 'subject' | 'body' | 'header'
     /** FilterOrderRequest */
     FilterOrderRequest: {
@@ -1888,14 +2394,14 @@ export interface components {
     }
     /** FilterRequest */
     FilterRequest: {
-      actions: components['schemas']['ActionsModel']
+      actions: components['schemas']['zendilohub__modules__channels__ui__api__schemas__ActionsModel']
       /**
        * Active
        * @default true
        */
       active: boolean
       /** Conditions */
-      conditions: components['schemas']['ConditionModel'][]
+      conditions: components['schemas']['zendilohub__modules__channels__ui__api__schemas__ConditionModel'][]
       /**
        * Match
        * @default all
@@ -1912,11 +2418,11 @@ export interface components {
     }
     /** FilterResponse */
     FilterResponse: {
-      actions: components['schemas']['ActionsModel']
+      actions: components['schemas']['zendilohub__modules__channels__ui__api__schemas__ActionsModel']
       /** Active */
       active: boolean
       /** Conditions */
-      conditions: components['schemas']['ConditionModel'][]
+      conditions: components['schemas']['zendilohub__modules__channels__ui__api__schemas__ConditionModel'][]
       /** Id */
       id: string
       /**
@@ -2002,6 +2508,13 @@ export interface components {
     HTTPValidationError: {
       /** Detail */
       detail?: components['schemas']['ValidationError'][]
+    }
+    /** InboxResponse */
+    InboxResponse: {
+      /** Items */
+      items: components['schemas']['NotificationResponse'][]
+      /** Unread */
+      unread: number
     }
     /** InvitationPreviewResponse */
     InvitationPreviewResponse: {
@@ -2141,6 +2654,29 @@ export interface components {
       to_addresses: string[]
     }
     /** @enum {string} */
+    NotificationKind: 'assigned' | 'mentioned' | 'message' | 'sla_breached'
+    /** NotificationResponse */
+    NotificationResponse: {
+      /** Actor */
+      actor: string
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string
+      /** Id */
+      id: string
+      kind: components['schemas']['NotificationKind']
+      /** Read At */
+      read_at: string | null
+      /** Subject */
+      subject: string
+      /** Ticket Id */
+      ticket_id: string
+      /** Ticket Number */
+      ticket_number: number
+    }
+    /** @enum {string} */
     Operator: 'contains' | 'not_contains' | 'equals' | 'starts_with' | 'ends_with' | 'regex'
     /**
      * OwnTenantResponse
@@ -2184,6 +2720,10 @@ export interface components {
       | 'customers.view'
       | 'customers.manage'
       | 'channels.manage'
+      | 'automation.manage'
+      | 'knowledge.manage'
+      | 'service.manage'
+      | 'reports.view'
       | 'integrations.manage'
       | 'audit.view'
     /** PersonalRequest */
@@ -2212,6 +2752,55 @@ export interface components {
       signature: string
       /** Title */
       title: string
+    }
+    /** PolicyRequest */
+    PolicyRequest: {
+      /**
+       * Active
+       * @default true
+       */
+      active: boolean
+      /** Calendar Id */
+      calendar_id?: string | null
+      /** First Response Minutes */
+      first_response_minutes?: number | null
+      /** Name */
+      name: string
+      /** Priorities */
+      priorities?: ('low' | 'normal' | 'high' | 'urgent')[]
+      /** Queue Ids */
+      queue_ids?: string[]
+      /** Solution Minutes */
+      solution_minutes?: number | null
+    }
+    /** PolicyResponse */
+    PolicyResponse: {
+      /** Active */
+      active: boolean
+      /** Calendar Id */
+      calendar_id: string | null
+      /** First Response Minutes */
+      first_response_minutes: number | null
+      /** Id */
+      id: string
+      /** Name */
+      name: string
+      /** Position */
+      position: number
+      /** Priorities */
+      priorities: string[]
+      /** Queue Ids */
+      queue_ids: string[]
+      /** Solution Minutes */
+      solution_minutes: number | null
+    }
+    /** PresenceRequest */
+    PresenceRequest: {
+      /**
+       * Writing
+       * @default false
+       */
+      writing: boolean
     }
     /** @enum {string} */
     Priority: 'low' | 'normal' | 'high' | 'urgent'
@@ -2300,6 +2889,11 @@ export interface components {
       /** Rights */
       rights: components['schemas']['QueueRight'][]
     }
+    /** ReadRequest */
+    ReadRequest: {
+      /** Ids */
+      ids?: string[] | null
+    }
     /** RegisterRequest */
     RegisterRequest: {
       /** Email */
@@ -2380,6 +2974,68 @@ export interface components {
       roles: components['schemas']['RoleResponse'][]
     }
     /** @enum {string} */
+    RuleKind: 'macro' | 'trigger' | 'schedule'
+    /** RuleRequest */
+    RuleRequest: {
+      actions: components['schemas']['zendilohub__modules__automation__ui__api__schemas__ActionsModel']
+      /**
+       * Active
+       * @default true
+       */
+      active: boolean
+      /** Conditions */
+      conditions?: components['schemas']['zendilohub__modules__automation__ui__api__schemas__ConditionModel'][]
+      event?: components['schemas']['TriggerEvent'] | null
+      /** Name */
+      name: string
+      schedule?: components['schemas']['ScheduleModel'] | null
+    }
+    /** RuleResponse */
+    RuleResponse: {
+      actions: components['schemas']['zendilohub__modules__automation__ui__api__schemas__ActionsModel']
+      /** Active */
+      active: boolean
+      /** Conditions */
+      conditions: components['schemas']['zendilohub__modules__automation__ui__api__schemas__ConditionModel'][]
+      event: components['schemas']['TriggerEvent'] | null
+      /** Id */
+      id: string
+      kind: components['schemas']['RuleKind']
+      /** Last Run At */
+      last_run_at: string | null
+      /** Name */
+      name: string
+      /** Position */
+      position: number
+      schedule: components['schemas']['ScheduleModel'] | null
+    }
+    /** ScheduleModel */
+    ScheduleModel: {
+      /** Age Hours */
+      age_hours?: number | null
+      /** Idle Hours */
+      idle_hours?: number | null
+      /**
+       * Owner
+       * @default any
+       * @enum {string}
+       */
+      owner: 'any' | 'none' | 'set'
+      /**
+       * Pending Passed
+       * @default false
+       */
+      pending_passed: boolean
+      /** Priorities */
+      priorities?: ('low' | 'normal' | 'high' | 'urgent')[]
+      /** Queue Ids */
+      queue_ids?: string[]
+      /** States */
+      states?: ('new' | 'open' | 'pending_reminder' | 'pending_close')[]
+      /** Tags */
+      tags?: string[]
+    }
+    /** @enum {string} */
     Security: 'ssl' | 'starttls' | 'none'
     /** ServerRequest */
     ServerRequest: {
@@ -2415,6 +3071,11 @@ export interface components {
     }
     /** @enum {string} */
     SettableState: 'new' | 'open' | 'pending_reminder' | 'pending_close' | 'closed'
+    /** SettingsBody */
+    SettingsBody: {
+      /** Email */
+      email: boolean
+    }
     /** SetupRequest */
     SetupRequest: {
       /** Email */
@@ -2429,6 +3090,13 @@ export interface components {
       timezone: string
       /** Token */
       token: string
+    }
+    /** SetupResponse */
+    SetupResponse: {
+      /** Calendars */
+      calendars: components['schemas']['CalendarResponse'][]
+      /** Policies */
+      policies: components['schemas']['PolicyResponse'][]
     }
     /** SetupStatusResponse */
     SetupStatusResponse: {
@@ -2494,6 +3162,35 @@ export interface components {
       /** Timezone */
       timezone: string
     }
+    /** TextModuleRequest */
+    TextModuleRequest: {
+      /** Body */
+      body: string
+      /** Keyword */
+      keyword: string
+      /** Name */
+      name: string
+      /** Queue Ids */
+      queue_ids?: string[]
+    }
+    /** TextModuleResponse */
+    TextModuleResponse: {
+      /** Body */
+      body: string
+      /** Id */
+      id: string
+      /** Keyword */
+      keyword: string
+      /** Name */
+      name: string
+      /** Queue Ids */
+      queue_ids: string[]
+      /**
+       * Updated At
+       * Format: date-time
+       */
+      updated_at: string
+    }
     /**
      * TicketChangesRequest
      * @description Only the fields sent change; `null` clears owner, responsible, customer or the pending date.
@@ -2501,6 +3198,10 @@ export interface components {
     TicketChangesRequest: {
       /** Customer Id */
       customer_id?: string | null
+      /** Fields */
+      fields?: {
+        [key: string]: string | number | boolean | null
+      } | null
       /** Owner Id */
       owner_id?: string | null
       /** Pending Until */
@@ -2540,6 +3241,10 @@ export interface components {
        */
       created_at: string
       customer: components['schemas']['CustomerCardResponse'] | null
+      /** Fields */
+      fields: {
+        [key: string]: string | number | boolean
+      }
       /** First Response At */
       first_response_at: string | null
       /** Id */
@@ -2606,6 +3311,10 @@ export interface components {
        */
       created_at: string
       customer: components['schemas']['CustomerCardResponse'] | null
+      /** Fields */
+      fields: {
+        [key: string]: string | number | boolean
+      }
       /** First Response At */
       first_response_at: string | null
       /** Id */
@@ -2666,6 +3375,8 @@ export interface components {
       /** Token */
       token: string
     }
+    /** @enum {string} */
+    TriggerEvent: 'created' | 'customer_replied' | 'updated'
     /** UpdateAccountRequest */
     UpdateAccountRequest: {
       locale: components['schemas']['LocaleValue']
@@ -2715,6 +3426,88 @@ export interface components {
       msg: string
       /** Error Type */
       type: string
+    }
+    /** ViewerResponse */
+    ViewerResponse: {
+      /** User Id */
+      user_id: string
+      /** Writing */
+      writing: boolean
+    }
+    /** @enum {string} */
+    Weekday: 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'
+    /** ActionsModel */
+    zendilohub__modules__automation__ui__api__schemas__ActionsModel: {
+      /** Add Tags */
+      add_tags?: string[]
+      /**
+       * Note
+       * @default
+       */
+      note: string
+      /** Owner Id */
+      owner_id?: string | null
+      /**
+       * Owner Me
+       * @default false
+       */
+      owner_me: boolean
+      /** Pending Hours */
+      pending_hours?: number | null
+      /** Priority */
+      priority?: ('low' | 'normal' | 'high' | 'urgent') | null
+      /** Queue Id */
+      queue_id?: string | null
+      /** Remove Tags */
+      remove_tags?: string[]
+      /**
+       * Reply
+       * @default
+       */
+      reply: string
+      /** State */
+      state?: ('new' | 'open' | 'pending_reminder' | 'pending_close' | 'closed') | null
+      /**
+       * Unassign
+       * @default false
+       */
+      unassign: boolean
+    }
+    /** ConditionModel */
+    zendilohub__modules__automation__ui__api__schemas__ConditionModel: {
+      field: components['schemas']['ConditionField']
+      operator: components['schemas']['ConditionOperator']
+      /**
+       * Value
+       * @default
+       */
+      value: string
+    }
+    /** ActionsModel */
+    zendilohub__modules__channels__ui__api__schemas__ActionsModel: {
+      /**
+       * Ignore
+       * @default false
+       */
+      ignore: boolean
+      /** Priority */
+      priority?: ('low' | 'normal' | 'high' | 'urgent') | null
+      /** Queue Id */
+      queue_id?: string | null
+      /** Tags */
+      tags?: string[]
+    }
+    /** ConditionModel */
+    zendilohub__modules__channels__ui__api__schemas__ConditionModel: {
+      field: components['schemas']['FilterField']
+      /**
+       * Header
+       * @default
+       */
+      header: string
+      operator: components['schemas']['Operator']
+      /** Value */
+      value: string
     }
     /** @enum {string} */
     zendilohub__modules__identity__ui__api__schemas__RoleValue: 'user' | 'admin'
@@ -4237,6 +5030,37 @@ export interface operations {
       }
     }
   }
+  escalations_api_v1_tenants__tenant_id__escalations_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ClockResponse'][]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
   failed_emails_api_v1_tenants__tenant_id__failed_emails_get: {
     parameters: {
       query?: never
@@ -4594,6 +5418,138 @@ export interface operations {
       }
     }
   }
+  macros_api_v1_tenants__tenant_id__macros_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['RuleResponse'][]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  create_macro_api_v1_tenants__tenant_id__macros_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RuleRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['RuleResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  delete_macro_api_v1_tenants__tenant_id__macros__rule_id__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        rule_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  update_macro_api_v1_tenants__tenant_id__macros__rule_id__patch: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        rule_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RuleRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['RuleResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
   filters_api_v1_tenants__tenant_id__mail_filters_get: {
     parameters: {
       query?: never
@@ -4827,6 +5783,72 @@ export interface operations {
       }
     }
   }
+  settings_api_v1_tenants__tenant_id__me_notification_settings_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['SettingsBody']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  save_settings_api_v1_tenants__tenant_id__me_notification_settings_put: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['SettingsBody']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['SettingsBody']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
   members_api_v1_tenants__tenant_id__members_get: {
     parameters: {
       query?: never
@@ -4911,6 +5933,75 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['MemberResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  notifications_api_v1_tenants__tenant_id__notifications_get: {
+    parameters: {
+      query?: {
+        limit?: number
+        unread?: boolean
+      }
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['InboxResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  read_api_v1_tenants__tenant_id__notifications_read_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ReadRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['InboxResponse']
         }
       }
       /** @description Validation Error */
@@ -5390,6 +6481,505 @@ export interface operations {
       }
     }
   }
+  list_schedules_api_v1_tenants__tenant_id__scheduled_jobs_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['RuleResponse'][]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  create_schedule_api_v1_tenants__tenant_id__scheduled_jobs_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RuleRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['RuleResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  delete_schedule_api_v1_tenants__tenant_id__scheduled_jobs__rule_id__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        rule_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  update_schedule_api_v1_tenants__tenant_id__scheduled_jobs__rule_id__patch: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        rule_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RuleRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['RuleResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  create_calendar_api_v1_tenants__tenant_id__service_calendars_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CalendarRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['CalendarResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  delete_calendar_api_v1_tenants__tenant_id__service_calendars__calendar_id__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        calendar_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  update_calendar_api_v1_tenants__tenant_id__service_calendars__calendar_id__patch: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        calendar_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CalendarRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['CalendarResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  setup_api_v1_tenants__tenant_id__service_levels_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['SetupResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  create_policy_api_v1_tenants__tenant_id__service_policies_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PolicyRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['PolicyResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  delete_policy_api_v1_tenants__tenant_id__service_policies__policy_id__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        policy_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  update_policy_api_v1_tenants__tenant_id__service_policies__policy_id__patch: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        policy_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PolicyRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['PolicyResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  text_modules_api_v1_tenants__tenant_id__text_modules_get: {
+    parameters: {
+      query?: {
+        queue_id?: string | null
+      }
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['TextModuleResponse'][]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  create_api_v1_tenants__tenant_id__text_modules_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['TextModuleRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['TextModuleResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  delete_api_v1_tenants__tenant_id__text_modules__module_id__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        module_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  update_api_v1_tenants__tenant_id__text_modules__module_id__patch: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        module_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['TextModuleRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['TextModuleResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
   templates_api_v1_tenants__tenant_id__text_templates_get: {
     parameters: {
       query?: never
@@ -5522,12 +7112,145 @@ export interface operations {
       }
     }
   }
+  fields_api_v1_tenants__tenant_id__ticket_fields_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['FieldResponse'][]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  create_field_api_v1_tenants__tenant_id__ticket_fields_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['FieldRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['FieldResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  delete_field_api_v1_tenants__tenant_id__ticket_fields__field_id__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        field_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  update_field_api_v1_tenants__tenant_id__ticket_fields__field_id__patch: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        field_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['FieldRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['FieldResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
   tickets_api_v1_tenants__tenant_id__tickets_get: {
     parameters: {
       query?: {
         company_id?: string | null
         customer_id?: string | null
         descending?: boolean
+        ids?: string[] | null
         limit?: number
         offset?: number
         owner_id?: string | null
@@ -5687,6 +7410,142 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['TicketDetailResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  checklist_api_v1_tenants__tenant_id__tickets__ticket_id__checklist_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+        ticket_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ChecklistItemResponse'][]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  add_checklist_item_api_v1_tenants__tenant_id__tickets__ticket_id__checklist_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+        ticket_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ChecklistItemRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ChecklistItemResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  delete_checklist_item_api_v1_tenants__tenant_id__tickets__ticket_id__checklist__item_id__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        item_id: string
+        tenant_id: string
+        ticket_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  change_checklist_item_api_v1_tenants__tenant_id__tickets__ticket_id__checklist__item_id__patch: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        item_id: string
+        tenant_id: string
+        ticket_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ChecklistChangeRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ChecklistItemResponse']
         }
       }
       /** @description Validation Error */
@@ -5966,6 +7825,74 @@ export interface operations {
       }
     }
   }
+  presence_api_v1_tenants__tenant_id__tickets__ticket_id__presence_put: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+        ticket_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PresenceRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ViewerResponse'][]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  clock_api_v1_tenants__tenant_id__tickets__ticket_id__service_level_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+        ticket_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ClockResponse'] | null
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
   split_api_v1_tenants__tenant_id__tickets__ticket_id__split_post: {
     parameters: {
       query?: never
@@ -6215,6 +8142,138 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['TicketCountsResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  list_triggers_api_v1_tenants__tenant_id__triggers_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['RuleResponse'][]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  create_trigger_api_v1_tenants__tenant_id__triggers_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RuleRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['RuleResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  delete_trigger_api_v1_tenants__tenant_id__triggers__rule_id__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        rule_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  update_trigger_api_v1_tenants__tenant_id__triggers__rule_id__patch: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        rule_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RuleRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['RuleResponse']
         }
       }
       /** @description Validation Error */

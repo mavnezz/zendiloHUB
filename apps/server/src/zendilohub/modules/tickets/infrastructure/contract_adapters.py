@@ -2,9 +2,11 @@ from collections.abc import Mapping
 
 from zendilohub.core.bus.command_bus import CommandBus
 from zendilohub.core.contracts import Contracts
+from zendilohub.core.domain.automation import AutomationChanges, TicketCriteria, TicketFacts
 from zendilohub.core.domain.inbox import InboundEmail, OutgoingEmail, ReceivedTicket
 from zendilohub.core.domain.queue_rights import QueueRight
 
+from ..application.commands.automation import ApplyAutomation, FactsOf, FindTickets
 from ..application.commands.email import MarkSent, OutgoingOf, ReceiveEmail, ThreadEmail
 from ..application.queries.tickets import TicketUsageQuery
 from ..domain.models.actor import Actor
@@ -104,4 +106,22 @@ class BusTicketInbox:
                 from_address=from_address,
                 to=to,
             )
+        )
+
+
+class BusTicketAutomation:
+    """Tickets' side of the `TicketAutomation` contract."""
+
+    def __init__(self, bus: CommandBus) -> None:
+        self._bus = bus
+
+    async def facts(self, tenant_id: str, ticket_id: str) -> TicketFacts | None:
+        return await self._bus.query(FactsOf(tenant_id=tenant_id, ticket_id=ticket_id))
+
+    async def find(self, tenant_id: str, criteria: TicketCriteria) -> list[str]:
+        return await self._bus.query(FindTickets(tenant_id=tenant_id, criteria=criteria))
+
+    async def apply(self, tenant_id: str, ticket_id: str, changes: AutomationChanges, *, by: str) -> bool:
+        return await self._bus.execute(
+            ApplyAutomation(tenant_id=tenant_id, ticket_id=ticket_id, changes=changes, by=by)
         )
