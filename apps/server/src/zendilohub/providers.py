@@ -5,8 +5,10 @@ from .modules.channels.channels_module import create_channels_module
 from .modules.compliance.compliance_module import create_compliance_module
 from .modules.customers.customers_module import create_customers_module
 from .modules.identity.identity_module import create_identity_module
+from .modules.integrations.integrations_module import create_integrations_module
 from .modules.knowledge.knowledge_module import create_knowledge_module
 from .modules.notifications.notifications_module import create_notifications_module
+from .modules.reporting.reporting_module import create_reporting_module
 from .modules.service.service_module import create_service_module
 from .modules.tenancy.tenancy_module import create_tenancy_module
 from .modules.tickets.tickets_module import create_tickets_module
@@ -23,5 +25,7 @@ providers: list[ModuleFactory] = [
     create_knowledge_module,
     create_service_module,
     create_notifications_module,
+    create_integrations_module,
+    create_reporting_module,
     create_compliance_module,
 ]

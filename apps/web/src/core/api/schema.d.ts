@@ -308,6 +308,40 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/v1/help/{tenant_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Library */
+    get: operations['library_api_v1_help__tenant_id__get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/help/{tenant_id}/{article_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Public Article */
+    get: operations['public_article_api_v1_help__tenant_id___article_id__get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/v1/invitations/accept': {
     parameters: {
       query?: never
@@ -464,6 +498,46 @@ export interface paths {
      * @description Another name or other permissions; they apply to the key at once.
      */
     patch: operations['update_api_key_api_v1_tenants__tenant_id__api_keys__key_id__patch']
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/articles': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Articles
+     * @description The knowledge base (internal and public articles); `q` searches title, text and tags.
+     */
+    get: operations['articles_api_v1_tenants__tenant_id__articles_get']
+    put?: never
+    /** Create */
+    post: operations['create_api_v1_tenants__tenant_id__articles_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/articles/{article_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Article */
+    get: operations['article_api_v1_tenants__tenant_id__articles__article_id__get']
+    put?: never
+    post?: never
+    /** Delete */
+    delete: operations['delete_api_v1_tenants__tenant_id__articles__article_id__delete']
+    options?: never
+    head?: never
+    /** Update */
+    patch: operations['update_api_v1_tenants__tenant_id__articles__article_id__patch']
     trace?: never
   }
   '/api/v1/tenants/{tenant_id}/audit-log': {
@@ -1172,6 +1246,26 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/v1/tenants/{tenant_id}/reports': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Report
+     * @description Key figures of the tickets from `start` to `end` (days in `timezone`), for every queue or one.
+     */
+    get: operations['report_api_v1_tenants__tenant_id__reports_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/v1/tenants/{tenant_id}/roles': {
     parameters: {
       query?: never
@@ -1867,6 +1961,85 @@ export interface paths {
     patch: operations['update_trigger_api_v1_tenants__tenant_id__triggers__rule_id__patch']
     trace?: never
   }
+  '/api/v1/tenants/{tenant_id}/webhooks': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Webhooks */
+    get: operations['webhooks_api_v1_tenants__tenant_id__webhooks_get']
+    put?: never
+    /**
+     * Create
+     * @description Deliveries are POSTs with a JSON body, signed in `X-Zendilohub-Signature: sha256=<HMAC of the body>`.
+     */
+    post: operations['create_api_v1_tenants__tenant_id__webhooks_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/webhooks/{webhook_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /** Delete */
+    delete: operations['delete_api_v1_tenants__tenant_id__webhooks__webhook_id__delete']
+    options?: never
+    head?: never
+    /** Update */
+    patch: operations['update_api_v1_tenants__tenant_id__webhooks__webhook_id__patch']
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/webhooks/{webhook_id}/deliveries': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Deliveries
+     * @description The last 50 tries, newest first.
+     */
+    get: operations['deliveries_api_v1_tenants__tenant_id__webhooks__webhook_id__deliveries_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/webhooks/{webhook_id}/test': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Test
+     * @description Sends a `ping` event now (see the deliveries for the answer).
+     */
+    post: operations['test_api_v1_tenants__tenant_id__webhooks__webhook_id__test_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
 }
 export type webhooks = Record<string, never>
 export interface components {
@@ -1990,6 +2163,56 @@ export interface components {
       permissions: components['schemas']['KeyPermission'][]
       /** Start */
       start: string
+    }
+    /** ArticleRequest */
+    ArticleRequest: {
+      /** Body */
+      body: string
+      /**
+       * Category
+       * @default
+       */
+      category: string
+      /** Tags */
+      tags?: string[]
+      /** Title */
+      title: string
+      /**
+       * Visibility
+       * @default internal
+       * @enum {string}
+       */
+      visibility: 'internal' | 'public'
+    }
+    /** ArticleResponse */
+    ArticleResponse: {
+      /** Author */
+      author: string
+      /** Body */
+      body: string
+      /** Category */
+      category: string
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string
+      /** Id */
+      id: string
+      /** Tags */
+      tags: string[]
+      /** Title */
+      title: string
+      /**
+       * Updated At
+       * Format: date-time
+       */
+      updated_at: string
+      /**
+       * Visibility
+       * @enum {string}
+       */
+      visibility: 'internal' | 'public'
     }
     /** AuditEntryResponse */
     AuditEntryResponse: {
@@ -2335,20 +2558,17 @@ export interface components {
       /** Phone */
       phone?: string | null
     }
-    /** DeliveryResponse */
-    DeliveryResponse: {
-      /** Attempts */
-      attempts: number
-      /** Error */
-      error: string | null
-      /** Message Id */
-      message_id: string
-      status: components['schemas']['DeliveryStatus']
+    /** DayResponse */
+    DayResponse: {
+      /** Closed */
+      closed: number
+      /** Created */
+      created: number
       /**
-       * Updated At
-       * Format: date-time
+       * Day
+       * Format: date
        */
-      updated_at: string
+      day: string
     }
     /** @enum {string} */
     DeliveryStatus: 'queued' | 'sent' | 'failed' | 'skipped'
@@ -2490,22 +2710,6 @@ export interface components {
       /** Name */
       name: string
     }
-    /** GroupResponse */
-    GroupResponse: {
-      /**
-       * Created At
-       * Format: date-time
-       */
-      created_at: string
-      /** Description */
-      description: string
-      /** Id */
-      id: string
-      /** Member Ids */
-      member_ids: string[]
-      /** Name */
-      name: string
-    }
     /** @enum {string} */
     HistoryAction:
       'created' | 'changed' | 'message' | 'merged' | 'merged_from' | 'split_from' | 'linked' | 'unlinked' | 'time'
@@ -2591,6 +2795,13 @@ export interface components {
       | 'customers.view'
       | 'customers.manage'
       | 'audit.view'
+    /** LibraryResponse */
+    LibraryResponse: {
+      /** Articles */
+      articles: components['schemas']['ArticleResponse'][]
+      /** Categories */
+      categories: string[]
+    }
     /** LinkedTicketResponse */
     LinkedTicketResponse: {
       /** Id */
@@ -2928,6 +3139,35 @@ export interface components {
       locale: components['schemas']['LocaleValue']
       /** Password */
       password: string
+    }
+    /** ReportResponse */
+    ReportResponse: {
+      /** Breached */
+      breached: number
+      /** Channels */
+      channels: components['schemas']['zendilohub__modules__reporting__ui__api__routes__GroupResponse'][]
+      /** Closed */
+      closed: number
+      /** Created */
+      created: number
+      /** Days */
+      days: components['schemas']['DayResponse'][]
+      /** First Response Average */
+      first_response_average: number | null
+      /** First Response Median */
+      first_response_median: number | null
+      /** Open Now */
+      open_now: number
+      /** Owners */
+      owners: components['schemas']['zendilohub__modules__reporting__ui__api__routes__GroupResponse'][]
+      /** Queues */
+      queues: components['schemas']['zendilohub__modules__reporting__ui__api__routes__GroupResponse'][]
+      /** Reopened */
+      reopened: number
+      /** Resolution Median */
+      resolution_median: number | null
+      /** Unassigned Now */
+      unassigned_now: number
     }
     /** ResetPasswordRequest */
     ResetPasswordRequest: {
@@ -3508,9 +3748,116 @@ export interface components {
       writing: boolean
     }
     /** @enum {string} */
+    WebhookEvent: 'ticket.created' | 'ticket.changed' | 'message.added' | 'sla.breached'
+    /** WebhookRequest */
+    WebhookRequest: {
+      /**
+       * Active
+       * @default true
+       */
+      active: boolean
+      /** Events */
+      events: components['schemas']['WebhookEvent'][]
+      /** Name */
+      name: string
+      /**
+       * New Secret
+       * @default false
+       */
+      new_secret: boolean
+      /** Url */
+      url: string
+    }
+    /** WebhookResponse */
+    WebhookResponse: {
+      /** Active */
+      active: boolean
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string
+      /** Events */
+      events: components['schemas']['WebhookEvent'][]
+      /** Id */
+      id: string
+      /** Last Delivery At */
+      last_delivery_at: string | null
+      /** Last Error */
+      last_error: string | null
+      /** Last Status */
+      last_status: number | null
+      /** Name */
+      name: string
+      /** Secret */
+      secret?: string | null
+      /** Url */
+      url: string
+    }
+    /** @enum {string} */
     Weekday: 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'
+    /** GroupResponse */
+    zendilohub__modules__access__ui__api__schemas__GroupResponse: {
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string
+      /** Description */
+      description: string
+      /** Id */
+      id: string
+      /** Member Ids */
+      member_ids: string[]
+      /** Name */
+      name: string
+    }
+    /** DeliveryResponse */
+    zendilohub__modules__channels__ui__api__schemas__DeliveryResponse: {
+      /** Attempts */
+      attempts: number
+      /** Error */
+      error: string | null
+      /** Message Id */
+      message_id: string
+      status: components['schemas']['DeliveryStatus']
+      /**
+       * Updated At
+       * Format: date-time
+       */
+      updated_at: string
+    }
     /** @enum {string} */
     zendilohub__modules__identity__ui__api__schemas__RoleValue: 'user' | 'admin'
+    /** DeliveryResponse */
+    zendilohub__modules__integrations__ui__api__routes__DeliveryResponse: {
+      /** Attempt */
+      attempt: number
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string
+      /** Error */
+      error: string | null
+      /** Event */
+      event: string
+      /** Id */
+      id: string
+      /** Status */
+      status: number | null
+    }
+    /** GroupResponse */
+    zendilohub__modules__reporting__ui__api__routes__GroupResponse: {
+      /** Closed */
+      closed: number
+      /** Created */
+      created: number
+      /** Key */
+      key: string | null
+      /** Open */
+      open: number
+    }
     'zendilohub__modules__tenancy__ui__api__schemas__RoleValue-Input': string
     'zendilohub__modules__tenancy__ui__api__schemas__RoleValue-Output': string
   }
@@ -4066,6 +4413,72 @@ export interface operations {
       }
     }
   }
+  library_api_v1_help__tenant_id__get: {
+    parameters: {
+      query?: {
+        category?: string | null
+        q?: string
+      }
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['LibraryResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  public_article_api_v1_help__tenant_id___article_id__get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        article_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ArticleResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
   accept_api_v1_invitations_accept_post: {
     parameters: {
       query?: never
@@ -4452,6 +4865,173 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['ApiKeyResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  articles_api_v1_tenants__tenant_id__articles_get: {
+    parameters: {
+      query?: {
+        category?: string | null
+        q?: string
+      }
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['LibraryResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  create_api_v1_tenants__tenant_id__articles_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ArticleRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ArticleResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  article_api_v1_tenants__tenant_id__articles__article_id__get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        article_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ArticleResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  delete_api_v1_tenants__tenant_id__articles__article_id__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        article_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  update_api_v1_tenants__tenant_id__articles__article_id__patch: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        article_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ArticleRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ArticleResponse']
         }
       }
       /** @description Validation Error */
@@ -5171,7 +5751,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['GroupResponse'][]
+          'application/json': components['schemas']['zendilohub__modules__access__ui__api__schemas__GroupResponse'][]
         }
       }
       /** @description Validation Error */
@@ -5206,7 +5786,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['GroupResponse']
+          'application/json': components['schemas']['zendilohub__modules__access__ui__api__schemas__GroupResponse']
         }
       }
       /** @description Validation Error */
@@ -5272,7 +5852,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['GroupResponse']
+          'application/json': components['schemas']['zendilohub__modules__access__ui__api__schemas__GroupResponse']
         }
       }
       /** @description Validation Error */
@@ -5308,7 +5888,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['GroupResponse']
+          'application/json': components['schemas']['zendilohub__modules__access__ui__api__schemas__GroupResponse']
         }
       }
       /** @description Validation Error */
@@ -6336,6 +6916,42 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['DraftResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  report_api_v1_tenants__tenant_id__reports_get: {
+    parameters: {
+      query: {
+        end: string
+        queue_id?: string | null
+        start: string
+        timezone?: string
+      }
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ReportResponse']
         }
       }
       /** @description Validation Error */
@@ -7577,7 +8193,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['DeliveryResponse'][]
+          'application/json': components['schemas']['zendilohub__modules__channels__ui__api__schemas__DeliveryResponse'][]
         }
       }
       /** @description Validation Error */
@@ -8275,6 +8891,200 @@ export interface operations {
         content: {
           'application/json': components['schemas']['RuleResponse']
         }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  webhooks_api_v1_tenants__tenant_id__webhooks_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['WebhookResponse'][]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  create_api_v1_tenants__tenant_id__webhooks_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['WebhookRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['WebhookResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  delete_api_v1_tenants__tenant_id__webhooks__webhook_id__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+        webhook_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  update_api_v1_tenants__tenant_id__webhooks__webhook_id__patch: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+        webhook_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['WebhookRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['WebhookResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  deliveries_api_v1_tenants__tenant_id__webhooks__webhook_id__deliveries_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+        webhook_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['zendilohub__modules__integrations__ui__api__routes__DeliveryResponse'][]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  test_api_v1_tenants__tenant_id__webhooks__webhook_id__test_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+        webhook_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      202: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
       }
       /** @description Validation Error */
       422: {

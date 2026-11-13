@@ -63,3 +63,4 @@ class PostgresTextModuleRepository:
 
     async def forget_tenant(self, tenant_id: str) -> None:
         await self._run('DELETE FROM text_modules WHERE tenant_id = %s', (tenant_id,))
+        await self._run('DELETE FROM knowledge_articles WHERE tenant_id = %s', (tenant_id,))
