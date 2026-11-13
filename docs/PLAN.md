@@ -420,13 +420,56 @@ Mitarbeiten, Bearbeiten, Voll. Die Rechte eines Menschen sind die Vereinigung se
 Andere Module fragen über den Vertrag `QueueAccess` im Core (`rights`, `visible`); `QueueDeleted` meldet gelöschte
 Queues. Oberfläche: Seiten Queues, Gruppen und Queue-Rechte im neuen Bereich „Helpdesk“ der Seitenleiste.
 
-**Phase 1b (offen):** eigene Rollen mit Systemrechten statt der festen Rollen owner, admin, manager, agent. Abweichend
-von Abschnitt 4.1 bleiben die Rollen in `tenancy`, weil dort Mitgliedschaft und Berechtigungsprüfung liegen; `access`
-besitzt Queues, Gruppen und Rechte.
+**Phase 1b (2026-11-13, fertig):** eigene Rollen neben den vorgegebenen owner, admin, manager, agent. Abweichend von
+Abschnitt 4.1 liegen die Rollen in `tenancy`, weil dort Mitgliedschaft und Berechtigungsprüfung liegen; `access`
+besitzt Queues, Gruppen und Rechte. Eine eigene Rolle hält beliebige Berechtigungen außer denen nur für Inhaber
+(`tenant.delete`, `members.assign_owner`). Niemand vergibt, ändert oder entzieht eine Rolle, die mehr darf als er
+selbst (`role_exceeds_own`); Rollen in Benutzung lassen sich nicht löschen. Seite „Rollen & Rechte“ mit Anlegen,
+Bearbeiten, Löschen und Mitgliederzahl je Rolle.
 
 ---
 
-## 11. Risiken
+## 11. Übernahme aus OTOBO und Zammad (2026-11-13)
+
+Beide Repos (`RotherOSS/otobo`, `zammad/zammad`) wurden auf ihre Module und Modelle durchgesehen. Übernommen werden
+die Funktionen, die im Alltag eines Support-Teams den größten Unterschied machen; die Umsetzung ist eigen, es wird
+kein Code übernommen (OTOBO steht unter GPL-3.0, Zammad unter AGPL-3.0).
+
+| Funktion                                                                           | Vorbild         | Phase |
+| ---------------------------------------------------------------------------------- | --------------- | ----- |
+| Status mit „Warten bis“ (Erinnerung, automatisch schließen) und Fälligkeit         | OTOBO           | 2     |
+| Priorität, Ticket-Typ, Tags                                                        | beide           | 2     |
+| Bearbeiter und Verantwortlicher                                                    | OTOBO           | 2     |
+| Beobachten (Watcher) und Erwähnen mit `@`                                          | OTOBO, Zammad   | 2     |
+| Zusammenführen, Aufteilen aus einer Nachricht, Verknüpfen (Eltern, Kind, verwandt) | beide           | 2     |
+| Lückenloser Verlauf je Ticket                                                      | beide           | 2     |
+| Ansichten („Meine Tickets“, „Nicht zugewiesen“, „Erinnerung fällig“, je Queue)     | Zammad          | 2     |
+| Sammelaktionen in der Liste                                                        | OTOBO           | 2     |
+| Zeiterfassung je Nachricht                                                         | Zammad          | 2     |
+| Kontakte und Firmen mit Kundenübersicht                                            | OTOBO (CIC)     | 2     |
+| Absenderadressen je Queue, Anrede und Signatur je Queue                            | OTOBO           | 3     |
+| Automatische Eingangsbestätigung je Queue                                          | OTOBO           | 3     |
+| Postmaster-Filter (Kopfzeilen → Queue, Priorität, Tags, Verwerfen)                 | OTOBO           | 3     |
+| Liste fehlgeschlagener E-Mails zum erneuten Verarbeiten                            | Zammad          | 3     |
+| Textbausteine mit `::` im Editor                                                   | Zammad          | 4     |
+| Antwortvorlagen je Queue                                                           | OTOBO           | 4     |
+| Makros (mehrere Änderungen mit einem Klick)                                        | Zammad          | 4     |
+| Trigger (bei Ereignis: wenn Bedingungen, dann Aktionen)                            | Zammad          | 4     |
+| Zeitgesteuerte Jobs (z. B. „wartet seit 7 Tagen → schließen“)                      | OTOBO, Zammad   | 4     |
+| SLAs mit Geschäftszeiten und Feiertagen, Eskalationsansicht                        | beide           | 4     |
+| Benachrichtigungen in der App und per E-Mail                                       | beide           | 4     |
+| Kollisionserkennung („Bob sieht sich das Ticket gerade an“)                        | Zammad          | 4     |
+| Eigene Felder an Tickets (Text, Auswahl, Datum, Ja/Nein)                           | OTOBO, Zammad   | 4     |
+| Checklisten im Ticket                                                              | Zammad          | 4     |
+| Berichte und Kennzahlen, Webhooks                                                  | beide           | 5     |
+| Wissensdatenbank (intern, später öffentlich)                                       | OTOBO (FAQ), Z. | 5     |
+
+**Bewusst nicht:** Prozessmanagement und ACL-Editor (OTOBO; zu schwer für kleine Teams), CMDB/ITSM, SOAP-Schnittstellen,
+Chat und soziale Kanäle (Zammad), Telefonie (macht zendilo.ai). PGP/S/MIME bleibt für später offen.
+
+---
+
+## 12. Risiken
 
 - **Zustellbarkeit von E-Mails:** SPF, DKIM und DMARC der Kundenpostfächer; falsch eingerichtet landen Antworten im Spam.
 - **Prompt Injection** über Kundentexte (Abschnitt 6.4), das größte Sicherheitsrisiko bei KI-Zugriff.

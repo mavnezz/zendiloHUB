@@ -10,6 +10,7 @@ from ...domain.models.membership import Membership
 from ...domain.models.tenant import Tenant
 from ...domain.ports.repositories import InvitationRepository, MembershipRepository, TenantRepository
 from ...domain.ports.services import TokenService
+from ..services.roles import RoleBook
 
 
 @dataclass(frozen=True)
@@ -44,6 +45,8 @@ class ListInvitationsHandler:
 class InvitationPreview:
     invitation: Invitation
     tenant: Tenant
+    role_name: str | None = None
+    """The name of an own role."""
 
 
 @dataclass(frozen=True)
@@ -55,8 +58,14 @@ class PreviewInvitation(Query[InvitationPreview]):
 
 class PreviewInvitationHandler:
     def __init__(
-        self, tenants: TenantRepository, invitations: InvitationRepository, tokens: TokenService, clock: Clock
+        self,
+        tenants: TenantRepository,
+        invitations: InvitationRepository,
+        tokens: TokenService,
+        clock: Clock,
+        roles: RoleBook,
     ) -> None:
+        self._roles = roles
         self._tenants = tenants
         self._invitations = invitations
         self._tokens = tokens
@@ -69,4 +78,4 @@ class PreviewInvitationHandler:
         tenant = await self._tenants.find(invitation.tenant_id)
         if tenant is None or not tenant.is_active:
             raise InvalidInvitationError()
-        return InvitationPreview(invitation, tenant)
+        return InvitationPreview(invitation, tenant, await self._roles.name_of(tenant.id, invitation.role))

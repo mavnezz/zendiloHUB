@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from '@/core/ui/dropdown-menu'
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '@/core/ui/sidebar'
+import { roleLabel } from '../roles'
 import { useTenants } from '../tenants'
 
 const tenants = useTenants()
@@ -47,7 +48,7 @@ async function open(tenantId: string): Promise<void> {
             <div class="grid flex-1 text-left text-sm leading-tight">
               <span class="truncate font-semibold" data-test="tenant-name">{{ tenants.current.value?.name }}</span>
               <span v-if="tenants.current.value" class="truncate text-xs text-muted-foreground">
-                {{ $t(`tenant.roles.${tenants.current.value.role}`) }}
+                {{ roleLabel(tenants.current.value.role ?? '', [], tenants.current.value.role_name) }}
               </span>
             </div>
             <ChevronsUpDown class="ml-auto" />

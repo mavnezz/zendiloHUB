@@ -11,10 +11,18 @@ from fastapi.routing import APIRoute
 from starlette.staticfiles import StaticFiles
 from starlette.types import Scope
 
-from zendilohub.core.domain.permissions import TenantRole
+from zendilohub.core.domain.permissions import MemberRole
 from zendilohub.core.events.integration_events import ActionPerformed
 
-from .access import ACCESS_POLICIES, ApiKeyAccess, ApiKeyGuard, AuthGuard, MembershipGuard, Principal, require_person
+from .access import (
+    ACCESS_POLICIES,
+    ApiKeyAccess,
+    ApiKeyGuard,
+    AuthGuard,
+    MembershipGuard,
+    Principal,
+    require_person,
+)
 from .audit import AuditRecorder, AuditSink, declares_audit
 from .content_security_policy import content_security_policy
 from .error_handler import error_body, install_error_handlers
@@ -87,7 +95,7 @@ class HttpKernel:
     def use_membership_guard(self, guard: MembershipGuard) -> None:
         self._memberships = guard
 
-    async def role_in(self, tenant_id: str, user_id: str) -> TenantRole | None:
+    async def role_in(self, tenant_id: str, user_id: str) -> MemberRole | None:
         return await self._memberships.role_in(tenant_id, user_id) if self._memberships else None
 
     def use_audit_sink(self, sink: AuditSink) -> None:

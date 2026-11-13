@@ -8,6 +8,7 @@ import { notify } from '@/core/notify'
 import { Button } from '@/core/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/core/ui/card'
 import { useSession } from '@/modules/identity/session'
+import { roleLabel } from '../roles'
 import { tenancyApi, type InvitationPreview } from '../api'
 import { rememberInvitation, takePendingInvitation, useTenants } from '../tenants'
 
@@ -80,7 +81,12 @@ async function switchAccount(): Promise<void> {
         <ErrorAlert v-if="error" :title="$t('invitation.invalidTitle')" :message="error" />
         <template v-else-if="preview">
           <p class="text-center" data-test="invitation-text">
-            {{ $t('invitation.text', { tenant: preview.tenant_name, role: $t(`tenant.roles.${preview.role}`) }) }}
+            {{
+              $t('invitation.text', {
+                tenant: preview.tenant_name,
+                role: roleLabel(preview.role, [], preview.role_name),
+              })
+            }}
           </p>
           <p class="text-center text-sm text-muted-foreground">
             {{ $t('invitation.forEmail', { email: preview.email }) }}

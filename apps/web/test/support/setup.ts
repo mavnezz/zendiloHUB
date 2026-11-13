@@ -3,6 +3,7 @@ import { http } from '@/core/api/http'
 import { setLocale } from '@/core/i18n/i18n'
 import { useInstance } from '@/core/instance'
 import { useSession } from '@/modules/identity/session'
+import { resetRoles } from '@/modules/tenancy/roles'
 import { useTenants } from '@/modules/tenancy/tenants'
 import { unmountAll } from './mount'
 
@@ -27,4 +28,5 @@ afterEach(() => {
   useSession().reset()
   useTenants().reset()
   useInstance().reset()
+  resetRoles()
 })

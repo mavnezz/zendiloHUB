@@ -320,17 +320,6 @@ async def test_owners_delete_the_organization(app: AppUnderTest) -> None:
     assert (await ada.get(TENANTS)).json() == []
 
 
-async def test_shows_the_role_matrix(app: AppUnderTest) -> None:
-    ada = await logged_in(app, 'ada@example.org')
-
-    matrix = (await ada.get('/api/v1/roles')).json()
-
-    assert matrix['roles'] == ['owner', 'admin', 'manager', 'agent']
-    assert matrix['permissions']['tenant.delete'] == ['owner']
-    assert matrix['permissions']['audit.view'] == ['owner', 'admin']
-    assert (await app.client.get('/api/v1/roles')).status_code == 401
-
-
 async def test_platform_administrators_suspend_organizations(app: AppUnderTest) -> None:
     root = await logged_in(app, 'root@example.org')
     await make_admin(app, 'root@example.org')

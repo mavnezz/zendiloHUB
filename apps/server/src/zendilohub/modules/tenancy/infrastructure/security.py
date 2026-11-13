@@ -2,7 +2,7 @@ import hashlib
 import secrets
 
 from zendilohub.core.bus.command_bus import CommandBus
-from zendilohub.core.domain.permissions import TenantRole
+from zendilohub.core.domain.permissions import MemberRole
 from zendilohub.core.http.access import ApiKeyAccess
 
 from ..application.commands.api_keys import UseApiKey
@@ -27,7 +27,7 @@ class TenantMembershipGuard:
     def __init__(self, bus: CommandBus) -> None:
         self._bus = bus
 
-    async def role_in(self, tenant_id: str, user_id: str) -> TenantRole | None:
+    async def role_in(self, tenant_id: str, user_id: str) -> MemberRole | None:
         return await self._bus.query(RoleIn(tenant_id=tenant_id, user_id=user_id))
 
 

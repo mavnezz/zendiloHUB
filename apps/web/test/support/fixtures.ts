@@ -1,5 +1,5 @@
 import type { User } from '@/modules/identity/api'
-import type { Invitation, Member, OwnTenant, Permission, TenantRole } from '@/modules/tenancy/api'
+import type { BuiltinRole, Invitation, Member, OwnTenant, Permission, Role, Roles } from '@/modules/tenancy/api'
 
 export function user(overrides: Partial<User> = {}): User {
   return {
@@ -13,7 +13,7 @@ export function user(overrides: Partial<User> = {}): User {
 }
 
 /** What each role may do; mirrors the server's matrix (apps/server/src/zendilohub/core/domain/permissions.py). */
-export const ROLE_PERMISSIONS: Record<TenantRole, Permission[]> = {
+export const ROLE_PERMISSIONS: Record<BuiltinRole, Permission[]> = {
   owner: [
     'tenant.manage',
     'tenant.delete',
@@ -42,7 +42,8 @@ export function tenant(overrides: Partial<OwnTenant> = {}): OwnTenant {
     locale: 'de',
     created_at: '2026-10-22T12:00:00Z',
     role,
-    permissions: ROLE_PERMISSIONS[role],
+    role_name: null,
+    permissions: ROLE_PERMISSIONS[role as BuiltinRole] ?? [],
     ...overrides,
   }
 }
@@ -62,12 +63,35 @@ export function invitation(overrides: Partial<Invitation> = {}): Invitation {
   }
 }
 
-export const ROLE_MATRIX = {
-  roles: ['owner', 'admin', 'manager', 'agent'] as TenantRole[],
-  permissions: Object.fromEntries(
-    ROLE_PERMISSIONS.owner.map((permission) => [
-      permission,
-      (Object.keys(ROLE_PERMISSIONS) as TenantRole[]).filter((role) => ROLE_PERMISSIONS[role].includes(permission)),
-    ]),
-  ) as Record<Permission, TenantRole[]>,
+export const OWNER_ONLY: Permission[] = ['tenant.delete', 'members.assign_owner']
+
+export function role(overrides: Partial<Role> = {}): Role {
+  return {
+    id: 'r1',
+    name: 'Team lead',
+    description: 'Runs a team',
+    builtin: false,
+    permissions: ['members.view', 'queues.manage'],
+    member_count: 0,
+    ...overrides,
+  }
+}
+
+/** The roles of an organization as the server lists them: built-in first, then `own`. */
+export function roles(own: Role[] = [], members: Partial<Record<string, number>> = { owner: 1 }): Roles {
+  return {
+    permissions: ROLE_PERMISSIONS.owner,
+    owner_only: OWNER_ONLY,
+    roles: [
+      ...(Object.keys(ROLE_PERMISSIONS) as BuiltinRole[]).map((id) => ({
+        id,
+        name: null,
+        description: '',
+        builtin: true,
+        permissions: ROLE_PERMISSIONS[id],
+        member_count: members[id] ?? 0,
+      })),
+      ...own,
+    ],
+  }
 }

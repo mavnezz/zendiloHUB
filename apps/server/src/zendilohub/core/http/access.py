@@ -20,7 +20,7 @@ from starlette.requests import HTTPConnection
 
 from zendilohub.core.domain.app_domain_error import ForbiddenError, NotFoundError, UnauthenticatedError
 from zendilohub.core.domain.assistant_access import AssistantAccess
-from zendilohub.core.domain.permissions import Permission, TenantRole, permissions_of
+from zendilohub.core.domain.permissions import MemberRole, Permission, TenantRole
 
 from .ids import Id
 
@@ -94,8 +94,8 @@ class Member:
     permissions: frozenset[Permission]
 
     @classmethod
-    def person(cls, principal: Principal, tenant_id: str, role: TenantRole) -> Member:
-        return cls(principal=principal, tenant_id=tenant_id, role=role, permissions=frozenset(permissions_of(role)))
+    def person(cls, principal: Principal, tenant_id: str, role: MemberRole) -> Member:
+        return cls(principal=principal, tenant_id=tenant_id, role=role.role, permissions=role.permissions)
 
     @classmethod
     def key(cls, principal: Principal, access: ApiKeyAccess) -> Member:
@@ -141,7 +141,7 @@ class ApiKeyGuard(Protocol):
 class MembershipGuard(Protocol):
     """Implemented by the module that owns tenants."""
 
-    async def role_in(self, tenant_id: str, user_id: str) -> TenantRole | None:
+    async def role_in(self, tenant_id: str, user_id: str) -> MemberRole | None:
         """The user's role in an active tenant, or None if they are no member (or the tenant does not exist)."""
         ...
 

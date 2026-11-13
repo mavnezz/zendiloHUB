@@ -46,12 +46,14 @@ class MailInvitationNotifier:
     def __init__(self, mailer: Mailer) -> None:
         self._mailer = mailer
 
-    async def invite(self, invitation: Invitation, tenant: Tenant, *, inviter: str, link: str) -> None:
+    async def invite(
+        self, invitation: Invitation, tenant: Tenant, *, inviter: str, link: str, role_name: str | None = None
+    ) -> None:
         subject, text = TEMPLATES[tenant.locale]
         values = {
             'tenant': tenant.name,
             'inviter': inviter,
-            'role': ROLE_NAMES[tenant.locale][invitation.role],
+            'role': role_name or ROLE_NAMES[tenant.locale].get(invitation.role, invitation.role),
             'link': link,
             'email': invitation.email,
             'days': INVITATION_LIFETIME.days,

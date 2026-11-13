@@ -2,27 +2,32 @@ from dataclasses import dataclass
 
 from zendilohub.core.bus.message import Command
 from zendilohub.core.domain.clock import Clock
-from zendilohub.core.domain.permissions import TenantRole
+from zendilohub.core.domain.permissions import Permission, TenantRole
 from zendilohub.core.domain.transaction import TransactionManager
 from zendilohub.core.events.event_bus import EventBus
 from zendilohub.core.events.integration_events import MemberRemoved, TenantDeleted
 
-from ...domain.exceptions import LastOwnerError, MemberNotFoundError, OwnerOnlyError
-from ...domain.models.membership import SENIORITY, Membership
+from ...domain.exceptions import LastOwnerError, MemberNotFoundError, OwnerOnlyError, RoleExceedsOwnError
+from ...domain.models.membership import Membership, seniority
 from ...domain.ports.repositories import MembershipRepository, TenantRepository
+from ..services.roles import RoleBook
 
 
 @dataclass(frozen=True, kw_only=True)
 class ChangeMemberRole(Command[Membership]):
     tenant_id: str
     actor_role: TenantRole
+    actor_permissions: frozenset[Permission]
     user_id: str
     role: TenantRole
 
 
 class ChangeMemberRoleHandler:
-    def __init__(self, memberships: MembershipRepository, transactions: TransactionManager, clock: Clock) -> None:
+    def __init__(
+        self, memberships: MembershipRepository, roles: RoleBook, transactions: TransactionManager, clock: Clock
+    ) -> None:
         self._memberships = memberships
+        self._roles = roles
         self._transactions = transactions
         self._clock = clock
 
@@ -39,6 +44,9 @@ class ChangeMemberRoleHandler:
                 and await self._memberships.count_owners(command.tenant_id) <= 1
             ):
                 raise LastOwnerError()
+            if not member.permissions <= command.actor_permissions:
+                raise RoleExceedsOwnError()
+            await self._roles.check_assignable(command.tenant_id, command.role, command.actor_permissions)
             member.change_role(command.role, self._clock.now())
             await self._memberships.save(member)
         return member
@@ -51,6 +59,7 @@ class RemoveMember(Command[Membership]):
     tenant_id: str
     actor_id: str
     actor_role: TenantRole
+    actor_permissions: frozenset[Permission]
     user_id: str
 
 
@@ -69,6 +78,8 @@ class RemoveMemberHandler:
                 raise OwnerOnlyError()
             if member.is_owner and await self._memberships.count_owners(command.tenant_id) <= 1:
                 raise LastOwnerError()
+            if command.user_id != command.actor_id and not member.permissions <= command.actor_permissions:
+                raise RoleExceedsOwnError()
             await self._memberships.delete(command.tenant_id, command.user_id)
             await self._events.publish(MemberRemoved(tenant_id=command.tenant_id, user_id=command.user_id))
         return member
@@ -107,6 +118,6 @@ class ForgetUserHandler:
                     await self._events.publish(TenantDeleted(tenant_id=tenant_id))
                     await self._tenants.delete(tenant_id)
                 elif not any(member.is_owner for member in remaining):
-                    successor = min(remaining, key=lambda member: (SENIORITY.index(member.role), member.created_at))
+                    successor = min(remaining, key=lambda member: (seniority(member.role), member.created_at))
                     successor.change_role('owner', self._clock.now())
                     await self._memberships.save(successor)

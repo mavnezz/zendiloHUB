@@ -348,23 +348,6 @@ export interface paths {
     patch?: never
     trace?: never
   }
-  '/api/v1/roles': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    /** Matrix */
-    get: operations['matrix_api_v1_roles_get']
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
   '/api/v1/setup': {
     parameters: {
       query?: never
@@ -702,6 +685,51 @@ export interface paths {
     patch: operations['update_queue_api_v1_tenants__tenant_id__queues__queue_id__patch']
     trace?: never
   }
+  '/api/v1/tenants/{tenant_id}/roles': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Roles
+     * @description Every role with what it allows and how many members have it (the roles page).
+     */
+    get: operations['roles_api_v1_tenants__tenant_id__roles_get']
+    put?: never
+    /**
+     * Create Role
+     * @description A role of the organization's own; it may hold only what the caller may do.
+     */
+    post: operations['create_role_api_v1_tenants__tenant_id__roles_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/roles/{role_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /**
+     * Delete Role
+     * @description Only roles nobody has any more (members or invitations).
+     */
+    delete: operations['delete_role_api_v1_tenants__tenant_id__roles__role_id__delete']
+    options?: never
+    head?: never
+    /** Update Role */
+    patch: operations['update_role_api_v1_tenants__tenant_id__roles__role_id__patch']
+    trace?: never
+  }
 }
 export type webhooks = Record<string, never>
 export interface components {
@@ -796,7 +824,7 @@ export interface components {
     }
     /** ChangeRoleRequest */
     ChangeRoleRequest: {
-      role: components['schemas']['zendilohub__modules__tenancy__ui__api__schemas__RoleValue']
+      role: components['schemas']['zendilohub__modules__tenancy__ui__api__schemas__RoleValue-Input']
     }
     /** ChangeStatusRequest */
     ChangeStatusRequest: {
@@ -887,7 +915,9 @@ export interface components {
        * Format: date-time
        */
       expires_at: string
-      role: components['schemas']['zendilohub__modules__tenancy__ui__api__schemas__RoleValue']
+      role: components['schemas']['zendilohub__modules__tenancy__ui__api__schemas__RoleValue-Output']
+      /** Role Name */
+      role_name: string | null
       /** Tenant Name */
       tenant_name: string
     }
@@ -907,14 +937,14 @@ export interface components {
       expires_at: string
       /** Id */
       id: string
-      role: components['schemas']['zendilohub__modules__tenancy__ui__api__schemas__RoleValue']
+      role: components['schemas']['zendilohub__modules__tenancy__ui__api__schemas__RoleValue-Output']
     }
     /** InviteRequest */
     InviteRequest: {
       /** Email */
       email: string
       /** @default agent */
-      role: components['schemas']['zendilohub__modules__tenancy__ui__api__schemas__RoleValue']
+      role: components['schemas']['zendilohub__modules__tenancy__ui__api__schemas__RoleValue-Input']
     }
     /** @enum {string} */
     KeyPermission: 'members.view' | 'queues.manage' | 'audit.view'
@@ -929,7 +959,7 @@ export interface components {
        * Format: date-time
        */
       joined_at: string
-      role: components['schemas']['zendilohub__modules__tenancy__ui__api__schemas__RoleValue']
+      role: components['schemas']['zendilohub__modules__tenancy__ui__api__schemas__RoleValue-Output']
       /** User Id */
       user_id: string
     }
@@ -950,7 +980,9 @@ export interface components {
       name: string
       /** Permissions */
       permissions: components['schemas']['Permission'][]
-      role: components['schemas']['zendilohub__modules__tenancy__ui__api__schemas__RoleValue'] | null
+      role: components['schemas']['zendilohub__modules__tenancy__ui__api__schemas__RoleValue-Output'] | null
+      /** Role Name */
+      role_name?: string | null
       status: components['schemas']['StatusValue']
       /** Timezone */
       timezone: string
@@ -1037,17 +1069,47 @@ export interface components {
     }
     /** @enum {string} */
     RightsPreset: 'read' | 'contribute' | 'work' | 'full'
-    /**
-     * RoleMatrixResponse
-     * @description Which role may do what; the web app shows it on the role permissions page.
-     */
-    RoleMatrixResponse: {
+    /** RoleRequest */
+    RoleRequest: {
+      /**
+       * Description
+       * @default
+       */
+      description: string
+      /** Name */
+      name: string
       /** Permissions */
-      permissions: {
-        [key: string]: components['schemas']['zendilohub__modules__tenancy__ui__api__schemas__RoleValue'][]
-      }
+      permissions: components['schemas']['Permission'][]
+    }
+    /**
+     * RoleResponse
+     * @description A built-in role (`id` is its key, `name` null: the web app translates it) or one of the organization's own.
+     */
+    RoleResponse: {
+      /** Builtin */
+      builtin: boolean
+      /** Description */
+      description: string
+      /** Id */
+      id: string
+      /** Member Count */
+      member_count: number
+      /** Name */
+      name: string | null
+      /** Permissions */
+      permissions: components['schemas']['Permission'][]
+    }
+    /**
+     * RolesResponse
+     * @description Every role of the organization, built-in first, and which permissions exist.
+     */
+    RolesResponse: {
+      /** Owner Only */
+      owner_only: components['schemas']['Permission'][]
+      /** Permissions */
+      permissions: components['schemas']['Permission'][]
       /** Roles */
-      roles: components['schemas']['zendilohub__modules__tenancy__ui__api__schemas__RoleValue'][]
+      roles: components['schemas']['RoleResponse'][]
     }
     /** SessionResponse */
     SessionResponse: {
@@ -1150,8 +1212,8 @@ export interface components {
     }
     /** @enum {string} */
     zendilohub__modules__identity__ui__api__schemas__RoleValue: 'user' | 'admin'
-    /** @enum {string} */
-    zendilohub__modules__tenancy__ui__api__schemas__RoleValue: 'owner' | 'admin' | 'manager' | 'agent'
+    'zendilohub__modules__tenancy__ui__api__schemas__RoleValue-Input': string
+    'zendilohub__modules__tenancy__ui__api__schemas__RoleValue-Output': string
   }
   responses: never
   parameters: never
@@ -1767,26 +1829,6 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['HTTPValidationError']
-        }
-      }
-    }
-  }
-  matrix_api_v1_roles_get: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['RoleMatrixResponse']
         }
       }
     }
@@ -2704,6 +2746,138 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['QueueResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  roles_api_v1_tenants__tenant_id__roles_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['RolesResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  create_role_api_v1_tenants__tenant_id__roles_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RoleRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['RoleResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  delete_role_api_v1_tenants__tenant_id__roles__role_id__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        role_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  update_role_api_v1_tenants__tenant_id__roles__role_id__patch: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        role_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['RoleRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['RoleResponse']
         }
       }
       /** @description Validation Error */

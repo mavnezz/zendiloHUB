@@ -6,6 +6,7 @@ from typing import Protocol
 from ..models.api_key import ApiKey
 from ..models.invitation import Invitation
 from ..models.membership import Membership
+from ..models.role import CustomRole
 from ..models.tenant import Tenant
 
 
@@ -113,3 +114,31 @@ class ApiKeyRepository(Protocol):
         ...
 
     async def touch(self, key_id: str, now: datetime) -> None: ...
+
+
+class RoleRepository(Protocol):
+    """The organization's own roles."""
+
+    async def find(self, tenant_id: str, role_id: str) -> CustomRole | None: ...
+
+    async def of_tenant(self, tenant_id: str) -> Sequence[CustomRole]:
+        """By name."""
+        ...
+
+    async def count(self, tenant_id: str) -> int: ...
+
+    async def name_taken(self, tenant_id: str, name: str, *, except_id: str | None = None) -> bool:
+        """Ignoring case."""
+        ...
+
+    async def in_use(self, tenant_id: str, role_id: str) -> bool:
+        """Whether a member or an open invitation has the role."""
+        ...
+
+    async def usage(self, tenant_id: str) -> dict[str, int]:
+        """Members per role (built-in and own)."""
+        ...
+
+    async def save(self, role: CustomRole) -> None: ...
+
+    async def delete(self, tenant_id: str, role_id: str) -> None: ...

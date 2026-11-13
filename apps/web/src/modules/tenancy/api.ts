@@ -6,13 +6,20 @@ export type Tenant = Schemas['TenantResponse']
 export type Member = Schemas['MemberResponse']
 export type Invitation = Schemas['InvitationResponse']
 export type InvitationPreview = Schemas['InvitationPreviewResponse']
-export type RoleMatrix = Schemas['RoleMatrixResponse']
+export type Roles = Schemas['RolesResponse']
+export type Role = Schemas['RoleResponse']
+export type RoleRequest = Schemas['RoleRequest']
 export type AdminTenantPage = Schemas['AdminTenantPageResponse']
-/** A person's role; API keys have none. */
+/** A person's role: a built-in one or the id of one of the organization's own; API keys have none. */
 export type TenantRole = NonNullable<OwnTenant['role']>
 export type Permission = OwnTenant['permissions'][number]
+export type BuiltinRole = 'owner' | 'admin' | 'manager' | 'agent'
 
-export const TENANT_ROLES: readonly TenantRole[] = ['owner', 'admin', 'manager', 'agent']
+export const BUILTIN_ROLES: readonly BuiltinRole[] = ['owner', 'admin', 'manager', 'agent']
+
+export function isBuiltin(role: string): role is BuiltinRole {
+  return (BUILTIN_ROLES as readonly string[]).includes(role)
+}
 
 export const tenancyApi = {
   list: () => http.get<OwnTenant[]>('/tenants'),
@@ -35,7 +42,11 @@ export const tenancyApi = {
   previewInvitation: (token: string) => http.post<InvitationPreview>('/invitations/preview', { token }),
   acceptInvitation: (token: string) => http.post<OwnTenant>('/invitations/accept', { token }),
 
-  roles: () => http.get<RoleMatrix>('/roles'),
+  roles: (tenantId: string) => http.get<Roles>(`/tenants/${tenantId}/roles`),
+  createRole: (tenantId: string, body: RoleRequest) => http.post<Role>(`/tenants/${tenantId}/roles`, body),
+  updateRole: (tenantId: string, roleId: string, body: RoleRequest) =>
+    http.patch<Role>(`/tenants/${tenantId}/roles/${roleId}`, body),
+  deleteRole: (tenantId: string, roleId: string) => http.delete<void>(`/tenants/${tenantId}/roles/${roleId}`),
 
   adminTenants: (query: { q?: string; offset?: number; limit?: number }) =>
     http.get<AdminTenantPage>('/admin/tenants', query),

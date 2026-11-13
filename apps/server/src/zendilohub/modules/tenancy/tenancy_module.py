@@ -33,6 +33,16 @@ from .application.commands.members import (
     RemoveMember,
     RemoveMemberHandler,
 )
+from .application.commands.roles import (
+    CreateRole,
+    CreateRoleHandler,
+    DeleteRole,
+    DeleteRoleHandler,
+    ListRoles,
+    ListRolesHandler,
+    UpdateRole,
+    UpdateRoleHandler,
+)
 from .application.commands.tenants import (
     ChangeTenantStatus,
     ChangeTenantStatusHandler,
@@ -61,18 +71,20 @@ from .application.queries.tenants import (
     SearchTenants,
     SearchTenantsHandler,
 )
+from .application.services.roles import RoleBook
 from .domain.models.tenant import Locale
 from .infrastructure.mail_notifier import MailInvitationNotifier
 from .infrastructure.membership_directory import MembershipDirectory
 from .infrastructure.pending_invitations import PendingInvitations
 from .infrastructure.postgres_api_keys import PostgresApiKeyRepository
+from .infrastructure.postgres_roles import PostgresRoleRepository
 from .infrastructure.postgres_tenancy import (
     PostgresInvitationRepository,
     PostgresMembershipRepository,
     PostgresTenantRepository,
 )
 from .infrastructure.security import Sha256TokenService, TenantApiKeyGuard, TenantMembershipGuard
-from .ui.api.routes import admin_tenant_routes, invitation_routes, role_routes, tenant_routes
+from .ui.api.routes import admin_tenant_routes, invitation_routes, tenant_routes
 
 MIGRATIONS = Path(__file__).parent / 'infrastructure' / 'migrations'
 
@@ -87,6 +99,8 @@ def create_tenancy_module(context: ModuleContext) -> AppModule:
     memberships = PostgresMembershipRepository(db)
     invitations = PostgresInvitationRepository(db)
     api_keys = PostgresApiKeyRepository(db)
+    roles = PostgresRoleRepository(db)
+    role_book = RoleBook(roles)
     tokens = Sha256TokenService()
     notifier = MailInvitationNotifier(context.mailer)
 
@@ -101,12 +115,14 @@ def create_tenancy_module(context: ModuleContext) -> AppModule:
         .register(UpdateTenant, UpdateTenantHandler(tenants, clock))
         .register(DeleteTenant, DeleteTenantHandler(tenants, db, events))
         .register(ChangeTenantStatus, ChangeTenantStatusHandler(tenants, clock))
-        .register(ChangeMemberRole, ChangeMemberRoleHandler(memberships, db, clock))
+        .register(ChangeMemberRole, ChangeMemberRoleHandler(memberships, role_book, db, clock))
         .register(RemoveMember, RemoveMemberHandler(memberships, db, events))
         .register(ForgetUser, ForgetUserHandler(tenants, memberships, db, events, clock))
         .register(
             InviteMember,
-            InviteMemberHandler(tenants, memberships, invitations, tokens, notifier, context.rate_limiter, ids, clock),
+            InviteMemberHandler(
+                tenants, memberships, invitations, tokens, notifier, context.rate_limiter, ids, clock, role_book
+            ),
         )
         .register(RevokeInvitation, RevokeInvitationHandler(invitations))
         .register(AcceptInvitation, AcceptInvitationHandler(tenants, memberships, invitations, tokens, db, clock))
@@ -116,7 +132,11 @@ def create_tenancy_module(context: ModuleContext) -> AppModule:
         .register(RoleIn, RoleInHandler(memberships))
         .register(ListMembers, ListMembersHandler(memberships))
         .register(ListInvitations, ListInvitationsHandler(invitations, clock))
-        .register(PreviewInvitation, PreviewInvitationHandler(tenants, invitations, tokens, clock))
+        .register(PreviewInvitation, PreviewInvitationHandler(tenants, invitations, tokens, clock, role_book))
+        .register(CreateRole, CreateRoleHandler(roles, db, ids, clock))
+        .register(UpdateRole, UpdateRoleHandler(roles, db, clock))
+        .register(DeleteRole, DeleteRoleHandler(roles, db))
+        .register(ListRoles, ListRolesHandler(roles))
         .register(CreateApiKey, CreateApiKeyHandler(api_keys, ids, clock))
         .register(UpdateApiKey, UpdateApiKeyHandler(api_keys))
         .register(DeleteApiKey, DeleteApiKeyHandler(api_keys))
@@ -151,5 +171,5 @@ def create_tenancy_module(context: ModuleContext) -> AppModule:
     return AppModule(
         name='tenancy',
         migrations=sql_migrations(MIGRATIONS),
-        routers=[tenant_routes(bus, context.config), invitation_routes(bus), role_routes(), admin_tenant_routes(bus)],
+        routers=[tenant_routes(bus, context.config), invitation_routes(bus), admin_tenant_routes(bus)],
     )

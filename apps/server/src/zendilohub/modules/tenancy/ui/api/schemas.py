@@ -3,19 +3,31 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from zendilohub.core.domain.permissions import PERMISSIONS, TENANT_ROLES, Permission, TenantRole, permissions_of
+from zendilohub.core.domain.permissions import (
+    BUILTIN_ROLES,
+    OWNER_ONLY,
+    PERMISSIONS,
+    BuiltinRole,
+    Permission,
+    ordered,
+    permissions_of,
+)
 from zendilohub.core.http.access import Member
 
 from ...application.commands.api_keys import CreatedApiKey
+from ...application.commands.roles import RoleOverview
 from ...application.queries.members import InvitationPreview
 from ...domain.models.api_key import KEY_PERMISSIONS, NAME_MAX, ApiKey, KeyPermission
 from ...domain.models.invitation import Invitation
 from ...domain.models.membership import Membership
+from ...domain.models.role import DESCRIPTION_MAX, CustomRole
+from ...domain.models.role import NAME_MAX as ROLE_NAME_MAX
 from ...domain.models.tenant import Tenant
 from ...domain.ports.repositories import OwnTenant, TenantPage
 
 type LocaleValue = Literal['de', 'en']
-type RoleValue = Literal['owner', 'admin', 'manager', 'agent']
+type RoleValue = str
+"""A built-in role (`owner`, `admin`, `manager`, `agent`) or the id of one of the organization's own roles."""
 type StatusValue = Literal['active', 'suspended']
 
 
@@ -40,12 +52,18 @@ class ChangeStatusRequest(Request):
 
 
 class ChangeRoleRequest(Request):
-    role: RoleValue
+    role: RoleValue = Field(min_length=1, max_length=64)
 
 
 class InviteRequest(Request):
     email: str = Field(max_length=254)
-    role: RoleValue = 'agent'
+    role: RoleValue = Field(default='agent', min_length=1, max_length=64)
+
+
+class RoleRequest(Request):
+    name: str = Field(max_length=ROLE_NAME_MAX)
+    description: str = Field(default='', max_length=DESCRIPTION_MAX)
+    permissions: list[Permission] = Field(min_length=1, max_length=len(PERMISSIONS))
 
 
 class TokenRequest(Request):
@@ -77,11 +95,20 @@ class OwnTenantResponse(TenantResponse):
 
     role: RoleValue | None
     """None for an API key: it has the permissions it was given, no role."""
+    role_name: str | None = None
+    """The name of an own role; built-in roles are translated by the web app."""
     permissions: list[Permission]
 
     @classmethod
-    def of_role(cls, tenant: Tenant, role: TenantRole) -> OwnTenantResponse:
-        return cls(**TenantResponse.of(tenant).model_dump(), role=role, permissions=permissions_of(role))
+    def of_role(
+        cls, tenant: Tenant, role: RoleValue, permissions: frozenset[Permission], role_name: str | None = None
+    ) -> OwnTenantResponse:
+        return cls(
+            **TenantResponse.of(tenant).model_dump(),
+            role=role,
+            role_name=role_name,
+            permissions=ordered(permissions),
+        )
 
     @classmethod
     def of_member(cls, tenant: Tenant, member: Member) -> OwnTenantResponse:
@@ -90,7 +117,7 @@ class OwnTenantResponse(TenantResponse):
 
     @classmethod
     def of_own(cls, own: OwnTenant) -> OwnTenantResponse:
-        return cls.of_role(own.tenant, own.membership.role)
+        return cls.of_role(own.tenant, own.membership.role, own.membership.permissions, own.membership.role_name)
 
 
 class MemberResponse(BaseModel):
@@ -126,6 +153,8 @@ class InvitationPreviewResponse(BaseModel):
     tenant_name: str
     email: str
     role: RoleValue
+    role_name: str | None
+    """The name of an own role; built-in roles are translated by the web app."""
     expires_at: datetime
 
     @classmethod
@@ -134,6 +163,7 @@ class InvitationPreviewResponse(BaseModel):
             tenant_name=preview.tenant.name,
             email=preview.invitation.email,
             role=preview.invitation.role,
+            role_name=preview.role_name,
             expires_at=preview.invitation.expires_at,
         )
 
@@ -157,20 +187,50 @@ class AdminTenantPageResponse(BaseModel):
         )
 
 
-class RoleMatrixResponse(BaseModel):
-    """Which role may do what; the web app shows it on the role permissions page."""
+class RoleResponse(BaseModel):
+    """A built-in role (`id` is its key, `name` null: the web app translates it) or one of the organization's own."""
 
-    roles: list[RoleValue]
-    permissions: dict[Permission, list[RoleValue]]
+    id: str
+    name: str | None
+    description: str
+    builtin: bool
+    permissions: list[Permission]
+    member_count: int
 
     @classmethod
-    def current(cls) -> RoleMatrixResponse:
+    def of_builtin(cls, role: BuiltinRole, members: int) -> RoleResponse:
         return cls(
-            roles=list(TENANT_ROLES),
-            permissions={
-                permission: [role for role in TENANT_ROLES if role in roles]
-                for permission, roles in PERMISSIONS.items()
-            },
+            id=role, name=None, description='', builtin=True, permissions=permissions_of(role), member_count=members
+        )
+
+    @classmethod
+    def of(cls, role: CustomRole, members: int) -> RoleResponse:
+        return cls(
+            id=role.id,
+            name=role.name,
+            description=role.description,
+            builtin=False,
+            permissions=ordered(role.permissions),
+            member_count=members,
+        )
+
+
+class RolesResponse(BaseModel):
+    """Every role of the organization, built-in first, and which permissions exist."""
+
+    permissions: list[Permission]
+    owner_only: list[Permission]
+    """What no own role may hold."""
+    roles: list[RoleResponse]
+
+    @classmethod
+    def of(cls, overview: RoleOverview) -> RolesResponse:
+        count = overview.members
+        return cls(
+            permissions=list(PERMISSIONS),
+            owner_only=ordered(OWNER_ONLY),
+            roles=[RoleResponse.of_builtin(role, count.get(role, 0)) for role in BUILTIN_ROLES]
+            + [RoleResponse.of(role, count.get(role.id, 0)) for role in overview.roles],
         )
 
 

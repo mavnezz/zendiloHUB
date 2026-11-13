@@ -88,3 +88,35 @@ class SingleOrganizationError(ForbiddenError):
 
     def __init__(self) -> None:
         super().__init__('single_organization', 'This instance has its organization already')
+
+
+class InvalidRoleError(ValidationError):
+    def __init__(self, field: str) -> None:
+        super().__init__('invalid_role', f'Please check the role ({field})', {'field': field})
+
+
+class RoleNotFoundError(NotFoundError):
+    def __init__(self) -> None:
+        super().__init__('role_not_found', 'The role does not exist')
+
+
+class RoleNameTakenError(ConflictError):
+    def __init__(self) -> None:
+        super().__init__('role_name_taken', 'There is already a role of this name')
+
+
+class RoleLimitError(ConflictError):
+    def __init__(self, limit: int) -> None:
+        super().__init__('role_limit', f'An organization can have at most {limit} roles of its own', {'limit': limit})
+
+
+class RoleInUseError(ConflictError):
+    def __init__(self) -> None:
+        super().__init__('role_in_use', 'Members or invitations still have this role; give them another one first')
+
+
+class RoleExceedsOwnError(ForbiddenError):
+    """Nobody hands out (or takes away) more than they may do themselves."""
+
+    def __init__(self) -> None:
+        super().__init__('role_exceeds_own', 'This role may do things you may not do yourself')

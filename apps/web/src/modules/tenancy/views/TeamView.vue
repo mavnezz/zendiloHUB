@@ -15,8 +15,9 @@ import { Button } from '@/core/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/core/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/core/ui/table'
 import { useSession } from '@/modules/identity/session'
-import { tenancyApi, TENANT_ROLES, type Invitation, type Member, type TenantRole } from '../api'
+import { tenancyApi, type Invitation, type Member, type TenantRole } from '../api'
 import InviteDialog from '../components/InviteDialog.vue'
+import { useRoles } from '../roles'
 import { useTenants } from '../tenants'
 
 const { t } = useI18n()
@@ -29,7 +30,11 @@ const tenant = computed(() => current.value!)
 const manage = computed(() => tenants.can('members.manage'))
 const owner = computed(() => tenants.can('members.assign_owner'))
 
-const members = useAsyncData(() => tenancyApi.members(tenant.value.id))
+const roles = useRoles()
+const members = useAsyncData(async () => {
+  await roles.load().catch(() => undefined)
+  return tenancyApi.members(tenant.value.id)
+})
 const invitations = useAsyncData(() =>
   manage.value ? tenancyApi.invitations(tenant.value.id) : Promise.resolve([] as Invitation[]),
 )
@@ -38,22 +43,23 @@ function isMe(member: Member): boolean {
   return member.user_id === session.user.value?.id
 }
 
-/** Owners can change everyone; admins everyone except owners, and nobody to owner. */
+/** Nobody hands out a role that may do more than they may (so only owners make owners). */
 function roleOptions(member: Member) {
-  return TENANT_ROLES.filter((role) => owner.value || (role !== 'owner' && member.role !== 'owner')).map((value) => ({
-    value,
-    label: t(`tenant.roles.${value}`),
-  }))
+  const options = roles.assignable().map((role) => ({ value: role.id, label: roles.label(role.id) }))
+  return options.some((option) => option.value === member.role)
+    ? options
+    : [{ value: member.role, label: roles.label(member.role) }, ...options]
 }
 
+/** Owners can change everyone; others only members who may not do more than they may. */
 function canChange(member: Member): boolean {
-  return manage.value && (owner.value || member.role !== 'owner')
+  return manage.value && (owner.value || (member.role !== 'owner' && roles.governs(member.role)))
 }
 
 async function changeRole(member: Member, role: TenantRole): Promise<void> {
   try {
     const changed = await tenancyApi.changeRole(tenant.value.id, member.user_id, role)
-    notify.success(t('team.roleChanged', { email: changed.email, role: t(`tenant.roles.${changed.role}`) }))
+    notify.success(t('team.roleChanged', { email: changed.email, role: roles.label(changed.role) }))
   } catch (caught) {
     notify.error(caught)
   }
@@ -132,7 +138,7 @@ async function revoke(invitation: Invitation): Promise<void> {
                   :data-test="`role-${member.email}`"
                   @update:model-value="(role: TenantRole) => changeRole(member, role)"
                 />
-                <span v-else>{{ $t(`tenant.roles.${member.role}`) }}</span>
+                <span v-else>{{ roles.label(member.role) }}</span>
               </TableCell>
               <TableCell class="hidden text-muted-foreground sm:table-cell">{{
                 formatDate(member.joined_at)
@@ -178,7 +184,7 @@ async function revoke(invitation: Invitation): Promise<void> {
           >
             <Mail class="size-4 text-muted-foreground" />
             <span class="font-medium">{{ invitation.email }}</span>
-            <Badge variant="outline">{{ $t(`tenant.roles.${invitation.role}`) }}</Badge>
+            <Badge variant="outline">{{ roles.label(invitation.role) }}</Badge>
             <span class="text-sm text-muted-foreground">
               {{ $t('team.expires', { date: formatDate(invitation.expires_at) }) }}
             </span>

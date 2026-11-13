@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Any, cast
 
 from zendilohub.core.database.database import Database
-from zendilohub.core.domain.permissions import TenantRole
+from zendilohub.core.domain.permissions import Permission
 
 from ..domain.models.invitation import Invitation
 from ..domain.models.membership import Membership
@@ -28,10 +28,19 @@ def _membership(row: dict[str, Any]) -> Membership:
         tenant_id=str(row['tenant_id']),
         user_id=str(row['user_id']),
         email=row['email'],
-        role=cast(TenantRole, row['role']),
+        role=row['role'],
         created_at=row['created_at'],
         updated_at=row['updated_at'],
+        role_permissions=frozenset(cast(list[Permission], row.get('role_permissions') or [])),
+        role_name=row.get('role_name'),
     )
+
+
+# Memberships with what their own role allows (built-in roles have no row in `roles`).
+_MEMBERSHIPS = """
+    SELECT m.*, r.permissions AS role_permissions, r.name AS role_name
+    FROM memberships m LEFT JOIN roles r ON r.tenant_id = m.tenant_id AND r.id::text = m.role
+"""
 
 
 def _invitation(row: dict[str, Any]) -> Invitation:
@@ -39,7 +48,7 @@ def _invitation(row: dict[str, Any]) -> Invitation:
         id=str(row['id']),
         tenant_id=str(row['tenant_id']),
         email=row['email'],
-        role=cast(TenantRole, row['role']),
+        role=row['role'],
         token_hash=row['token_hash'],
         invited_by=str(row['invited_by']),
         created_at=row['created_at'],
@@ -118,16 +127,16 @@ class PostgresMembershipRepository:
         self._db = db
 
     async def find(self, tenant_id: str, user_id: str) -> Membership | None:
-        return await self._one('SELECT * FROM memberships WHERE tenant_id = %s AND user_id = %s', (tenant_id, user_id))
+        return await self._one(f'{_MEMBERSHIPS} WHERE m.tenant_id = %s AND m.user_id = %s', (tenant_id, user_id))
 
     async def find_by_email(self, tenant_id: str, email: str) -> Membership | None:
-        return await self._one('SELECT * FROM memberships WHERE tenant_id = %s AND email = %s', (tenant_id, email))
+        return await self._one(f'{_MEMBERSHIPS} WHERE m.tenant_id = %s AND m.email = %s', (tenant_id, email))
 
     async def of_tenant(self, tenant_id: str) -> Sequence[Membership]:
         async with self._db.connection() as connection:
             rows = await (
                 await connection.execute(
-                    'SELECT * FROM memberships WHERE tenant_id = %s ORDER BY created_at, user_id', (tenant_id,)
+                    f'{_MEMBERSHIPS} WHERE m.tenant_id = %s ORDER BY m.created_at, m.user_id'.encode(), (tenant_id,)
                 )
             ).fetchall()
         return [_membership(row) for row in rows]
@@ -137,9 +146,11 @@ class PostgresMembershipRepository:
             rows = await (
                 await connection.execute(
                     """
-                    SELECT m.*, t.id AS t_id, t.name AS t_name, t.status AS t_status, t.timezone AS t_timezone,
+                    SELECT m.*, r.permissions AS role_permissions, r.name AS role_name, t.id AS t_id, t.name AS t_name, t.status AS t_status,
+                           t.timezone AS t_timezone,
                            t.locale AS t_locale, t.created_at AS t_created_at, t.updated_at AS t_updated_at
                     FROM memberships m JOIN tenants t ON t.id = m.tenant_id
+                    LEFT JOIN roles r ON r.tenant_id = m.tenant_id AND r.id::text = m.role
                     WHERE m.user_id = %s
                     ORDER BY lower(t.name), t.id
                     """,
@@ -151,7 +162,8 @@ class PostgresMembershipRepository:
     async def role_in_active(self, tenant_id: str, user_id: str) -> Membership | None:
         return await self._one(
             """
-            SELECT m.* FROM memberships m JOIN tenants t ON t.id = m.tenant_id
+            SELECT m.*, r.permissions AS role_permissions, r.name AS role_name FROM memberships m JOIN tenants t ON t.id = m.tenant_id
+            LEFT JOIN roles r ON r.tenant_id = m.tenant_id AND r.id::text = m.role
             WHERE m.tenant_id = %s AND m.user_id = %s AND t.status = 'active'
             """,
             (tenant_id, user_id),
@@ -168,7 +180,7 @@ class PostgresMembershipRepository:
                     role = EXCLUDED.role,
                     updated_at = EXCLUDED.updated_at
                 """,
-                vars(membership),
+                {key: value for key, value in vars(membership).items() if key not in {'role_permissions', 'role_name'}},
             )
 
     async def delete(self, tenant_id: str, user_id: str) -> None:

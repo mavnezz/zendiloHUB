@@ -4,6 +4,7 @@ from fastapi import APIRouter, Query, Request, Response
 
 from zendilohub.core.bus.command_bus import CommandBus
 from zendilohub.core.config import AppConfig
+from zendilohub.core.domain.permissions import permissions_of
 from zendilohub.core.http.access import (
     CurrentAdmin,
     CurrentMember,
@@ -19,6 +20,7 @@ from zendilohub.core.http.ids import Id
 from ...application.commands.api_keys import CreateApiKey, DeleteApiKey, ListApiKeys, UpdateApiKey
 from ...application.commands.invitations import AcceptInvitation, InviteMember, RevokeInvitation
 from ...application.commands.members import ChangeMemberRole, RemoveMember
+from ...application.commands.roles import CreateRole, DeleteRole, ListRoles, UpdateRole
 from ...application.commands.tenants import ChangeTenantStatus, CreateTenant, DeleteTenant, UpdateTenant
 from ...application.queries.members import ListInvitations, ListMembers, PreviewInvitation
 from ...application.queries.tenants import GetTenant, ListOwnTenants, SearchTenants
@@ -35,7 +37,9 @@ from .schemas import (
     InviteRequest,
     MemberResponse,
     OwnTenantResponse,
-    RoleMatrixResponse,
+    RoleRequest,
+    RoleResponse,
+    RolesResponse,
     TenantResponse,
     TokenRequest,
     UpdateTenantRequest,
@@ -63,7 +67,7 @@ def tenant_routes(bus: CommandBus, config: AppConfig) -> APIRouter:
             )
         )
         note_audit(request, tenant_id=tenant.id, target=tenant.name)
-        return OwnTenantResponse.of_role(tenant, 'owner')
+        return OwnTenantResponse.of_role(tenant, 'owner', frozenset(permissions_of('owner')))
 
     @router.get('/{tenant_id}')
     async def show(member: CurrentMember) -> OwnTenantResponse:
@@ -95,7 +99,13 @@ def tenant_routes(bus: CommandBus, config: AppConfig) -> APIRouter:
         member: Annotated[Member, member_with('members.manage', people_only=True)],
     ) -> MemberResponse:
         changed = await bus.execute(
-            ChangeMemberRole(tenant_id=member.tenant_id, actor_role=member.person_role, user_id=user_id, role=body.role)
+            ChangeMemberRole(
+                tenant_id=member.tenant_id,
+                actor_role=member.person_role,
+                actor_permissions=member.permissions,
+                user_id=user_id,
+                role=body.role,
+            )
         )
         note_audit(request, target=f'{changed.email}: {changed.role}')
         return MemberResponse.of(changed)
@@ -112,7 +122,11 @@ def tenant_routes(bus: CommandBus, config: AppConfig) -> APIRouter:
             member.require('members.manage')
         removed = await bus.execute(
             RemoveMember(
-                tenant_id=member.tenant_id, actor_id=member.user_id, actor_role=member.person_role, user_id=user_id
+                tenant_id=member.tenant_id,
+                actor_id=member.user_id,
+                actor_role=member.person_role,
+                actor_permissions=member.permissions,
+                user_id=user_id,
             )
         )
         note_audit(request, target=removed.email)
@@ -136,6 +150,7 @@ def tenant_routes(bus: CommandBus, config: AppConfig) -> APIRouter:
                 actor_id=member.user_id,
                 actor_email=member.principal.email,
                 actor_role=member.person_role,
+                actor_permissions=member.permissions,
                 email=body.email,
                 role=body.role,
                 link_base=config.public_url or str(request.base_url).rstrip('/'),
@@ -155,6 +170,61 @@ def tenant_routes(bus: CommandBus, config: AppConfig) -> APIRouter:
     ) -> None:
         revoked = await bus.execute(RevokeInvitation(tenant_id=member.tenant_id, invitation_id=invitation_id))
         note_audit(request, target=revoked.email)
+
+    @router.get('/{tenant_id}/roles')
+    async def roles(member: CurrentMember) -> RolesResponse:
+        """Every role with what it allows and how many members have it (the roles page)."""
+        return RolesResponse.of(await bus.query(ListRoles(member.tenant_id)))
+
+    @router.post('/{tenant_id}/roles', status_code=201, dependencies=[audited('role.created')])
+    async def create_role(
+        body: RoleRequest, request: Request, member: Annotated[Member, member_with('members.manage', people_only=True)]
+    ) -> RoleResponse:
+        """A role of the organization's own; it may hold only what the caller may do."""
+        role = await bus.execute(
+            CreateRole(
+                tenant_id=member.tenant_id,
+                actor_permissions=member.permissions,
+                name=body.name,
+                description=body.description,
+                permissions=frozenset(body.permissions),
+            )
+        )
+        note_audit(request, target=role.name)
+        return RoleResponse.of(role, 0)
+
+    @router.patch('/{tenant_id}/roles/{role_id}', dependencies=[audited('role.updated')])
+    async def update_role(
+        role_id: Id,
+        body: RoleRequest,
+        request: Request,
+        member: Annotated[Member, member_with('members.manage', people_only=True)],
+    ) -> RoleResponse:
+        role = await bus.execute(
+            UpdateRole(
+                tenant_id=member.tenant_id,
+                actor_permissions=member.permissions,
+                role_id=role_id,
+                name=body.name,
+                description=body.description,
+                permissions=frozenset(body.permissions),
+            )
+        )
+        note_audit(request, target=role.name)
+        overview = await bus.query(ListRoles(member.tenant_id))
+        return RoleResponse.of(role, overview.members.get(role.id, 0))
+
+    @router.delete(
+        '/{tenant_id}/roles/{role_id}', status_code=204, response_class=Response, dependencies=[audited('role.deleted')]
+    )
+    async def delete_role(
+        role_id: Id, request: Request, member: Annotated[Member, member_with('members.manage', people_only=True)]
+    ) -> None:
+        """Only roles nobody has any more (members or invitations)."""
+        role = await bus.execute(
+            DeleteRole(tenant_id=member.tenant_id, actor_permissions=member.permissions, role_id=role_id)
+        )
+        note_audit(request, target=role.name)
 
     @router.get('/{tenant_id}/api-keys')
     async def api_keys(
@@ -222,16 +292,6 @@ def invitation_routes(bus: CommandBus) -> APIRouter:
 async def _own(bus: CommandBus, tenant_id: str, user_id: str) -> OwnTenantResponse:
     own = next(own for own in await bus.query(ListOwnTenants(user_id)) if own.tenant.id == tenant_id)
     return OwnTenantResponse.of_own(own)
-
-
-def role_routes() -> APIRouter:
-    router = APIRouter(prefix='/roles', tags=['tenants'])
-
-    @router.get('')
-    async def matrix(_principal: CurrentUser) -> RoleMatrixResponse:
-        return RoleMatrixResponse.current()
-
-    return router
 
 
 def admin_tenant_routes(bus: CommandBus) -> APIRouter:

@@ -9,7 +9,7 @@ import RolesView from '@/modules/tenancy/views/RolesView.vue'
 import TeamView from '@/modules/tenancy/views/TeamView.vue'
 import TenantSettingsView from '@/modules/tenancy/views/TenantSettingsView.vue'
 import { FakeApi } from '../../support/fake-api'
-import { invitation, member, ROLE_MATRIX, tenant, TENANT_ID, user } from '../../support/fixtures'
+import { invitation, member, role, roles, tenant, TENANT_ID, user } from '../../support/fixtures'
 import { $, $$, click, exists, flushPromises, mountView, text, type } from '../../support/mount'
 import { spyToasts } from '../../support/toasts'
 
@@ -60,7 +60,10 @@ describe('TeamView', () => {
   ]
 
   function api(): FakeApi {
-    return new FakeApi().json('GET', `${BASE}/members`, members).json('GET', `${BASE}/invitations`, [invitation()])
+    return new FakeApi()
+      .json('GET', `${BASE}/members`, members)
+      .json('GET', `${BASE}/invitations`, [invitation()])
+      .json('GET', `${BASE}/roles`, roles())
   }
 
   it('lists the members and open invitations', async () => {
@@ -163,7 +166,10 @@ describe('TeamView', () => {
 
   it('shows admins no controls for owners and an empty invitation list', async () => {
     inTenant('admin')
-    new FakeApi().json('GET', `${BASE}/members`, members).json('GET', `${BASE}/invitations`, [])
+    new FakeApi()
+      .json('GET', `${BASE}/members`, members)
+      .json('GET', `${BASE}/invitations`, [])
+      .json('GET', `${BASE}/roles`, roles())
     await mountView(TeamView, { path: `/t/${TENANT_ID}/team` })
     expect(exists('[data-test="role-carol@example.org"]')).toBe(false)
     expect(exists('[data-test="remove-carol@example.org"]')).toBe(false)
@@ -191,18 +197,89 @@ describe('TeamView', () => {
 describe('RolesView', () => {
   it('shows what each role may do', async () => {
     inTenant('manager')
-    new FakeApi().json('GET', '/roles', ROLE_MATRIX)
+    new FakeApi().json('GET', `${BASE}/roles`, roles([role({ member_count: 2 })], { owner: 1, manager: 1 }))
     await mountView(RolesView, { path: `/t/${TENANT_ID}/roles` })
     expect($('[data-test=role-card-manager]').classes()).toContain('border-primary')
-    expect($('[data-test=permission-tenant\\.delete]').text()).toContain('Delete the organization')
+    expect($('[data-test=role-card-r1]').text()).toContain('Team lead')
+    expect($('[data-test=role-members-r1]').text()).toBe('2 members')
+    expect($('[data-test=role-members-agent]').text()).toBe('No members')
+    expect($('[data-test=permission-tenant\\.delete]').text()).toContain('Owners only')
     expect($('[data-test=permission-tenant\\.delete]').findAll('[data-test=allowed]')).toHaveLength(1)
-    expect($('[data-test=permission-audit\\.view]').findAll('[data-test=allowed]')).toHaveLength(2)
-    expect(text()).toContain('Audit log')
+    expect($('[data-test=permission-queues\\.manage]').findAll('[data-test=allowed]')).toHaveLength(3)
+    // Managers cannot change roles.
+    expect(exists('[data-test=create-role]')).toBe(false)
+    expect(exists('[data-test=edit-role-r1]')).toBe(false)
+  })
+
+  it('creates, changes and deletes own roles', async () => {
+    const toasts = spyToasts()
+    inTenant('admin')
+    const fake = new FakeApi()
+      .json('GET', `${BASE}/roles`, roles([role(), role({ id: 'r2', name: 'Seer', permissions: ['queues.all'] })]))
+      .json('POST', `${BASE}/roles`, role({ id: 'r3', name: 'Auditor' }), 201)
+      .json('PATCH', `${BASE}/roles/r1`, role({ name: 'Lead' }))
+      .on('DELETE', `${BASE}/roles/r1`, { status: 204 })
+    await mountView(RolesView, { path: `/t/${TENANT_ID}/roles` })
+    // Admins may not see every queue, so they cannot touch a role that may.
+    expect(exists('[data-test=edit-role-r2]')).toBe(false)
+
+    await click('[data-test=create-role]')
+    // What only owners may do, and what admins may not do themselves, is not on offer.
+    expect(exists('[data-test=permission-tenant\\.delete]:not(tr)')).toBe(false)
+    expect(exists('[data-test=permission-queues\\.all]:not(tr)')).toBe(false)
+    await type('#role-name', 'Auditor')
+    await type('#role-description', 'Reads the log')
+    await click('label[data-test=permission-audit\\.view] button')
+    await click('label[data-test=permission-members\\.view] button')
+    await click('[data-test=save-role]')
+    expect(fake.last('POST', `${BASE}/roles`)?.body).toEqual({
+      name: 'Auditor',
+      description: 'Reads the log',
+      permissions: ['members.view', 'audit.view'],
+    })
+    expect(toasts.success()).toContain('Role "Auditor" created.')
+
+    await click('[data-test=edit-role-r1]')
+    expect(($('#role-name').element as HTMLInputElement).value).toBe('Team lead')
+    await type('#role-name', 'Lead')
+    await click('label[data-test=permission-members\\.view] button')
+    await click('[data-test=save-role]')
+    expect(fake.last('PATCH', `${BASE}/roles/r1`)?.body).toEqual({
+      name: 'Lead',
+      description: 'Runs a team',
+      permissions: ['queues.manage'],
+    })
+
+    await click('[data-test=delete-role-r1]')
+    expect(text()).toContain('Delete the role "Team lead"?')
+    await click('[data-test=confirm]')
+    expect(fake.calls('DELETE', `${BASE}/roles/r1`)).toHaveLength(1)
+  })
+
+  it('shows why saving failed and reloads the own permissions after changing the own role', async () => {
+    useSession().start(user())
+    useTenants().put(tenant({ role: 'r1', role_name: 'Team lead', permissions: ['members.view', 'members.manage'] }))
+    useTenants().select(TENANT_ID)
+    const fake = new FakeApi()
+      .json('GET', `${BASE}/roles`, roles([role({ permissions: ['members.view'] })]))
+      .error('POST', `${BASE}/roles`, 409, 'role_name_taken')
+      .json('PATCH', `${BASE}/roles/r1`, role())
+      .json('GET', '/tenants', [tenant({ role: 'r1', permissions: ['members.view'] })])
+    await mountView(RolesView, { path: `/t/${TENANT_ID}/roles` })
+    await click('[data-test=create-role]')
+    await type('#role-name', 'Admin')
+    await click('label[data-test=permission-members\\.view] button')
+    await click('[data-test=save-role]')
+    expect($('[role=dialog] [data-test=error]').text()).toContain('There is already a role of this name.')
+
+    await click('[data-test=edit-role-r1]')
+    await click('[data-test=save-role]')
+    expect(fake.calls('GET', '/tenants')).toHaveLength(1)
   })
 
   it('reports a failure', async () => {
     inTenant()
-    new FakeApi().error('GET', '/roles', 500, 'internal_error')
+    new FakeApi().error('GET', `${BASE}/roles`, 500, 'internal_error')
     await mountView(RolesView, { path: `/t/${TENANT_ID}/roles` })
     expect(exists('[data-test=error]')).toBe(true)
   })

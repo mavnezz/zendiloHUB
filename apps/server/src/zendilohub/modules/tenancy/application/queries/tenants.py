@@ -2,7 +2,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from zendilohub.core.bus.message import Query
-from zendilohub.core.domain.permissions import TenantRole
+from zendilohub.core.domain.permissions import MemberRole
 
 from ...domain.exceptions import TenantNotFoundError
 from ...domain.models.tenant import Tenant
@@ -54,7 +54,7 @@ class SearchTenantsHandler:
 
 
 @dataclass(frozen=True, kw_only=True)
-class RoleIn(Query[TenantRole | None]):
+class RoleIn(Query[MemberRole | None]):
     """The user's role in an active tenant (the HTTP policy of tenant routes)."""
 
     tenant_id: str
@@ -65,6 +65,6 @@ class RoleInHandler:
     def __init__(self, memberships: MembershipRepository) -> None:
         self._memberships = memberships
 
-    async def handle(self, query: RoleIn) -> TenantRole | None:
+    async def handle(self, query: RoleIn) -> MemberRole | None:
         membership = await self._memberships.role_in_active(query.tenant_id, query.user_id)
-        return membership.role if membership else None
+        return MemberRole(role=membership.role, permissions=membership.permissions) if membership else None

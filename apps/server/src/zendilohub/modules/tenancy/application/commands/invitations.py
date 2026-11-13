@@ -4,7 +4,7 @@ from zendilohub.core.bus.message import Command
 from zendilohub.core.domain.clock import Clock
 from zendilohub.core.domain.email_address import normalized_email
 from zendilohub.core.domain.id_generator import IdGenerator
-from zendilohub.core.domain.permissions import TenantRole
+from zendilohub.core.domain.permissions import Permission, TenantRole
 from zendilohub.core.domain.rate_limited import TooManyRequestsError
 from zendilohub.core.domain.rate_limiter import RateLimit, RateLimiter
 from zendilohub.core.domain.transaction import TransactionManager
@@ -23,6 +23,7 @@ from ...domain.models.membership import Membership
 from ...domain.models.tenant import Tenant
 from ...domain.ports.repositories import InvitationRepository, MembershipRepository, TenantRepository
 from ...domain.ports.services import InvitationNotifier, TokenService
+from ..services.roles import RoleBook
 
 # Invitations are e-mails we send on request: nobody may use an organization to spam.
 INVITATIONS_PER_TENANT = RateLimit('invitations-tenant', limit=50, window_seconds=60 * 60)
@@ -34,6 +35,7 @@ class InviteMember(Command[Invitation]):
     actor_id: str
     actor_email: str
     actor_role: TenantRole
+    actor_permissions: frozenset[Permission]
     email: str
     role: TenantRole
     link_base: str
@@ -51,7 +53,9 @@ class InviteMemberHandler:
         limiter: RateLimiter,
         ids: IdGenerator,
         clock: Clock,
+        roles: RoleBook,
     ) -> None:
+        self._roles = roles
         self._tenants = tenants
         self._memberships = memberships
         self._invitations = invitations
@@ -67,6 +71,7 @@ class InviteMemberHandler:
             raise InvalidEmailError()
         if command.role == 'owner' and command.actor_role != 'owner':
             raise OwnerOnlyError()
+        await self._roles.check_assignable(command.tenant_id, command.role, command.actor_permissions)
         tenant = await self._tenants.find(command.tenant_id)
         if tenant is None:
             raise TenantNotFoundError()
@@ -93,6 +98,7 @@ class InviteMemberHandler:
             invitation,
             tenant,
             inviter=command.actor_email,
+            role_name=await self._roles.name_of(command.tenant_id, command.role),
             link=f'{command.link_base}/invitations?token={issued.token}',
         )
         return invitation

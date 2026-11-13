@@ -18,7 +18,8 @@ import {
 } from '@/core/ui/dialog'
 import { Input } from '@/core/ui/input'
 import { Label } from '@/core/ui/label'
-import { tenancyApi, TENANT_ROLES, type TenantRole } from '../api'
+import { tenancyApi, type TenantRole } from '../api'
+import { useRoles } from '../roles'
 import { useTenants } from '../tenants'
 
 const emit = defineEmits<{ invited: [] }>()
@@ -31,15 +32,19 @@ const role = ref<TenantRole>('agent')
 const error = ref<string | null>(null)
 const busy = ref(false)
 
-/** Only owners may invite owners. */
+/** Only roles that may not do more than the inviter (so only owners invite owners). */
+const known = useRoles()
 const roles = computed(() =>
-  TENANT_ROLES.filter((each) => each !== 'owner' || tenants.can('members.assign_owner')).map((value) => ({
-    value,
-    label: `${t(`tenant.roles.${value}`)} – ${t(`tenant.roleDescriptions.${value}`)}`,
+  known.assignable().map((each) => ({
+    value: each.id,
+    label: `${known.label(each.id)} – ${each.builtin ? t(`tenant.roleDescriptions.${each.id}`) : each.description}`,
   })),
 )
 
 watch(open, () => {
+  if (open.value) {
+    void known.load().catch(() => undefined)
+  }
   email.value = ''
   role.value = 'agent'
   error.value = null
