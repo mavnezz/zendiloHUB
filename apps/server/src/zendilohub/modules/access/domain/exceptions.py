@@ -51,3 +51,8 @@ class NotAMemberError(ValidationError):
 class InvalidRightsError(ValidationError):
     def __init__(self, right: str) -> None:
         super().__init__('invalid_rights', f'"{right}" is no right in a queue', {'right': right})
+
+
+class QueueHasTicketsError(ConflictError):
+    def __init__(self, count: int) -> None:
+        super().__init__('queue_has_tickets', 'Tickets still lie in this queue; move them first', {'count': count})

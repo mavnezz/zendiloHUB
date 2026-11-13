@@ -1,0 +1,138 @@
+from pathlib import Path
+
+from zendilohub.core.bus.command_bus import CommandBus
+from zendilohub.core.database.migration import sql_migrations
+from zendilohub.core.events.integration_events import MemberRemoved, TenantDeleted, UserDeleted
+from zendilohub.core.module import AppModule, ModuleContext
+
+from .application.commands.forget import (
+    CloseDueTickets,
+    CloseDueTicketsHandler,
+    ForgetMember,
+    ForgetMemberHandler,
+    ForgetTenant,
+    ForgetTenantHandler,
+)
+from .application.commands.messages import AddMessage, AddMessageHandler
+from .application.commands.relations import (
+    LinkTickets,
+    LinkTicketsHandler,
+    MergeTicket,
+    MergeTicketHandler,
+    RecordTime,
+    RecordTimeHandler,
+    SplitTicket,
+    SplitTicketHandler,
+    UnlinkTickets,
+    UnlinkTicketsHandler,
+    Watch,
+    WatchHandler,
+)
+from .application.commands.tickets import (
+    BulkUpdate,
+    BulkUpdateHandler,
+    CreateTicket,
+    CreateTicketHandler,
+    DeleteTicket,
+    DeleteTicketHandler,
+    UpdateTicket,
+    UpdateTicketHandler,
+)
+from .application.queries.tickets import (
+    Assignees,
+    AssigneesHandler,
+    CountTickets,
+    CountTicketsHandler,
+    FindTicketByNumber,
+    FindTicketByNumberHandler,
+    GetTicket,
+    GetTicketHandler,
+    ListMessages,
+    ListMessagesHandler,
+    SearchTickets,
+    SearchTicketsHandler,
+    TicketHistory,
+    TicketHistoryHandler,
+    TicketTime,
+    TicketTimeHandler,
+    TicketUsageHandler,
+    TicketUsageQuery,
+)
+from .application.services.desk import Desk, TimeKeeper
+from .infrastructure.contract_adapters import BusTicketUsage, ContractCustomers, ContractQueueRights
+from .infrastructure.postgres_tickets import (
+    PostgresHistoryRepository,
+    PostgresLinkRepository,
+    PostgresMessageRepository,
+    PostgresTicketRepository,
+    PostgresTimeRepository,
+    PostgresWatcherRepository,
+)
+from .ui.api.routes import ticket_routes
+
+MIGRATIONS = Path(__file__).parent / 'infrastructure' / 'migrations'
+CLOSE_DUE_EVERY_SECONDS = 60
+
+
+def create_tickets_module(context: ModuleContext) -> AppModule:
+    """
+    Tickets and their messages, history, tags, watchers, links and time. Who may do what with a ticket comes from the
+    access module's rights in its queue (`QueueAccess` contract); customers come from the `Contacts` contract.
+    """
+    db = context.db
+    tickets = PostgresTicketRepository(db)
+    messages = PostgresMessageRepository(db)
+    history = PostgresHistoryRepository(db)
+    watchers = PostgresWatcherRepository(db)
+    links = PostgresLinkRepository(db)
+    times = PostgresTimeRepository(db)
+    rights = ContractQueueRights(context.contracts)
+    customers = ContractCustomers(context.contracts)
+    desk = Desk(tickets, history, rights, context.events, context.ids, context.clock)
+    time = TimeKeeper(desk, times)
+    update = UpdateTicketHandler(desk, customers, db)
+    bus = (
+        CommandBus()
+        .register(CreateTicket, CreateTicketHandler(desk, messages, customers, db, time))
+        .register(UpdateTicket, update)
+        .register(BulkUpdate, BulkUpdateHandler(update))
+        .register(DeleteTicket, DeleteTicketHandler(desk))
+        .register(AddMessage, AddMessageHandler(desk, messages, watchers, time, db))
+        .register(Watch, WatchHandler(desk, watchers))
+        .register(LinkTickets, LinkTicketsHandler(desk, links, db))
+        .register(UnlinkTickets, UnlinkTicketsHandler(desk, links))
+        .register(MergeTicket, MergeTicketHandler(desk, messages, watchers, links, db))
+        .register(SplitTicket, SplitTicketHandler(desk, messages, links, db))
+        .register(RecordTime, RecordTimeHandler(desk, time))
+        .register(ForgetMember, ForgetMemberHandler(tickets, watchers, desk))
+        .register(ForgetTenant, ForgetTenantHandler(tickets))
+        .register(CloseDueTickets, CloseDueTicketsHandler(desk, db))
+        .register(SearchTickets, SearchTicketsHandler(desk, customers))
+        .register(CountTickets, CountTicketsHandler(desk))
+        .register(GetTicket, GetTicketHandler(desk, watchers, links, times))
+        .register(FindTicketByNumber, FindTicketByNumberHandler(desk))
+        .register(ListMessages, ListMessagesHandler(desk, messages))
+        .register(TicketHistory, TicketHistoryHandler(desk))
+        .register(TicketTime, TicketTimeHandler(desk, times))
+        .register(Assignees, AssigneesHandler(desk))
+        .register(TicketUsageQuery, TicketUsageHandler(desk))
+    )
+
+    async def member_removed(event: MemberRemoved) -> None:
+        await bus.execute(ForgetMember(event.tenant_id, event.user_id))
+
+    async def user_deleted(event: UserDeleted) -> None:
+        await bus.execute(ForgetMember(None, event.user_id))
+
+    async def tenant_deleted(event: TenantDeleted) -> None:
+        await bus.execute(ForgetTenant(event.tenant_id))
+
+    context.events.subscribe(MemberRemoved, member_removed)
+    context.events.subscribe(UserDeleted, user_deleted)
+    context.events.subscribe(TenantDeleted, tenant_deleted)
+    context.contracts.ticket_usage.provide(BusTicketUsage(bus))
+    context.scheduler.every(CLOSE_DUE_EVERY_SECONDS, 'tickets.close_due', lambda: bus.execute(CloseDueTickets()))
+
+    return AppModule(
+        name='tickets', migrations=sql_migrations(MIGRATIONS), routers=[ticket_routes(bus, context.contracts)]
+    )

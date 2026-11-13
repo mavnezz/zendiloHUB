@@ -1,0 +1,448 @@
+import re
+from collections.abc import Sequence
+from datetime import datetime
+from typing import Any, cast
+
+from zendilohub.core.database.database import Database
+
+from ..domain.models.history import HistoryAction, HistoryEntry
+from ..domain.models.link import OPPOSITE, Link, LinkKind
+from ..domain.models.message import AuthorKind, Direction, Message, MessageKind
+from ..domain.models.ticket import OPEN_STATES, PENDING_STATES, Channel, Priority, Ticket, TicketState
+from ..domain.models.time_entry import TimeEntry
+from ..domain.models.views import TicketFilter, TicketView
+from ..domain.ports.repositories import TicketPage
+
+_NUMBER = re.compile(r'^#?(\d{1,15})$')
+FIRST_NUMBER = 1001
+
+_SORTS = {
+    'updated': 't.updated_at',
+    'created': 't.created_at',
+    'number': 't.number',
+    'pending': 't.pending_until',
+    'priority': "array_position(ARRAY['low', 'normal', 'high', 'urgent'], t.priority)",
+}
+
+
+def _id(value: object) -> str | None:
+    return str(value) if value is not None else None
+
+
+def _ticket(row: dict[str, Any]) -> Ticket:
+    return Ticket(
+        id=str(row['id']),
+        tenant_id=str(row['tenant_id']),
+        number=int(row['number']),
+        subject=row['subject'],
+        queue_id=str(row['queue_id']),
+        state=cast(TicketState, row['state']),
+        priority=cast(Priority, row['priority']),
+        channel=cast(Channel, row['channel']),
+        customer_id=_id(row['customer_id']),
+        owner_id=_id(row['owner_id']),
+        responsible_id=_id(row['responsible_id']),
+        tags=tuple(row['tags']),
+        pending_until=row['pending_until'],
+        merged_into_id=_id(row['merged_into_id']),
+        created_at=row['created_at'],
+        updated_at=row['updated_at'],
+        first_response_at=row['first_response_at'],
+        closed_at=row['closed_at'],
+        last_message_at=row['last_message_at'],
+    )
+
+
+def _message(row: dict[str, Any]) -> Message:
+    return Message(
+        id=str(row['id']),
+        tenant_id=str(row['tenant_id']),
+        ticket_id=str(row['ticket_id']),
+        kind=cast(MessageKind, row['kind']),
+        direction=cast(Direction, row['direction']),
+        author_kind=cast(AuthorKind, row['author_kind']),
+        author_id=_id(row['author_id']),
+        author_name=row['author_name'],
+        body=row['body'],
+        body_html=row['body_html'],
+        subject=row['subject'],
+        from_address=row['from_address'],
+        to_addresses=tuple(row['to_addresses']),
+        cc_addresses=tuple(row['cc_addresses']),
+        email_message_id=row['email_message_id'],
+        in_reply_to=row['in_reply_to'],
+        references=tuple(row['references']),
+        created_at=row['created_at'],
+    )
+
+
+class _Sql:
+    def __init__(self, db: Database) -> None:
+        self._db = db
+
+    async def rows(self, sql: str, params: Any = None) -> list[dict[str, Any]]:
+        async with self._db.connection() as connection:
+            return list(await (await connection.execute(sql.encode(), params)).fetchall())
+
+    async def one(self, sql: str, params: Any = None) -> dict[str, Any] | None:
+        rows = await self.rows(sql, params)
+        return rows[0] if rows else None
+
+    async def run(self, sql: str, params: Any = None) -> None:
+        async with self._db.connection() as connection:
+            await connection.execute(sql.encode(), params)
+
+
+def _where(criteria: TicketFilter, view: TicketView) -> tuple[str, dict[str, Any]]:
+    """The SQL condition of a view with the filters; never outside the visible queues."""
+    params: dict[str, Any] = {
+        'tenant': criteria.tenant_id,
+        'queues': list(criteria.queue_ids),
+        'user': criteria.user_id,
+        'now': criteria.now,
+        'open': list(OPEN_STATES),
+        'pending': list(PENDING_STATES),
+    }
+    conditions = ['t.tenant_id = %(tenant)s', 't.queue_id = ANY(%(queues)s::uuid[])']
+    views = {
+        'mine': 't.owner_id = %(user)s::uuid AND t.state = ANY(%(open)s)',
+        'unassigned': 't.owner_id IS NULL AND t.state = ANY(%(open)s)',
+        'due': 't.state = ANY(%(pending)s) AND t.pending_until <= %(now)s',
+        'open': 't.state = ANY(%(open)s)',
+        'watching': """t.state <> 'merged' AND EXISTS (
+            SELECT 1 FROM ticket_watchers w WHERE w.ticket_id = t.id AND w.user_id = %(user)s::uuid)""",
+        'closed': "t.state = 'closed'",
+        'all': "t.state <> 'merged'" if criteria.state is None else 'TRUE',
+    }
+    conditions.append(views[view])
+    if criteria.queue_id is not None:
+        conditions.append('t.queue_id = %(queue)s::uuid')
+        params['queue'] = criteria.queue_id
+    if criteria.state is not None:
+        conditions.append('t.state = %(state)s')
+        params['state'] = criteria.state
+    if criteria.priority is not None:
+        conditions.append('t.priority = %(priority)s')
+        params['priority'] = criteria.priority
+    if criteria.owner_id is not None:
+        conditions.append('t.owner_id = %(owner)s::uuid')
+        params['owner'] = criteria.owner_id
+    if criteria.customer_ids is not None:
+        conditions.append('t.customer_id = ANY(%(customers)s::uuid[])')
+        params['customers'] = list(criteria.customer_ids)
+    if criteria.tag is not None:
+        conditions.append('%(tag)s = ANY(t.tags)')
+        params['tag'] = criteria.tag
+    if criteria.query:
+        params['q'] = criteria.query
+        params['like'] = '%' + criteria.query.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_') + '%'
+        found = [
+            't.subject ILIKE %(like)s',
+            """EXISTS (SELECT 1 FROM ticket_messages m
+                WHERE m.ticket_id = t.id AND m.search @@ plainto_tsquery('simple', %(q)s))""",
+        ]
+        number = _NUMBER.match(criteria.query)
+        if number:
+            found.append('t.number = %(number)s')
+            params['number'] = int(number.group(1))
+        conditions.append('(' + ' OR '.join(found) + ')')
+    return ' AND '.join(conditions), params
+
+
+class PostgresTicketRepository(_Sql):
+    async def next_number(self, tenant_id: str) -> int:
+        row = await self.one(
+            """
+            INSERT INTO ticket_counters (tenant_id, last_number) VALUES (%s, %s)
+            ON CONFLICT (tenant_id) DO UPDATE SET last_number = ticket_counters.last_number + 1
+            RETURNING last_number
+            """,
+            (tenant_id, FIRST_NUMBER),
+        )
+        assert row is not None
+        return int(row['last_number'])
+
+    async def find(self, tenant_id: str, ticket_id: str) -> Ticket | None:
+        row = await self.one('SELECT * FROM tickets WHERE tenant_id = %s AND id = %s', (tenant_id, ticket_id))
+        return _ticket(row) if row else None
+
+    async def find_by_number(self, tenant_id: str, number: int) -> Ticket | None:
+        row = await self.one('SELECT * FROM tickets WHERE tenant_id = %s AND number = %s', (tenant_id, number))
+        return _ticket(row) if row else None
+
+    async def find_many(self, tenant_id: str, ticket_ids: Sequence[str]) -> Sequence[Ticket]:
+        if not ticket_ids:
+            return []
+        rows = await self.rows(
+            'SELECT * FROM tickets WHERE tenant_id = %s AND id = ANY(%s::uuid[]) ORDER BY number',
+            (tenant_id, list(ticket_ids)),
+        )
+        return [_ticket(row) for row in rows]
+
+    async def save(self, ticket: Ticket) -> None:
+        values = {key: value for key, value in vars(ticket).items() if key != 'changes'}
+        values['tags'] = list(ticket.tags)
+        await self.run(
+            """
+            INSERT INTO tickets (id, tenant_id, number, subject, queue_id, state, priority, channel, customer_id,
+                                 owner_id, responsible_id, tags, pending_until, merged_into_id, created_at, updated_at,
+                                 first_response_at, closed_at, last_message_at)
+            VALUES (%(id)s, %(tenant_id)s, %(number)s, %(subject)s, %(queue_id)s, %(state)s, %(priority)s,
+                    %(channel)s, %(customer_id)s, %(owner_id)s, %(responsible_id)s, %(tags)s, %(pending_until)s,
+                    %(merged_into_id)s, %(created_at)s, %(updated_at)s, %(first_response_at)s, %(closed_at)s,
+                    %(last_message_at)s)
+            ON CONFLICT (id) DO UPDATE SET
+                subject = EXCLUDED.subject,
+                queue_id = EXCLUDED.queue_id,
+                state = EXCLUDED.state,
+                priority = EXCLUDED.priority,
+                customer_id = EXCLUDED.customer_id,
+                owner_id = EXCLUDED.owner_id,
+                responsible_id = EXCLUDED.responsible_id,
+                tags = EXCLUDED.tags,
+                pending_until = EXCLUDED.pending_until,
+                merged_into_id = EXCLUDED.merged_into_id,
+                updated_at = EXCLUDED.updated_at,
+                first_response_at = EXCLUDED.first_response_at,
+                closed_at = EXCLUDED.closed_at,
+                last_message_at = EXCLUDED.last_message_at
+            """,
+            values,
+        )
+
+    async def delete(self, tenant_id: str, ticket_id: str) -> None:
+        await self.run('DELETE FROM tickets WHERE tenant_id = %s AND id = %s', (tenant_id, ticket_id))
+
+    async def search(self, criteria: TicketFilter) -> TicketPage:
+        where, params = _where(criteria, criteria.view)
+        order = _SORTS[criteria.sort] + (' DESC NULLS LAST' if criteria.descending else ' ASC NULLS LAST')
+        rows = await self.rows(
+            f'SELECT t.* FROM tickets t WHERE {where} ORDER BY {order}, t.number DESC OFFSET %(offset)s LIMIT %(limit)s',
+            {**params, 'offset': criteria.offset, 'limit': criteria.limit},
+        )
+        total = await self.one(f'SELECT count(*) AS n FROM tickets t WHERE {where}', params)
+        return TicketPage([_ticket(row) for row in rows], int(total['n']) if total else 0)
+
+    async def counts(self, criteria: TicketFilter) -> dict[TicketView, int]:
+        views: tuple[TicketView, ...] = ('mine', 'unassigned', 'due', 'open', 'watching')
+        parts, params = [], {}
+        for view in views:
+            where, view_params = _where(criteria, view)
+            params.update(view_params)
+            parts.append(f'(SELECT count(*) FROM tickets t WHERE {where}) AS "{view}"')
+        row = await self.one('SELECT ' + ', '.join(parts), params)
+        assert row is not None
+        return {view: int(row[view]) for view in views}
+
+    async def in_queue(self, tenant_id: str, queue_id: str) -> int:
+        row = await self.one(
+            'SELECT count(*) AS n FROM tickets WHERE tenant_id = %s AND queue_id = %s', (tenant_id, queue_id)
+        )
+        return int(row['n']) if row else 0
+
+    async def of_customer(self, tenant_id: str, contact_id: str) -> int:
+        row = await self.one(
+            'SELECT count(*) AS n FROM tickets WHERE tenant_id = %s AND customer_id = %s', (tenant_id, contact_id)
+        )
+        return int(row['n']) if row else 0
+
+    async def due_to_close(self, now: datetime, limit: int) -> Sequence[Ticket]:
+        rows = await self.rows(
+            """
+            SELECT * FROM tickets WHERE state = 'pending_close' AND pending_until <= %s
+            ORDER BY pending_until LIMIT %s
+            """,
+            (now, limit),
+        )
+        return [_ticket(row) for row in rows]
+
+    async def unassign(self, tenant_id: str | None, user_id: str, now: datetime) -> None:
+        await self.run(
+            """
+            UPDATE tickets SET owner_id = CASE WHEN owner_id = %(user)s THEN NULL ELSE owner_id END,
+                               responsible_id = CASE WHEN responsible_id = %(user)s THEN NULL ELSE responsible_id END,
+                               updated_at = %(now)s
+            WHERE (owner_id = %(user)s OR responsible_id = %(user)s)
+              AND (%(tenant)s::uuid IS NULL OR tenant_id = %(tenant)s::uuid)
+            """,
+            {'user': user_id, 'tenant': tenant_id, 'now': now},
+        )
+
+    async def forget_tenant(self, tenant_id: str) -> None:
+        await self.run('DELETE FROM tickets WHERE tenant_id = %s', (tenant_id,))
+        await self.run('DELETE FROM ticket_counters WHERE tenant_id = %s', (tenant_id,))
+
+
+class PostgresMessageRepository(_Sql):
+    async def of_ticket(self, tenant_id: str, ticket_id: str) -> Sequence[Message]:
+        rows = await self.rows(
+            'SELECT * FROM ticket_messages WHERE tenant_id = %s AND ticket_id = %s ORDER BY created_at, id',
+            (tenant_id, ticket_id),
+        )
+        return [_message(row) for row in rows]
+
+    async def find(self, tenant_id: str, message_id: str) -> Message | None:
+        row = await self.one('SELECT * FROM ticket_messages WHERE tenant_id = %s AND id = %s', (tenant_id, message_id))
+        return _message(row) if row else None
+
+    async def save(self, message: Message) -> None:
+        values = vars(message) | {
+            'to_addresses': list(message.to_addresses),
+            'cc_addresses': list(message.cc_addresses),
+            'references': list(message.references),
+        }
+        await self.run(
+            """
+            INSERT INTO ticket_messages (id, tenant_id, ticket_id, kind, direction, author_kind, author_id,
+                                         author_name, body, body_html, subject, from_address, to_addresses,
+                                         cc_addresses, email_message_id, in_reply_to, "references", created_at)
+            VALUES (%(id)s, %(tenant_id)s, %(ticket_id)s, %(kind)s, %(direction)s, %(author_kind)s, %(author_id)s,
+                    %(author_name)s, %(body)s, %(body_html)s, %(subject)s, %(from_address)s, %(to_addresses)s,
+                    %(cc_addresses)s, %(email_message_id)s, %(in_reply_to)s, %(references)s, %(created_at)s)
+            """,
+            values,
+        )
+
+    async def move(self, tenant_id: str, from_ticket: str, to_ticket: str) -> None:
+        for table in ('ticket_messages', 'ticket_time'):
+            await self.run(
+                f'UPDATE {table} SET ticket_id = %s WHERE tenant_id = %s AND ticket_id = %s',
+                (to_ticket, tenant_id, from_ticket),
+            )
+
+
+class PostgresHistoryRepository(_Sql):
+    async def add(self, entries: Sequence[HistoryEntry]) -> None:
+        if not entries:
+            return
+        async with self._db.connection() as connection, connection.cursor() as cursor:
+            await cursor.executemany(
+                """
+                INSERT INTO ticket_history (id, tenant_id, ticket_id, actor_id, actor_name, action, field, old, new,
+                                            created_at)
+                VALUES (%(id)s, %(tenant_id)s, %(ticket_id)s, %(actor_id)s, %(actor_name)s, %(action)s, %(field)s,
+                        %(old)s, %(new)s, %(created_at)s)
+                """,
+                [vars(entry) for entry in entries],
+            )
+
+    async def of_ticket(self, tenant_id: str, ticket_id: str) -> Sequence[HistoryEntry]:
+        rows = await self.rows(
+            'SELECT * FROM ticket_history WHERE tenant_id = %s AND ticket_id = %s ORDER BY created_at, id',
+            (tenant_id, ticket_id),
+        )
+        return [
+            HistoryEntry(
+                id=str(row['id']),
+                tenant_id=str(row['tenant_id']),
+                ticket_id=str(row['ticket_id']),
+                actor_id=_id(row['actor_id']),
+                actor_name=row['actor_name'],
+                action=cast(HistoryAction, row['action']),
+                field=row['field'],
+                old=row['old'],
+                new=row['new'],
+                created_at=row['created_at'],
+            )
+            for row in rows
+        ]
+
+
+class PostgresWatcherRepository(_Sql):
+    async def watch(self, tenant_id: str, ticket_id: str, user_ids: Sequence[str]) -> None:
+        for user_id in user_ids:
+            await self.run(
+                """
+                INSERT INTO ticket_watchers (ticket_id, tenant_id, user_id) VALUES (%s, %s, %s)
+                ON CONFLICT DO NOTHING
+                """,
+                (ticket_id, tenant_id, user_id),
+            )
+
+    async def unwatch(self, tenant_id: str, ticket_id: str, user_id: str) -> None:
+        await self.run(
+            'DELETE FROM ticket_watchers WHERE tenant_id = %s AND ticket_id = %s AND user_id = %s',
+            (tenant_id, ticket_id, user_id),
+        )
+
+    async def of_ticket(self, tenant_id: str, ticket_id: str) -> Sequence[str]:
+        rows = await self.rows(
+            'SELECT user_id FROM ticket_watchers WHERE tenant_id = %s AND ticket_id = %s ORDER BY user_id',
+            (tenant_id, ticket_id),
+        )
+        return [str(row['user_id']) for row in rows]
+
+    async def forget(self, tenant_id: str | None, user_id: str) -> None:
+        await self.run(
+            'DELETE FROM ticket_watchers WHERE user_id = %s AND (%s::uuid IS NULL OR tenant_id = %s::uuid)',
+            (user_id, tenant_id, tenant_id),
+        )
+
+
+class PostgresLinkRepository(_Sql):
+    async def link(self, tenant_id: str, link: Link) -> None:
+        for ticket_id, other_id, kind in (
+            (link.ticket_id, link.other_id, link.kind),
+            (link.other_id, link.ticket_id, OPPOSITE[link.kind]),
+        ):
+            await self.run(
+                """
+                INSERT INTO ticket_links (tenant_id, ticket_id, other_id, kind) VALUES (%s, %s, %s, %s)
+                ON CONFLICT (ticket_id, other_id) DO UPDATE SET kind = EXCLUDED.kind
+                """,
+                (tenant_id, ticket_id, other_id, kind),
+            )
+
+    async def unlink(self, tenant_id: str, ticket_id: str, other_id: str) -> None:
+        await self.run(
+            """
+            DELETE FROM ticket_links WHERE tenant_id = %(t)s
+              AND ((ticket_id = %(a)s AND other_id = %(b)s) OR (ticket_id = %(b)s AND other_id = %(a)s))
+            """,
+            {'t': tenant_id, 'a': ticket_id, 'b': other_id},
+        )
+
+    async def of_ticket(self, tenant_id: str, ticket_id: str) -> Sequence[Link]:
+        rows = await self.rows(
+            'SELECT * FROM ticket_links WHERE tenant_id = %s AND ticket_id = %s', (tenant_id, ticket_id)
+        )
+        return [
+            Link(ticket_id=str(row['ticket_id']), other_id=str(row['other_id']), kind=cast(LinkKind, row['kind']))
+            for row in rows
+        ]
+
+    async def kind_between(self, tenant_id: str, ticket_id: str, other_id: str) -> LinkKind | None:
+        row = await self.one(
+            'SELECT kind FROM ticket_links WHERE tenant_id = %s AND ticket_id = %s AND other_id = %s',
+            (tenant_id, ticket_id, other_id),
+        )
+        return cast(LinkKind, row['kind']) if row else None
+
+
+class PostgresTimeRepository(_Sql):
+    async def add(self, entry: TimeEntry) -> None:
+        await self.run(
+            """
+            INSERT INTO ticket_time (id, tenant_id, ticket_id, user_id, minutes, message_id, created_at)
+            VALUES (%(id)s, %(tenant_id)s, %(ticket_id)s, %(user_id)s, %(minutes)s, %(message_id)s, %(created_at)s)
+            """,
+            vars(entry),
+        )
+
+    async def of_ticket(self, tenant_id: str, ticket_id: str) -> Sequence[TimeEntry]:
+        rows = await self.rows(
+            'SELECT * FROM ticket_time WHERE tenant_id = %s AND ticket_id = %s ORDER BY created_at, id',
+            (tenant_id, ticket_id),
+        )
+        return [
+            TimeEntry(
+                id=str(row['id']),
+                tenant_id=str(row['tenant_id']),
+                ticket_id=str(row['ticket_id']),
+                user_id=str(row['user_id']),
+                minutes=int(row['minutes']),
+                message_id=_id(row['message_id']),
+                created_at=row['created_at'],
+            )
+            for row in rows
+        ]

@@ -85,3 +85,39 @@ class QueueDeleted(IntegrationEvent):
 
     tenant_id: str
     queue_id: str
+
+
+@dataclass(frozen=True, kw_only=True)
+class TicketCreated(IntegrationEvent):
+    tenant_id: str
+    ticket_id: str
+    number: int
+    queue_id: str
+    customer_id: str | None
+    channel: str
+    actor_id: str | None
+
+
+@dataclass(frozen=True, kw_only=True)
+class TicketChanged(IntegrationEvent):
+    """Fields of a ticket changed: (field, old, new) as text, e.g. ('state', 'open', 'closed')."""
+
+    tenant_id: str
+    ticket_id: str
+    actor_id: str | None
+    changes: tuple[tuple[str, str | None, str | None], ...]
+
+
+@dataclass(frozen=True, kw_only=True)
+class MessageAdded(IntegrationEvent):
+    """
+    A message joined a ticket. `public` + `out` is a reply the channels module sends to the customer; `in` came from
+    the customer (by e-mail, or written down by an agent).
+    """
+
+    tenant_id: str
+    ticket_id: str
+    message_id: str
+    kind: str
+    direction: str
+    author_id: str | None

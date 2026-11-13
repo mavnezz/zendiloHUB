@@ -214,6 +214,22 @@ class PostgresGrantRepository:
             ).fetchall()
         return {str(row['queue_id']): frozenset(ordered(row['rights'])) for row in rows}
 
+    async def people_with(self, tenant_id: str, queue_id: str, right: QueueRight) -> frozenset[str]:
+        async with self._db.connection() as connection:
+            rows = await (
+                await connection.execute(
+                    """
+                    SELECT DISTINCT m.user_id
+                    FROM queue_grants r
+                    JOIN group_members m ON m.group_id = r.group_id
+                    JOIN queues q ON q.id = r.queue_id
+                    WHERE q.tenant_id = %s AND r.queue_id = %s AND %s = ANY(r.rights)
+                    """,
+                    (tenant_id, queue_id, right),
+                )
+            ).fetchall()
+        return frozenset(str(row['user_id']) for row in rows)
+
 
 class PostgresTenantData:
     def __init__(self, db: Database) -> None:

@@ -111,6 +111,8 @@ async def test_lets_each_role_do_only_what_it_may(app: AppUnderTest) -> None:
     assert (await admin.delete(f'{TENANTS}/{tenant}')).status_code == 403
     assert (await agent.get(f'{TENANTS}/{tenant}')).json()['permissions'] == [
         'members.view',
+        'customers.view',
+        'customers.manage',
     ]
 
 

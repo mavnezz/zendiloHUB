@@ -433,7 +433,7 @@ export interface paths {
     put?: never
     /**
      * Create Api Key
-     * @description A new key with its permissions; the key is in this answer only.
+     * @description A new key with its permissions (only what the caller may do); the key is in this answer only.
      */
     post: operations['create_api_key_api_v1_tenants__tenant_id__api_keys_post']
     delete?: never
@@ -484,6 +484,92 @@ export interface paths {
     options?: never
     head?: never
     patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/companies': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Companies */
+    get: operations['companies_api_v1_tenants__tenant_id__companies_get']
+    put?: never
+    /** Create Company */
+    post: operations['create_company_api_v1_tenants__tenant_id__companies_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/companies/{company_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Company */
+    get: operations['company_api_v1_tenants__tenant_id__companies__company_id__get']
+    put?: never
+    post?: never
+    /**
+     * Delete Company
+     * @description Its contacts stay, without a company.
+     */
+    delete: operations['delete_company_api_v1_tenants__tenant_id__companies__company_id__delete']
+    options?: never
+    head?: never
+    /** Update Company */
+    patch: operations['update_company_api_v1_tenants__tenant_id__companies__company_id__patch']
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/contacts': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Contacts
+     * @description Contacts by name; `q` searches name, e-mail address and phone number.
+     */
+    get: operations['contacts_api_v1_tenants__tenant_id__contacts_get']
+    put?: never
+    /**
+     * Create Contact
+     * @description A new contact; with an address of a company's domain they join that company.
+     */
+    post: operations['create_contact_api_v1_tenants__tenant_id__contacts_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/contacts/{contact_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Contact */
+    get: operations['contact_api_v1_tenants__tenant_id__contacts__contact_id__get']
+    put?: never
+    post?: never
+    /**
+     * Delete Contact
+     * @description Only contacts without tickets.
+     */
+    delete: operations['delete_contact_api_v1_tenants__tenant_id__contacts__contact_id__delete']
+    options?: never
+    head?: never
+    /** Update Contact */
+    patch: operations['update_contact_api_v1_tenants__tenant_id__contacts__contact_id__patch']
     trace?: never
   }
   '/api/v1/tenants/{tenant_id}/groups': {
@@ -685,6 +771,26 @@ export interface paths {
     patch: operations['update_queue_api_v1_tenants__tenant_id__queues__queue_id__patch']
     trace?: never
   }
+  '/api/v1/tenants/{tenant_id}/queues/{queue_id}/assignees': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Assignees
+     * @description The members tickets of the queue may go to (who may reply in it), by user id.
+     */
+    get: operations['assignees_api_v1_tenants__tenant_id__queues__queue_id__assignees_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/v1/tenants/{tenant_id}/roles': {
     parameters: {
       query?: never
@@ -728,6 +834,261 @@ export interface paths {
     head?: never
     /** Update Role */
     patch: operations['update_role_api_v1_tenants__tenant_id__roles__role_id__patch']
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/tickets': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Tickets
+     * @description A view of the inbox (`mine`, `unassigned`, `due`, `open`, `watching`, `closed`, `all`), narrowed by the
+     *     filters; `q` searches number, subject and every message.
+     */
+    get: operations['tickets_api_v1_tenants__tenant_id__tickets_get']
+    put?: never
+    /**
+     * Create
+     * @description A new ticket in a queue where the caller has `create` (and `reply` or `note` for what it starts with).
+     */
+    post: operations['create_api_v1_tenants__tenant_id__tickets_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/tickets/{ticket_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Show */
+    get: operations['show_api_v1_tenants__tenant_id__tickets__ticket_id__get']
+    put?: never
+    post?: never
+    /**
+     * Destroy
+     * @description Deletes the ticket with everything in it, for good.
+     */
+    delete: operations['destroy_api_v1_tenants__tenant_id__tickets__ticket_id__delete']
+    options?: never
+    head?: never
+    /**
+     * Update
+     * @description Changes what was sent; each change needs its right (`edit`, `assign`, `move` + `create` in the target).
+     */
+    patch: operations['update_api_v1_tenants__tenant_id__tickets__ticket_id__patch']
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/tickets/{ticket_id}/history': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** History */
+    get: operations['history_api_v1_tenants__tenant_id__tickets__ticket_id__history_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/tickets/{ticket_id}/links': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Link */
+    post: operations['link_api_v1_tenants__tenant_id__tickets__ticket_id__links_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/tickets/{ticket_id}/links/{other_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /** Unlink */
+    delete: operations['unlink_api_v1_tenants__tenant_id__tickets__ticket_id__links__other_id__delete']
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/tickets/{ticket_id}/merge': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Merge
+     * @description Merges this ticket into the one with the number; answers with that one.
+     */
+    post: operations['merge_api_v1_tenants__tenant_id__tickets__ticket_id__merge_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/tickets/{ticket_id}/messages': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Messages */
+    get: operations['messages_api_v1_tenants__tenant_id__tickets__ticket_id__messages_get']
+    put?: never
+    /**
+     * Add Message
+     * @description A reply (`reply`), an internal note (`note`) or what the customer said; can change the state (`edit`).
+     */
+    post: operations['add_message_api_v1_tenants__tenant_id__tickets__ticket_id__messages_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/tickets/{ticket_id}/split': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Split
+     * @description A new ticket from one message of this one.
+     */
+    post: operations['split_api_v1_tenants__tenant_id__tickets__ticket_id__split_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/tickets/{ticket_id}/time': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Time */
+    get: operations['time_api_v1_tenants__tenant_id__tickets__ticket_id__time_get']
+    put?: never
+    /** Record Time */
+    post: operations['record_time_api_v1_tenants__tenant_id__tickets__ticket_id__time_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/tickets/{ticket_id}/watch': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    /** Watch */
+    put: operations['watch_api_v1_tenants__tenant_id__tickets__ticket_id__watch_put']
+    post?: never
+    /** Unwatch */
+    delete: operations['unwatch_api_v1_tenants__tenant_id__tickets__ticket_id__watch_delete']
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/tickets/bulk': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Bulk
+     * @description The same changes for many tickets; those the caller may not change are listed with the reason.
+     */
+    post: operations['bulk_api_v1_tenants__tenant_id__tickets_bulk_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/tickets/by-number/{number}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** By Number */
+    get: operations['by_number_api_v1_tenants__tenant_id__tickets_by_number__number__get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/tickets/counts': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Counts
+     * @description How many tickets the views of the inbox have.
+     */
+    get: operations['counts_api_v1_tenants__tenant_id__tickets_counts_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
     trace?: never
   }
 }
@@ -815,6 +1176,32 @@ export interface components {
       /** Total */
       total: number
     }
+    /** @enum {string} */
+    AuthorKind: 'agent' | 'customer' | 'system'
+    /** BulkRequest */
+    BulkRequest: {
+      /** Add Tags */
+      add_tags?: string[]
+      /** Owner Id */
+      owner_id?: string | null
+      /** Pending Until */
+      pending_until?: string | null
+      priority?: components['schemas']['Priority'] | null
+      /** Queue Id */
+      queue_id?: string | null
+      state?: components['schemas']['SettableState'] | null
+      /** Ticket Ids */
+      ticket_ids: string[]
+    }
+    /** BulkResponse */
+    BulkResponse: {
+      /** Changed */
+      changed: string[]
+      /** Failed */
+      failed: {
+        [key: string]: string
+      }
+    }
     /** ChangePasswordRequest */
     ChangePasswordRequest: {
       /** Current Password */
@@ -829,6 +1216,105 @@ export interface components {
     /** ChangeStatusRequest */
     ChangeStatusRequest: {
       status: components['schemas']['StatusValue']
+    }
+    /** @enum {string} */
+    Channel: 'web' | 'email' | 'phone' | 'api'
+    /** CompanyPageResponse */
+    CompanyPageResponse: {
+      /** Items */
+      items: components['schemas']['CompanyResponse'][]
+      /** Total */
+      total: number
+    }
+    /** CompanyRef */
+    CompanyRef: {
+      /** Id */
+      id: string
+      /** Name */
+      name: string
+    }
+    /** CompanyRequest */
+    CompanyRequest: {
+      /** Domain */
+      domain?: string | null
+      /** Name */
+      name: string
+      /**
+       * Notes
+       * @default
+       */
+      notes: string
+    }
+    /** CompanyResponse */
+    CompanyResponse: {
+      /** Contact Count */
+      contact_count: number
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string
+      /** Domain */
+      domain: string | null
+      /** Id */
+      id: string
+      /** Name */
+      name: string
+      /** Notes */
+      notes: string
+    }
+    /** ContactPageResponse */
+    ContactPageResponse: {
+      /** Items */
+      items: components['schemas']['ContactResponse'][]
+      /** Total */
+      total: number
+    }
+    /**
+     * ContactRequest
+     * @description At least a name, an e-mail address or a phone number.
+     */
+    ContactRequest: {
+      /** Company Id */
+      company_id?: string | null
+      /** Email */
+      email?: string | null
+      /**
+       * Name
+       * @default
+       */
+      name: string
+      /**
+       * Notes
+       * @default
+       */
+      notes: string
+      /** Phone */
+      phone?: string | null
+    }
+    /** ContactResponse */
+    ContactResponse: {
+      company: components['schemas']['CompanyRef'] | null
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string
+      /** Email */
+      email: string | null
+      /** Id */
+      id: string
+      /** Name */
+      name: string
+      /** Notes */
+      notes: string
+      /** Phone */
+      phone: string | null
+      /**
+       * Updated At
+       * Format: date-time
+       */
+      updated_at: string
     }
     /** CreatedApiKeyResponse */
     CreatedApiKeyResponse: {
@@ -848,6 +1334,35 @@ export interface components {
        */
       timezone: string
     }
+    /** CreateTicketRequest */
+    CreateTicketRequest: {
+      /** Body */
+      body: string
+      /**
+       * Channel
+       * @default web
+       * @enum {string}
+       */
+      channel: 'web' | 'phone' | 'api'
+      customer?: components['schemas']['CustomerRequest'] | null
+      /** @default customer */
+      first: components['schemas']['FirstMessage']
+      /** Owner Id */
+      owner_id?: string | null
+      /** Pending Until */
+      pending_until?: string | null
+      /** @default normal */
+      priority: components['schemas']['Priority']
+      /** Queue Id */
+      queue_id: string
+      state?: components['schemas']['SettableState'] | null
+      /** Subject */
+      subject: string
+      /** Tags */
+      tags?: string[]
+      /** Time Minutes */
+      time_minutes?: number | null
+    }
     /** CredentialsRequest */
     CredentialsRequest: {
       /** Email */
@@ -855,11 +1370,47 @@ export interface components {
       /** Password */
       password: string
     }
+    /** CustomerCardResponse */
+    CustomerCardResponse: {
+      /** Company Id */
+      company_id: string | null
+      /** Company Name */
+      company_name: string | null
+      /** Email */
+      email: string | null
+      /** Id */
+      id: string
+      /** Name */
+      name: string
+      /** Phone */
+      phone: string | null
+    }
+    /**
+     * CustomerRequest
+     * @description An existing contact (`id`), or one found or made by `email` or `phone`.
+     */
+    CustomerRequest: {
+      /** Email */
+      email?: string | null
+      /** Id */
+      id?: string | null
+      /**
+       * Name
+       * @default
+       */
+      name: string
+      /** Phone */
+      phone?: string | null
+    }
+    /** @enum {string} */
+    Direction: 'in' | 'out'
     /** EmailRequest */
     EmailRequest: {
       /** Email */
       email: string
     }
+    /** @enum {string} */
+    FirstMessage: 'customer' | 'reply' | 'note'
     /** GrantResponse */
     GrantResponse: {
       /** Group Id */
@@ -900,6 +1451,30 @@ export interface components {
       member_ids: string[]
       /** Name */
       name: string
+    }
+    /** @enum {string} */
+    HistoryAction:
+      'created' | 'changed' | 'message' | 'merged' | 'merged_from' | 'split_from' | 'linked' | 'unlinked' | 'time'
+    /** HistoryEntryResponse */
+    HistoryEntryResponse: {
+      action: components['schemas']['HistoryAction']
+      /** Actor Id */
+      actor_id: string | null
+      /** Actor Name */
+      actor_name: string
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string
+      /** Field */
+      field: string | null
+      /** Id */
+      id: string
+      /** New */
+      new: string | null
+      /** Old */
+      old: string | null
     }
     /** HTTPValidationError */
     HTTPValidationError: {
@@ -947,7 +1522,34 @@ export interface components {
       role: components['schemas']['zendilohub__modules__tenancy__ui__api__schemas__RoleValue-Input']
     }
     /** @enum {string} */
-    KeyPermission: 'members.view' | 'queues.manage' | 'audit.view'
+    KeyPermission:
+      | 'members.view'
+      | 'queues.manage'
+      | 'queues.all'
+      | 'tickets.delete'
+      | 'customers.view'
+      | 'customers.manage'
+      | 'audit.view'
+    /** LinkedTicketResponse */
+    LinkedTicketResponse: {
+      /** Id */
+      id: string
+      kind: components['schemas']['LinkKind']
+      /** Number */
+      number: number
+      state: components['schemas']['TicketState']
+      /** Subject */
+      subject: string
+    }
+    /** @enum {string} */
+    LinkKind: 'related' | 'parent' | 'child'
+    /** LinkRequest */
+    LinkRequest: {
+      /** @default related */
+      kind: components['schemas']['LinkKind']
+      /** Number */
+      number: number
+    }
     /** @enum {string} */
     LocaleValue: 'de' | 'en'
     /** MemberResponse */
@@ -962,6 +1564,59 @@ export interface components {
       role: components['schemas']['zendilohub__modules__tenancy__ui__api__schemas__RoleValue-Output']
       /** User Id */
       user_id: string
+    }
+    /** MergeRequest */
+    MergeRequest: {
+      /** Number */
+      number: number
+    }
+    /** @enum {string} */
+    MessageKind: 'public' | 'internal'
+    /** MessageRequest */
+    MessageRequest: {
+      /** Body */
+      body: string
+      /** @default out */
+      direction: components['schemas']['Direction']
+      kind: components['schemas']['MessageKind']
+      /** Mentions */
+      mentions?: string[]
+      /** Pending Until */
+      pending_until?: string | null
+      state?: components['schemas']['SettableState'] | null
+      /** Time Minutes */
+      time_minutes?: number | null
+    }
+    /** MessageResponse */
+    MessageResponse: {
+      /** Author Id */
+      author_id: string | null
+      author_kind: components['schemas']['AuthorKind']
+      /** Author Name */
+      author_name: string
+      /** Body */
+      body: string
+      /** Body Html */
+      body_html: string | null
+      /** Cc Addresses */
+      cc_addresses: string[]
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string
+      direction: components['schemas']['Direction']
+      /** From Address */
+      from_address: string | null
+      /** Id */
+      id: string
+      kind: components['schemas']['MessageKind']
+      /** Subject */
+      subject: string | null
+      /** Ticket Id */
+      ticket_id: string
+      /** To Addresses */
+      to_addresses: string[]
     }
     /**
      * OwnTenantResponse
@@ -1001,8 +1656,13 @@ export interface components {
       | 'members.assign_owner'
       | 'queues.manage'
       | 'queues.all'
+      | 'tickets.delete'
+      | 'customers.view'
+      | 'customers.manage'
       | 'integrations.manage'
       | 'audit.view'
+    /** @enum {string} */
+    Priority: 'low' | 'normal' | 'high' | 'urgent'
     /** QueueRequest */
     QueueRequest: {
       /**
@@ -1115,6 +1775,8 @@ export interface components {
     SessionResponse: {
       user: components['schemas']['UserResponse'] | null
     }
+    /** @enum {string} */
+    SettableState: 'new' | 'open' | 'pending_reminder' | 'pending_close' | 'closed'
     /** SetupRequest */
     SetupRequest: {
       /** Email */
@@ -1137,6 +1799,13 @@ export interface components {
       /** Self Hosted */
       self_hosted: boolean
     }
+    /** SplitRequest */
+    SplitRequest: {
+      /** Message Id */
+      message_id: string
+      /** Subject */
+      subject?: string | null
+    }
     /** @enum {string} */
     StatusValue: 'active' | 'suspended'
     /** TenantResponse */
@@ -1154,6 +1823,173 @@ export interface components {
       status: components['schemas']['StatusValue']
       /** Timezone */
       timezone: string
+    }
+    /**
+     * TicketChangesRequest
+     * @description Only the fields sent change; `null` clears owner, responsible, customer or the pending date.
+     */
+    TicketChangesRequest: {
+      /** Customer Id */
+      customer_id?: string | null
+      /** Owner Id */
+      owner_id?: string | null
+      /** Pending Until */
+      pending_until?: string | null
+      priority?: components['schemas']['Priority'] | null
+      /** Queue Id */
+      queue_id?: string | null
+      /** Responsible Id */
+      responsible_id?: string | null
+      state?: components['schemas']['SettableState'] | null
+      /** Subject */
+      subject?: string | null
+      /** Tags */
+      tags?: string[] | null
+    }
+    /** TicketCountsResponse */
+    TicketCountsResponse: {
+      /** Due */
+      due: number
+      /** Mine */
+      mine: number
+      /** Open */
+      open: number
+      /** Unassigned */
+      unassigned: number
+      /** Watching */
+      watching: number
+    }
+    /** TicketDetailResponse */
+    TicketDetailResponse: {
+      channel: components['schemas']['Channel']
+      /** Closed At */
+      closed_at: string | null
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string
+      customer: components['schemas']['CustomerCardResponse'] | null
+      /** First Response At */
+      first_response_at: string | null
+      /** Id */
+      id: string
+      /** Last Message At */
+      last_message_at: string | null
+      /** Links */
+      links: components['schemas']['LinkedTicketResponse'][]
+      merged_into: components['schemas']['TicketRef'] | null
+      /** Merged Into Id */
+      merged_into_id: string | null
+      /** Number */
+      number: number
+      /** Owner Id */
+      owner_id: string | null
+      /** Pending Until */
+      pending_until: string | null
+      priority: components['schemas']['Priority']
+      /** Queue Id */
+      queue_id: string
+      /** Responsible Id */
+      responsible_id: string | null
+      /** Rights */
+      rights: components['schemas']['QueueRight'][]
+      state: components['schemas']['TicketState']
+      /** Subject */
+      subject: string
+      /** Tags */
+      tags: string[]
+      /** Time Minutes */
+      time_minutes: number
+      /**
+       * Updated At
+       * Format: date-time
+       */
+      updated_at: string
+      /** Watchers */
+      watchers: string[]
+      /** Watching */
+      watching: boolean
+    }
+    /** TicketPageResponse */
+    TicketPageResponse: {
+      /** Items */
+      items: components['schemas']['TicketResponse'][]
+      /** Total */
+      total: number
+    }
+    /** TicketRef */
+    TicketRef: {
+      /** Id */
+      id: string
+      /** Number */
+      number: number
+    }
+    /** TicketResponse */
+    TicketResponse: {
+      channel: components['schemas']['Channel']
+      /** Closed At */
+      closed_at: string | null
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string
+      customer: components['schemas']['CustomerCardResponse'] | null
+      /** First Response At */
+      first_response_at: string | null
+      /** Id */
+      id: string
+      /** Last Message At */
+      last_message_at: string | null
+      /** Merged Into Id */
+      merged_into_id: string | null
+      /** Number */
+      number: number
+      /** Owner Id */
+      owner_id: string | null
+      /** Pending Until */
+      pending_until: string | null
+      priority: components['schemas']['Priority']
+      /** Queue Id */
+      queue_id: string
+      /** Responsible Id */
+      responsible_id: string | null
+      /** Rights */
+      rights: components['schemas']['QueueRight'][]
+      state: components['schemas']['TicketState']
+      /** Subject */
+      subject: string
+      /** Tags */
+      tags: string[]
+      /**
+       * Updated At
+       * Format: date-time
+       */
+      updated_at: string
+    }
+    /** @enum {string} */
+    TicketState: 'new' | 'open' | 'pending_reminder' | 'pending_close' | 'closed' | 'merged'
+    /** TimeEntryResponse */
+    TimeEntryResponse: {
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string
+      /** Id */
+      id: string
+      /** Message Id */
+      message_id: string | null
+      /** Minutes */
+      minutes: number
+      /** User Id */
+      user_id: string
+    }
+    /** TimeRequest */
+    TimeRequest: {
+      /** Minutes */
+      minutes: number
     }
     /** TokenRequest */
     TokenRequest: {
@@ -2200,6 +3036,343 @@ export interface operations {
       }
     }
   }
+  companies_api_v1_tenants__tenant_id__companies_get: {
+    parameters: {
+      query?: {
+        limit?: number
+        offset?: number
+        q?: string
+      }
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['CompanyPageResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  create_company_api_v1_tenants__tenant_id__companies_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CompanyRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['CompanyResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  company_api_v1_tenants__tenant_id__companies__company_id__get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        company_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['CompanyResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  delete_company_api_v1_tenants__tenant_id__companies__company_id__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        company_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  update_company_api_v1_tenants__tenant_id__companies__company_id__patch: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        company_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CompanyRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['CompanyResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  contacts_api_v1_tenants__tenant_id__contacts_get: {
+    parameters: {
+      query?: {
+        company_id?: string | null
+        limit?: number
+        offset?: number
+        q?: string
+      }
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ContactPageResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  create_contact_api_v1_tenants__tenant_id__contacts_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ContactRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ContactResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  contact_api_v1_tenants__tenant_id__contacts__contact_id__get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        contact_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ContactResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  delete_contact_api_v1_tenants__tenant_id__contacts__contact_id__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        contact_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  update_contact_api_v1_tenants__tenant_id__contacts__contact_id__patch: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        contact_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ContactRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ContactResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
   groups_api_v1_tenants__tenant_id__groups_get: {
     parameters: {
       query?: never
@@ -2759,6 +3932,38 @@ export interface operations {
       }
     }
   }
+  assignees_api_v1_tenants__tenant_id__queues__queue_id__assignees_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        queue_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': string[]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
   roles_api_v1_tenants__tenant_id__roles_get: {
     parameters: {
       query?: never
@@ -2878,6 +4083,649 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['RoleResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  tickets_api_v1_tenants__tenant_id__tickets_get: {
+    parameters: {
+      query?: {
+        company_id?: string | null
+        customer_id?: string | null
+        descending?: boolean
+        limit?: number
+        offset?: number
+        owner_id?: string | null
+        priority?: components['schemas']['Priority'] | null
+        q?: string
+        queue_id?: string | null
+        sort?: 'updated' | 'created' | 'priority' | 'number' | 'pending'
+        state?: components['schemas']['TicketState'] | null
+        tag?: string | null
+        view?: 'mine' | 'unassigned' | 'due' | 'open' | 'watching' | 'closed' | 'all'
+      }
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['TicketPageResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  create_api_v1_tenants__tenant_id__tickets_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateTicketRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['TicketDetailResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  show_api_v1_tenants__tenant_id__tickets__ticket_id__get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+        ticket_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['TicketDetailResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  destroy_api_v1_tenants__tenant_id__tickets__ticket_id__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+        ticket_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  update_api_v1_tenants__tenant_id__tickets__ticket_id__patch: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+        ticket_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['TicketChangesRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['TicketDetailResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  history_api_v1_tenants__tenant_id__tickets__ticket_id__history_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+        ticket_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HistoryEntryResponse'][]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  link_api_v1_tenants__tenant_id__tickets__ticket_id__links_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+        ticket_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['LinkRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['TicketDetailResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  unlink_api_v1_tenants__tenant_id__tickets__ticket_id__links__other_id__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        other_id: string
+        tenant_id: string
+        ticket_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  merge_api_v1_tenants__tenant_id__tickets__ticket_id__merge_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+        ticket_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['MergeRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['TicketDetailResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  messages_api_v1_tenants__tenant_id__tickets__ticket_id__messages_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+        ticket_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['MessageResponse'][]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  add_message_api_v1_tenants__tenant_id__tickets__ticket_id__messages_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+        ticket_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['MessageRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['MessageResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  split_api_v1_tenants__tenant_id__tickets__ticket_id__split_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+        ticket_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['SplitRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['TicketDetailResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  time_api_v1_tenants__tenant_id__tickets__ticket_id__time_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+        ticket_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['TimeEntryResponse'][]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  record_time_api_v1_tenants__tenant_id__tickets__ticket_id__time_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+        ticket_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['TimeRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['TimeEntryResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  watch_api_v1_tenants__tenant_id__tickets__ticket_id__watch_put: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+        ticket_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  unwatch_api_v1_tenants__tenant_id__tickets__ticket_id__watch_delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+        ticket_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  bulk_api_v1_tenants__tenant_id__tickets_bulk_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['BulkRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['BulkResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  by_number_api_v1_tenants__tenant_id__tickets_by_number__number__get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        number: number
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['TicketResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  counts_api_v1_tenants__tenant_id__tickets_counts_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['TicketCountsResponse']
         }
       }
       /** @description Validation Error */

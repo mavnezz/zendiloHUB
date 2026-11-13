@@ -24,6 +24,8 @@ from ...application.commands.roles import CreateRole, DeleteRole, ListRoles, Upd
 from ...application.commands.tenants import ChangeTenantStatus, CreateTenant, DeleteTenant, UpdateTenant
 from ...application.queries.members import ListInvitations, ListMembers, PreviewInvitation
 from ...application.queries.tenants import GetTenant, ListOwnTenants, SearchTenants
+from ...domain.exceptions import RoleExceedsOwnError
+from ...domain.models.api_key import KeyPermission
 from .schemas import (
     AdminTenantPageResponse,
     ApiKeyRequest,
@@ -239,7 +241,8 @@ def tenant_routes(bus: CommandBus, config: AppConfig) -> APIRouter:
         request: Request,
         member: Annotated[Member, member_with('integrations.manage', people_only=True)],
     ) -> CreatedApiKeyResponse:
-        """A new key with its permissions; the key is in this answer only."""
+        """A new key with its permissions (only what the caller may do); the key is in this answer only."""
+        _within_own(member, body.permissions)
         created = await bus.execute(CreateApiKey(member.tenant_id, body.name, tuple(body.permissions), member.user_id))
         note_audit(request, target=created.key.name)
         return CreatedApiKeyResponse.of(created)
@@ -252,6 +255,7 @@ def tenant_routes(bus: CommandBus, config: AppConfig) -> APIRouter:
         member: Annotated[Member, member_with('integrations.manage', people_only=True)],
     ) -> ApiKeyResponse:
         """Another name or other permissions; they apply to the key at once."""
+        _within_own(member, body.permissions)
         key = await bus.execute(UpdateApiKey(member.tenant_id, key_id, body.name, tuple(body.permissions)))
         note_audit(request, target=key.name)
         return ApiKeyResponse.of(key)
@@ -269,6 +273,12 @@ def tenant_routes(bus: CommandBus, config: AppConfig) -> APIRouter:
         await bus.execute(DeleteApiKey(member.tenant_id, key_id))
 
     return router
+
+
+def _within_own(member: Member, permissions: list[KeyPermission]) -> None:
+    """Nobody makes a key that may do more than they may."""
+    if not set(permissions) <= member.permissions:
+        raise RoleExceedsOwnError()
 
 
 def invitation_routes(bus: CommandBus) -> APIRouter:

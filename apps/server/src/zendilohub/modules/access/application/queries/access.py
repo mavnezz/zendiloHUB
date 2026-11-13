@@ -86,6 +86,21 @@ class RightsOf(Query[Mapping[str, frozenset[QueueRight]]]):
     all_queues: bool = False
 
 
+@dataclass(frozen=True, kw_only=True)
+class PeopleWith(Query[frozenset[str]]):
+    tenant_id: str
+    queue_id: str
+    right: QueueRight
+
+
+class PeopleWithHandler:
+    def __init__(self, grants: GrantRepository) -> None:
+        self._grants = grants
+
+    async def handle(self, query: PeopleWith) -> frozenset[str]:
+        return await self._grants.people_with(query.tenant_id, query.queue_id, query.right)
+
+
 class RightsOfHandler:
     def __init__(self, queues: QueueRepository, grants: GrantRepository) -> None:
         self._queues = queues

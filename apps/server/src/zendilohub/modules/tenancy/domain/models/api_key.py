@@ -15,11 +15,16 @@ from ..exceptions import InvalidApiKeyError
 type KeyPermission = Literal[
     'members.view',
     'queues.manage',
+    'queues.all',
+    'tickets.delete',
+    'customers.view',
+    'customers.manage',
     'audit.view',
 ]
 """
 What a key can be given: the permissions of the routes other systems may call. Never what needs a person (the
-organization itself, the team, the keys) or an owner; tickets and queues join with their routes.
+organization itself, the team, the keys). Keys have no groups: with `queues.all` they work in every queue with every
+right, without it they see no tickets.
 """
 
 KEY_PERMISSIONS: tuple[KeyPermission, ...] = get_args(KeyPermission.__value__)

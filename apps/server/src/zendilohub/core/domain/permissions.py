@@ -24,6 +24,9 @@ type Permission = Literal[
     'members.assign_owner',
     'queues.manage',
     'queues.all',
+    'tickets.delete',
+    'customers.view',
+    'customers.manage',
     'integrations.manage',
     'audit.view',
 ]
@@ -41,6 +44,10 @@ PERMISSIONS: dict[Permission, frozenset[BuiltinRole]] = {
     # Queues, groups and the rights between them; seeing every queue's tickets is a right of its own.
     'queues.manage': _ADMINS,
     'queues.all': _OWNER,
+    # What someone may do with a ticket comes from their groups' rights in its queue; deleting is a permission on top.
+    'tickets.delete': _ADMINS,
+    'customers.view': _ALL,
+    'customers.manage': _ALL,
     'integrations.manage': _ADMINS,
     'audit.view': _ADMINS,
 }

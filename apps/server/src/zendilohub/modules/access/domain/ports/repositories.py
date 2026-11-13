@@ -8,6 +8,12 @@ from ..models.group import Group
 from ..models.queue import Queue
 
 
+class QueueUsage(Protocol):
+    """How many tickets lie in a queue (they are kept in the tickets module)."""
+
+    async def in_queue(self, tenant_id: str, queue_id: str) -> int: ...
+
+
 class QueueRepository(Protocol):
     async def of_tenant(self, tenant_id: str) -> Sequence[Queue]:
         """By name."""
@@ -63,6 +69,10 @@ class GrantRepository(Protocol):
 
     async def of_user(self, tenant_id: str, user_id: str) -> Mapping[str, frozenset[QueueRight]]:
         """The union of the rights of the person's groups, by queue id (queues without rights are left out)."""
+        ...
+
+    async def people_with(self, tenant_id: str, queue_id: str, right: QueueRight) -> frozenset[str]:
+        """The members of groups with the right in the queue."""
         ...
 
 

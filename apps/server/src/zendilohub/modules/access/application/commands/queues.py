@@ -7,9 +7,9 @@ from zendilohub.core.domain.transaction import TransactionManager
 from zendilohub.core.events.event_bus import EventBus
 from zendilohub.core.events.integration_events import QueueDeleted
 
-from ...domain.exceptions import QueueLimitError, QueueNameTakenError, QueueNotFoundError
+from ...domain.exceptions import QueueHasTicketsError, QueueLimitError, QueueNameTakenError, QueueNotFoundError
 from ...domain.models.queue import QUEUES_MAX, Queue
-from ...domain.ports.repositories import QueueRepository
+from ...domain.ports.repositories import QueueRepository, QueueUsage
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -74,7 +74,10 @@ class DeleteQueue(Command[Queue]):
 
 
 class DeleteQueueHandler:
-    def __init__(self, queues: QueueRepository, transactions: TransactionManager, events: EventBus) -> None:
+    def __init__(
+        self, queues: QueueRepository, usage: QueueUsage, transactions: TransactionManager, events: EventBus
+    ) -> None:
+        self._usage = usage
         self._queues = queues
         self._transactions = transactions
         self._events = events
@@ -83,6 +86,9 @@ class DeleteQueueHandler:
         queue = await self._queues.find(command.tenant_id, command.queue_id)
         if queue is None:
             raise QueueNotFoundError()
+        tickets = await self._usage.in_queue(queue.tenant_id, queue.id)
+        if tickets:
+            raise QueueHasTicketsError(tickets)
         async with self._transactions.transaction():
             await self._events.publish(QueueDeleted(tenant_id=queue.tenant_id, queue_id=queue.id))
             await self._queues.delete(queue.tenant_id, queue.id)

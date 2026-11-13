@@ -7,6 +7,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Protocol
 
+from .domain.permissions import Permission
 from .domain.queue_rights import QueueRight
 
 
@@ -36,10 +37,23 @@ class Invitations(Protocol):
         ...
 
 
+@dataclass(frozen=True, kw_only=True)
+class MemberCard:
+    """A member of an organization as other modules see them."""
+
+    user_id: str
+    email: str
+    permissions: frozenset[Permission]
+
+
 class Memberships(Protocol):
-    """Provided by tenancy, used by access: only members of an organization can be in its groups."""
+    """Provided by tenancy, used by access (only members can be in groups) and tickets (who may get tickets)."""
 
     async def is_member(self, tenant_id: str, user_id: str) -> bool: ...
+
+    async def members(self, tenant_id: str) -> list[MemberCard]:
+        """Every member with what their role allows, oldest first."""
+        ...
 
 
 class QueueAccess(Protocol):
@@ -61,6 +75,48 @@ class QueueAccess(Protocol):
         """The queues the person may at least `view`, by id, with their rights; for filtering lists in SQL."""
         ...
 
+    async def people_with(self, tenant_id: str, queue_id: str, right: QueueRight) -> frozenset[str]:
+        """Who has the right in the queue through a group (not counting `queues.all`)."""
+        ...
+
+
+@dataclass(frozen=True, kw_only=True)
+class ContactCard:
+    """What other modules show of a customer: a contact with their company."""
+
+    id: str
+    name: str
+    email: str | None
+    phone: str | None
+    company_id: str | None
+    company_name: str | None
+
+
+class Contacts(Protocol):
+    """Provided by customers, used by tickets and channels: who wrote, and what to show of them."""
+
+    async def identify(
+        self, tenant_id: str, *, email: str | None, name: str = '', phone: str | None = None
+    ) -> ContactCard:
+        """The contact with this e-mail address (or phone number), made on first contact."""
+        ...
+
+    async def cards(self, tenant_id: str, contact_ids: list[str]) -> Mapping[str, ContactCard]:
+        """By id; unknown ids are left out."""
+        ...
+
+    async def of_company(self, tenant_id: str, company_id: str) -> list[str]:
+        """The ids of the company's contacts."""
+        ...
+
+
+class TicketUsage(Protocol):
+    """Provided by tickets, used by access and customers: what still has tickets cannot simply be deleted."""
+
+    async def in_queue(self, tenant_id: str, queue_id: str) -> int: ...
+
+    async def of_customer(self, tenant_id: str, contact_id: str) -> int: ...
+
 
 @dataclass(frozen=True)
 class Contracts:
@@ -69,6 +125,8 @@ class Contracts:
     invitations: Slot[Invitations] = field(default_factory=lambda: Slot('Invitations'))
     memberships: Slot[Memberships] = field(default_factory=lambda: Slot('Memberships'))
     queue_access: Slot[QueueAccess] = field(default_factory=lambda: Slot('QueueAccess'))
+    contacts: Slot[Contacts] = field(default_factory=lambda: Slot('Contacts'))
+    ticket_usage: Slot[TicketUsage] = field(default_factory=lambda: Slot('TicketUsage'))
 
     @classmethod
     def empty(cls) -> Contracts:

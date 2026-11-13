@@ -39,10 +39,12 @@ from .application.queries.access import (
     ListGroupsHandler,
     ListQueues,
     ListQueuesHandler,
+    PeopleWith,
+    PeopleWithHandler,
     RightsOf,
     RightsOfHandler,
 )
-from .infrastructure.contract_adapters import BusQueueAccess, TenancyMembers
+from .infrastructure.contract_adapters import BusQueueAccess, QueueTickets, TenancyMembers
 from .infrastructure.postgres_access import (
     PostgresGrantRepository,
     PostgresGroupRepository,
@@ -67,7 +69,7 @@ def create_access_module(context: ModuleContext) -> AppModule:
         CommandBus()
         .register(CreateQueue, CreateQueueHandler(queues, ids, clock))
         .register(UpdateQueue, UpdateQueueHandler(queues, clock))
-        .register(DeleteQueue, DeleteQueueHandler(queues, db, events))
+        .register(DeleteQueue, DeleteQueueHandler(queues, QueueTickets(context.contracts), db, events))
         .register(CreateGroup, CreateGroupHandler(groups, ids, clock))
         .register(UpdateGroup, UpdateGroupHandler(groups, clock))
         .register(SetGroupMembers, SetGroupMembersHandler(groups, TenancyMembers(context.contracts), clock))
@@ -80,6 +82,7 @@ def create_access_module(context: ModuleContext) -> AppModule:
         .register(ListGroups, ListGroupsHandler(groups))
         .register(ListGrants, ListGrantsHandler(grants))
         .register(RightsOf, RightsOfHandler(queues, grants))
+        .register(PeopleWith, PeopleWithHandler(grants))
     )
 
     async def member_removed(event: MemberRemoved) -> None:
