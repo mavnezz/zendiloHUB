@@ -12,6 +12,7 @@ import { Button } from '@/core/ui/button'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/core/ui/dialog'
 import { Input } from '@/core/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/core/ui/tabs'
+import { channelsApi, type Delivery } from '@/modules/channels/api'
 import { useTenants } from '@/modules/tenancy/tenants'
 import {
   ticketsApi,
@@ -42,6 +43,7 @@ const ticketId = computed(() => String(route.params.ticketId))
 const ticket = ref<TicketDetail | null>(null)
 const messages = ref<TicketMessage[]>([])
 const history = ref<HistoryEntry[]>([])
+const deliveries = ref<Record<string, Delivery>>({})
 const error = ref<string | null>(null)
 
 async function load(): Promise<void> {
@@ -55,6 +57,8 @@ async function load(): Promise<void> {
     messages.value = listed
     history.value = entries
     error.value = null
+    const sent = await channelsApi.deliveries(tenantId.value, ticketId.value).catch(() => [])
+    deliveries.value = Object.fromEntries(sent.map((each) => [each.message_id, each]))
   } catch (caught) {
     error.value = errorText(caught)
   }
@@ -87,6 +91,16 @@ async function toggleWatch(): Promise<void> {
       ? ticketsApi.unwatch(tenantId.value, current.id)
       : ticketsApi.watch(tenantId.value, current.id))
     notify.success(t(current.watching ? 'tickets.unwatched' : 'tickets.watched'))
+  } catch (caught) {
+    notify.error(caught)
+  }
+  await load()
+}
+
+async function resend(message: TicketMessage): Promise<void> {
+  try {
+    await channelsApi.resend(tenantId.value, ticketId.value, message.id)
+    notify.success(t('tickets.delivery.resent'))
   } catch (caught) {
     notify.error(caught)
   }
@@ -221,7 +235,9 @@ async function remove(): Promise<void> {
               :messages="messages"
               :customer="ticket.customer"
               :can-split="rights.includes('create') && !merged"
+              :deliveries="deliveries"
               @split="split"
+              @resend="resend"
             />
             <Composer v-if="!merged" :ticket="ticket" @sent="load" />
           </TabsContent>

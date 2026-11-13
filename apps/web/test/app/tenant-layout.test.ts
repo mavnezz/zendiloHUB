@@ -26,6 +26,7 @@ describe('TenantLayout', () => {
     expect($$('[data-test^=nav-group-]').map((group) => group.attributes('data-test'))).toEqual([
       'nav-group-workspace',
       'nav-group-helpdesk',
+      'nav-group-email',
       'nav-group-organization',
     ])
     expect($('[data-test=nav-queueRights]').attributes('href')).toBe(`/t/${TENANT_ID}/queue-rights`)
@@ -45,6 +46,8 @@ describe('TenantLayout', () => {
     expect(exists('[data-test=nav-audit]')).toBe(false)
     // Who manages no queues sees no helpdesk settings (their queues come with the tickets).
     expect(exists('[data-test=nav-group-helpdesk]')).toBe(false)
+    expect(exists('[data-test=nav-group-email]')).toBe(false)
+    expect(exists('[data-test=nav-mySignature]')).toBe(true)
   })
 
   it('switches organizations and creates new ones', async () => {

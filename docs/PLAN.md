@@ -439,6 +439,21 @@ mit `reply`, Verschieben mit `move` und `create` im Ziel). API-Schlüssel brauch
 neue Berechtigungen `tickets.delete`, `customers.view`, `customers.manage`. Queues und Kontakte mit Tickets lassen sich
 nicht löschen.
 
+**Phase 3 (2026-11-13, fertig):** Modul `channels`. Beliebig viele E-Mail-Konten je Organisation (IMAP zum Abholen,
+SMTP zum Senden, Passwörter mit AES-GCM verschlüsselt, Testknopf, Fehlerstatus „nicht erreichbar seit …“, Abruf jede
+Minute im Worker, UID und UIDVALIDITY je Konto). Jede Queue wählt ihr Absenderkonto, eine Anrede und eine Signatur;
+Platzhalter (`{{agent.name}}`, `{{customer.name}}`, `{{ticket.number}}` …) werden beim Speichern geprüft und beim
+Antworten gefüllt, die persönliche Signatur jedes Mitglieds kommt über `{{agent.signature}}` hinein. Die
+Antwortvorlage steht beim Antworten schon im Editor. Automatische Eingangsbestätigung je Queue, nie an Roboter
+(`Auto-Submitted`, `Precedence`, `List-Id` …), höchstens dreimal pro Stunde je Absender. Threading über `Message-ID`,
+`In-Reply-To`, `References` und `[#1001]` im Betreff; eigene Adressen und doppelte Mails werden erkannt. Postmaster-Filter
+(Absender, An, Cc, Betreff, Text, beliebige Kopfzeile; enthält, ist, beginnt, endet, regulärer Ausdruck; alle oder eine
+Bedingung) leiten in Queues, setzen Priorität und Tags oder verwerfen. HTML-Mails werden mit `nh3` bereinigt und
+lassen sich formatiert anzeigen. Fehlgeschlagene Mails landen in einer Liste zum erneuten Verarbeiten. Antworten gehen
+im Hintergrund raus, mit Status je Nachricht (gesendet, wird gesendet, nicht gesendet mit Grund) und Wiederholungen
+nach 1, 5, 15 und 60 Minuten. Die echten IMAP- und SMTP-Adapter sind gegen GreenMail getestet.
+Offen für später: OAuth2 (XOAUTH2) für Microsoft 365 und Google, Anhänge, mehrere Absenderadressen je Queue.
+
 ---
 
 ## 11. Übernahme aus OTOBO und Zammad (2026-11-13)

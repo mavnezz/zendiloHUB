@@ -1,5 +1,11 @@
 import {
   Building2,
+  FileSignature,
+  Filter,
+  Mail,
+  MailCheck,
+  MailX,
+  PenLine,
   Contact,
   Inbox,
   Ticket,
@@ -25,7 +31,7 @@ export interface NavItem {
 }
 
 export interface NavGroup {
-  key: 'workspace' | 'helpdesk' | 'organization'
+  key: 'workspace' | 'helpdesk' | 'email' | 'organization'
   items: NavItem[]
 }
 
@@ -38,6 +44,7 @@ export const navigation: NavGroup[] = [
       { name: 'tickets', path: 'tickets', icon: Ticket },
       { name: 'contacts', path: 'contacts', icon: Contact, permission: 'customers.view' },
       { name: 'companies', path: 'companies', icon: Building2, permission: 'customers.view' },
+      { name: 'mySignature', path: 'my-signature', icon: PenLine },
     ],
   },
   {
@@ -46,6 +53,16 @@ export const navigation: NavGroup[] = [
       { name: 'queues', path: 'queues', icon: Inbox, permission: 'queues.manage' },
       { name: 'queueGroups', path: 'groups', icon: UsersRound, permission: 'queues.manage' },
       { name: 'queueRights', path: 'queue-rights', icon: UserCog, permission: 'queues.manage' },
+    ],
+  },
+  {
+    key: 'email',
+    items: [
+      { name: 'emailAccounts', path: 'email-accounts', icon: Mail, permission: 'channels.manage' },
+      { name: 'queueEmail', path: 'queue-email', icon: MailCheck, permission: 'channels.manage' },
+      { name: 'textTemplates', path: 'text-templates', icon: FileSignature, permission: 'channels.manage' },
+      { name: 'mailFilters', path: 'mail-filters', icon: Filter, permission: 'channels.manage' },
+      { name: 'failedEmails', path: 'failed-emails', icon: MailX, permission: 'channels.manage' },
     ],
   },
   {

@@ -410,6 +410,60 @@ describe('TicketView', () => {
     expect(router.currentRoute.value.name).toBe('tickets')
   })
 
+  it('starts replies with the queue draft, shows deliveries and formatted e-mails', async () => {
+    const toasts = spyToasts()
+    inTenant()
+    const fake = api()
+      .json('GET', `${BASE}/tickets/t1/messages`, [
+        message({ from_address: 'carl@acme.example', body_html: '<p>It does <b>not</b> print.</p>' }),
+        message({ id: 'm2', direction: 'out', author_kind: 'agent', author_name: 'ada@example.org', body: 'On it' }),
+        message({ id: 'm3', direction: 'out', author_kind: 'agent', author_name: 'ada@example.org', body: 'Again' }),
+        message({ id: 'm4', direction: 'out', author_kind: 'agent', author_name: 'ada@example.org', body: 'Phone' }),
+      ])
+      .json('GET', `${BASE}/tickets/t1/deliveries`, [
+        { message_id: 'm2', status: 'sent', error: null, attempts: 1, updated_at: '2026-11-13T12:00:00Z' },
+        { message_id: 'm3', status: 'failed', error: 'No answer', attempts: 5, updated_at: '2026-11-13T12:00:00Z' },
+        {
+          message_id: 'm4',
+          status: 'skipped',
+          error: 'no_customer_address',
+          attempts: 0,
+          updated_at: '2026-11-13T12:00:00Z',
+        },
+      ])
+      .json('GET', `${BASE}/queues/q1/reply-draft`, { text: 'Hello Carl,\n\n\n\nBest regards' })
+      .on('POST', `${BASE}/tickets/t1/deliveries/m3/resend`, { status: 202 })
+    await mountView(TicketView, { path: `/t/${TENANT_ID}/tickets/t1` })
+    expect(fake.last('GET', `${BASE}/queues/q1/reply-draft`)?.query).toMatchObject({
+      number: '1001',
+      customer_name: 'Carl Customer',
+    })
+    const body = () => ($('[data-test=composer-body]').element as HTMLTextAreaElement).value
+    expect(body()).toBe('Hello Carl,\n\n\n\nBest regards')
+    expect($('[data-test=send]').attributes('disabled')).toBeDefined()
+    await click('[data-test=option-note]')
+    expect(body()).toBe('')
+    await click('[data-test=option-reply]')
+    expect(body()).toBe('Hello Carl,\n\n\n\nBest regards')
+
+    expect($('[data-test=delivery-m2]').text()).toContain('sent by e-mail')
+    expect($('[data-test=delivery-m4]').text()).toContain('the customer has no e-mail address')
+    expect($('[data-test=delivery-m3]').attributes('title')).toBe('No answer')
+    await click('[data-test=resend-m3]')
+    expect(fake.calls('POST', `${BASE}/tickets/t1/deliveries/m3/resend`)).toHaveLength(1)
+    expect(toasts.success()).toContain('Sending again.')
+
+    expect(text()).toContain('carl@acme.example')
+    await click('[data-test=formatted-m1]')
+    expect($('[data-test=message-public-in] b').text()).toBe('not')
+    await click('[data-test=formatted-m1]')
+    expect(exists('[data-test=message-public-in] b')).toBe(false)
+
+    fake.error('POST', `${BASE}/tickets/t1/deliveries/m3/resend`, 500, 'internal_error')
+    await click('[data-test=resend-m3]')
+    expect(toasts.error()).toHaveLength(1)
+  })
+
   it('shows merged tickets and readers without controls, and failures', async () => {
     inTenant('agent')
     api(

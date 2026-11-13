@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import NativeSelect from '@/core/components/NativeSelect.vue'
 import SegmentedControl from '@/core/components/SegmentedControl.vue'
@@ -16,6 +16,7 @@ import {
   type MessageRequest,
   type TicketDetail,
 } from '../api'
+import { channelsApi } from '@/modules/channels/api'
 import { useTenants } from '@/modules/tenancy/tenants'
 import { useDirectory } from '../directory'
 
@@ -54,6 +55,34 @@ watch(
   { immediate: true },
 )
 
+/** A reply starts with the queue's salutation and signature (with the writer's details filled in). */
+const draft = ref('')
+async function loadDraft(): Promise<void> {
+  const ticket = props.ticket
+  try {
+    const answer = await channelsApi.replyDraft(tenants.current.value!.id, ticket.queue_id, {
+      number: ticket.number,
+      subject: ticket.subject,
+      customer_name: ticket.customer?.name ?? '',
+      customer_email: ticket.customer?.email ?? '',
+    })
+    draft.value = answer.text
+  } catch {
+    draft.value = ''
+  }
+  if (mode.value === 'reply' && !body.value.trim()) {
+    body.value = draft.value
+  }
+}
+onMounted(loadDraft)
+watch(mode, (next, before) => {
+  if (next === 'reply' && (!body.value.trim() || body.value === draft.value)) {
+    body.value = draft.value
+  } else if (before === 'reply' && body.value === draft.value) {
+    body.value = ''
+  }
+})
+
 const stateOptions = computed(() => [
   { value: '', label: t('tickets.composer.keepState') },
   ...SETTABLE_STATES.map((value) => ({ value, label: t(`tickets.states.${value}`) })),
@@ -86,7 +115,7 @@ async function send(): Promise<void> {
   try {
     await ticketsApi.addMessage(tenants.current.value!.id, props.ticket.id, request)
     notify.success(t(`tickets.composer.sent.${mode.value}`))
-    body.value = ''
+    body.value = mode.value === 'reply' ? draft.value : ''
     state.value = ''
     pendingUntil.value = ''
     minutes.value = ''
@@ -122,7 +151,7 @@ async function send(): Promise<void> {
         <Label for="composer-minutes" class="text-xs">{{ $t('tickets.composer.minutes') }}</Label>
         <Input id="composer-minutes" v-model="minutes" type="number" min="1" max="1440" class="w-24" />
       </div>
-      <Button type="submit" class="ml-auto" :disabled="busy || !body.trim()" data-test="send">
+      <Button type="submit" class="ml-auto" :disabled="busy || !body.trim() || body === draft" data-test="send">
         {{ $t(`tickets.composer.send.${mode}`) }}
       </Button>
     </div>

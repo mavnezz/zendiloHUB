@@ -106,10 +106,9 @@ export class HttpClient {
     if (!response.ok) {
       throw await toError(response)
     }
-    if (response.status === 204) {
-      return undefined as T
-    }
-    return (await response.json()) as T
+    // 204 and 202 (accepted, e.g. "fetch now") come without a body.
+    const text = response.status === 204 ? '' : await response.text()
+    return (text ? JSON.parse(text) : undefined) as T
   }
 }
 

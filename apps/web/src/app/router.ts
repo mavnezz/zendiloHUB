@@ -5,6 +5,7 @@ import { identityRoutes } from '@/modules/identity/routes'
 import { installLocaleSync, useSession } from '@/modules/identity/session'
 import type { Permission } from '@/modules/tenancy/api'
 import { accessRoutes } from '@/modules/access/routes'
+import { channelRoutes } from '@/modules/channels/routes'
 import { customerRoutes } from '@/modules/customers/routes'
 import { ticketRoutes } from '@/modules/tickets/routes'
 import { complianceAdminRoutes, complianceRoutes } from '@/modules/compliance/routes'
@@ -54,6 +55,7 @@ export function createAppRouter(history: RouterHistory = createWebHistory()): Ro
           { path: 'overview', name: 'overview', component: () => import('./OverviewView.vue') },
           ...ticketRoutes,
           ...customerRoutes,
+          ...channelRoutes,
           ...tenantRoutes,
           ...accessRoutes,
           ...complianceRoutes,
