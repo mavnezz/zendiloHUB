@@ -13,7 +13,7 @@ class Strict(BaseModel):
     model_config = ConfigDict(extra='forbid')
 
 
-class ActionsModel(Strict):
+class RuleActionsModel(Strict):
     state: Literal['new', 'open', 'pending_reminder', 'pending_close', 'closed'] | None = None
     pending_hours: int | None = Field(default=None, ge=1, le=24 * 365)
     """For a pending state: until this many hours from when the rule runs (default 24)."""
@@ -30,13 +30,13 @@ class ActionsModel(Strict):
     """Triggers and jobs: a message to the customer (sent by e-mail when the queue has an account)."""
 
 
-class ConditionModel(Strict):
+class RuleConditionModel(Strict):
     field: ConditionField
     operator: ConditionOperator
     value: str = Field(default='', max_length=500)
 
 
-class ScheduleModel(Strict):
+class RuleScheduleModel(Strict):
     states: list[Literal['new', 'open', 'pending_reminder', 'pending_close']] = Field(default_factory=list)
     queue_ids: list[Id] = Field(default_factory=list, max_length=200)
     priorities: list[Literal['low', 'normal', 'high', 'urgent']] = Field(default_factory=list)
@@ -50,12 +50,12 @@ class ScheduleModel(Strict):
 class RuleRequest(Strict):
     name: str = Field(max_length=80)
     active: bool = True
-    actions: ActionsModel
+    actions: RuleActionsModel
     event: TriggerEvent | None = None
     """Triggers: when they run (`created`, `customer_replied`, `updated`)."""
-    conditions: list[ConditionModel] = Field(default_factory=list, max_length=10)
+    conditions: list[RuleConditionModel] = Field(default_factory=list, max_length=10)
     """Triggers: all must hold."""
-    schedule: ScheduleModel | None = None
+    schedule: RuleScheduleModel | None = None
     """Scheduled jobs: which tickets they take."""
 
 
@@ -65,10 +65,10 @@ class RuleResponse(BaseModel):
     name: str
     active: bool
     position: int
-    actions: ActionsModel
+    actions: RuleActionsModel
     event: TriggerEvent | None
-    conditions: list[ConditionModel]
-    schedule: ScheduleModel | None
+    conditions: list[RuleConditionModel]
+    schedule: RuleScheduleModel | None
     last_run_at: datetime | None
 
     @classmethod
@@ -79,9 +79,9 @@ class RuleResponse(BaseModel):
             name=rule.name,
             active=rule.active,
             position=rule.position,
-            actions=ActionsModel.model_validate(asdict(rule.actions)),
+            actions=RuleActionsModel.model_validate(asdict(rule.actions)),
             event=rule.event,
-            conditions=[ConditionModel.model_validate(asdict(each)) for each in rule.conditions],
-            schedule=ScheduleModel.model_validate(asdict(rule.schedule)) if rule.schedule else None,
+            conditions=[RuleConditionModel.model_validate(asdict(each)) for each in rule.conditions],
+            schedule=RuleScheduleModel.model_validate(asdict(rule.schedule)) if rule.schedule else None,
             last_run_at=rule.last_run_at,
         )

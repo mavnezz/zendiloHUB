@@ -42,6 +42,7 @@ export function ticket(overrides: Partial<Ticket> = {}): Ticket {
     first_response_at: null,
     closed_at: null,
     last_message_at: '2026-11-13T12:00:00Z',
+    fields: {},
     rights: [...FULL],
     ...overrides,
   }

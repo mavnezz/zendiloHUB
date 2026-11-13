@@ -1927,6 +1927,20 @@ export interface components {
       queue_id: string
       smtp: components['schemas']['ServerResponse']
     }
+    /** ActionsModel */
+    ActionsModel: {
+      /**
+       * Ignore
+       * @default false
+       */
+      ignore: boolean
+      /** Priority */
+      priority?: ('low' | 'normal' | 'high' | 'urgent') | null
+      /** Queue Id */
+      queue_id?: string | null
+      /** Tags */
+      tags?: string[]
+    }
     /** AdminTenantPageResponse */
     AdminTenantPageResponse: {
       /** Items */
@@ -2168,6 +2182,18 @@ export interface components {
     }
     /** @enum {string} */
     ConditionField: 'queue_id' | 'state' | 'priority' | 'channel' | 'tags' | 'subject' | 'customer_email' | 'owner'
+    /** ConditionModel */
+    ConditionModel: {
+      field: components['schemas']['FilterField']
+      /**
+       * Header
+       * @default
+       */
+      header: string
+      operator: components['schemas']['Operator']
+      /** Value */
+      value: string
+    }
     /** @enum {string} */
     ConditionOperator: 'is' | 'is_not' | 'contains' | 'not_contains' | 'is_set' | 'is_not_set'
     /** ContactPageResponse */
@@ -2394,14 +2420,14 @@ export interface components {
     }
     /** FilterRequest */
     FilterRequest: {
-      actions: components['schemas']['zendilohub__modules__channels__ui__api__schemas__ActionsModel']
+      actions: components['schemas']['ActionsModel']
       /**
        * Active
        * @default true
        */
       active: boolean
       /** Conditions */
-      conditions: components['schemas']['zendilohub__modules__channels__ui__api__schemas__ConditionModel'][]
+      conditions: components['schemas']['ConditionModel'][]
       /**
        * Match
        * @default all
@@ -2418,11 +2444,11 @@ export interface components {
     }
     /** FilterResponse */
     FilterResponse: {
-      actions: components['schemas']['zendilohub__modules__channels__ui__api__schemas__ActionsModel']
+      actions: components['schemas']['ActionsModel']
       /** Active */
       active: boolean
       /** Conditions */
-      conditions: components['schemas']['zendilohub__modules__channels__ui__api__schemas__ConditionModel'][]
+      conditions: components['schemas']['ConditionModel'][]
       /** Id */
       id: string
       /**
@@ -2973,30 +2999,77 @@ export interface components {
       /** Roles */
       roles: components['schemas']['RoleResponse'][]
     }
+    /** RuleActionsModel */
+    RuleActionsModel: {
+      /** Add Tags */
+      add_tags?: string[]
+      /**
+       * Note
+       * @default
+       */
+      note: string
+      /** Owner Id */
+      owner_id?: string | null
+      /**
+       * Owner Me
+       * @default false
+       */
+      owner_me: boolean
+      /** Pending Hours */
+      pending_hours?: number | null
+      /** Priority */
+      priority?: ('low' | 'normal' | 'high' | 'urgent') | null
+      /** Queue Id */
+      queue_id?: string | null
+      /** Remove Tags */
+      remove_tags?: string[]
+      /**
+       * Reply
+       * @default
+       */
+      reply: string
+      /** State */
+      state?: ('new' | 'open' | 'pending_reminder' | 'pending_close' | 'closed') | null
+      /**
+       * Unassign
+       * @default false
+       */
+      unassign: boolean
+    }
+    /** RuleConditionModel */
+    RuleConditionModel: {
+      field: components['schemas']['ConditionField']
+      operator: components['schemas']['ConditionOperator']
+      /**
+       * Value
+       * @default
+       */
+      value: string
+    }
     /** @enum {string} */
     RuleKind: 'macro' | 'trigger' | 'schedule'
     /** RuleRequest */
     RuleRequest: {
-      actions: components['schemas']['zendilohub__modules__automation__ui__api__schemas__ActionsModel']
+      actions: components['schemas']['RuleActionsModel']
       /**
        * Active
        * @default true
        */
       active: boolean
       /** Conditions */
-      conditions?: components['schemas']['zendilohub__modules__automation__ui__api__schemas__ConditionModel'][]
+      conditions?: components['schemas']['RuleConditionModel'][]
       event?: components['schemas']['TriggerEvent'] | null
       /** Name */
       name: string
-      schedule?: components['schemas']['ScheduleModel'] | null
+      schedule?: components['schemas']['RuleScheduleModel'] | null
     }
     /** RuleResponse */
     RuleResponse: {
-      actions: components['schemas']['zendilohub__modules__automation__ui__api__schemas__ActionsModel']
+      actions: components['schemas']['RuleActionsModel']
       /** Active */
       active: boolean
       /** Conditions */
-      conditions: components['schemas']['zendilohub__modules__automation__ui__api__schemas__ConditionModel'][]
+      conditions: components['schemas']['RuleConditionModel'][]
       event: components['schemas']['TriggerEvent'] | null
       /** Id */
       id: string
@@ -3007,10 +3080,10 @@ export interface components {
       name: string
       /** Position */
       position: number
-      schedule: components['schemas']['ScheduleModel'] | null
+      schedule: components['schemas']['RuleScheduleModel'] | null
     }
-    /** ScheduleModel */
-    ScheduleModel: {
+    /** RuleScheduleModel */
+    RuleScheduleModel: {
       /** Age Hours */
       age_hours?: number | null
       /** Idle Hours */
@@ -3436,79 +3509,6 @@ export interface components {
     }
     /** @enum {string} */
     Weekday: 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'
-    /** ActionsModel */
-    zendilohub__modules__automation__ui__api__schemas__ActionsModel: {
-      /** Add Tags */
-      add_tags?: string[]
-      /**
-       * Note
-       * @default
-       */
-      note: string
-      /** Owner Id */
-      owner_id?: string | null
-      /**
-       * Owner Me
-       * @default false
-       */
-      owner_me: boolean
-      /** Pending Hours */
-      pending_hours?: number | null
-      /** Priority */
-      priority?: ('low' | 'normal' | 'high' | 'urgent') | null
-      /** Queue Id */
-      queue_id?: string | null
-      /** Remove Tags */
-      remove_tags?: string[]
-      /**
-       * Reply
-       * @default
-       */
-      reply: string
-      /** State */
-      state?: ('new' | 'open' | 'pending_reminder' | 'pending_close' | 'closed') | null
-      /**
-       * Unassign
-       * @default false
-       */
-      unassign: boolean
-    }
-    /** ConditionModel */
-    zendilohub__modules__automation__ui__api__schemas__ConditionModel: {
-      field: components['schemas']['ConditionField']
-      operator: components['schemas']['ConditionOperator']
-      /**
-       * Value
-       * @default
-       */
-      value: string
-    }
-    /** ActionsModel */
-    zendilohub__modules__channels__ui__api__schemas__ActionsModel: {
-      /**
-       * Ignore
-       * @default false
-       */
-      ignore: boolean
-      /** Priority */
-      priority?: ('low' | 'normal' | 'high' | 'urgent') | null
-      /** Queue Id */
-      queue_id?: string | null
-      /** Tags */
-      tags?: string[]
-    }
-    /** ConditionModel */
-    zendilohub__modules__channels__ui__api__schemas__ConditionModel: {
-      field: components['schemas']['FilterField']
-      /**
-       * Header
-       * @default
-       */
-      header: string
-      operator: components['schemas']['Operator']
-      /** Value */
-      value: string
-    }
     /** @enum {string} */
     zendilohub__modules__identity__ui__api__schemas__RoleValue: 'user' | 'admin'
     'zendilohub__modules__tenancy__ui__api__schemas__RoleValue-Input': string
