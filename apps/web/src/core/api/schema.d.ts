@@ -2558,17 +2558,20 @@ export interface components {
       /** Phone */
       phone?: string | null
     }
-    /** DayResponse */
-    DayResponse: {
-      /** Closed */
-      closed: number
-      /** Created */
-      created: number
+    /** DeliveryResponse */
+    DeliveryResponse: {
+      /** Attempts */
+      attempts: number
+      /** Error */
+      error: string | null
+      /** Message Id */
+      message_id: string
+      status: components['schemas']['DeliveryStatus']
       /**
-       * Day
-       * Format: date
+       * Updated At
+       * Format: date-time
        */
-      day: string
+      updated_at: string
     }
     /** @enum {string} */
     DeliveryStatus: 'queued' | 'sent' | 'failed' | 'skipped'
@@ -2707,6 +2710,22 @@ export interface components {
        * @default
        */
       description: string
+      /** Name */
+      name: string
+    }
+    /** GroupResponse */
+    GroupResponse: {
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string
+      /** Description */
+      description: string
+      /** Id */
+      id: string
+      /** Member Ids */
+      member_ids: string[]
       /** Name */
       name: string
     }
@@ -3140,18 +3159,41 @@ export interface components {
       /** Password */
       password: string
     }
+    /** ReportDayResponse */
+    ReportDayResponse: {
+      /** Closed */
+      closed: number
+      /** Created */
+      created: number
+      /**
+       * Day
+       * Format: date
+       */
+      day: string
+    }
+    /** ReportGroupResponse */
+    ReportGroupResponse: {
+      /** Closed */
+      closed: number
+      /** Created */
+      created: number
+      /** Key */
+      key: string | null
+      /** Open */
+      open: number
+    }
     /** ReportResponse */
     ReportResponse: {
       /** Breached */
       breached: number
       /** Channels */
-      channels: components['schemas']['zendilohub__modules__reporting__ui__api__routes__GroupResponse'][]
+      channels: components['schemas']['ReportGroupResponse'][]
       /** Closed */
       closed: number
       /** Created */
       created: number
       /** Days */
-      days: components['schemas']['DayResponse'][]
+      days: components['schemas']['ReportDayResponse'][]
       /** First Response Average */
       first_response_average: number | null
       /** First Response Median */
@@ -3159,9 +3201,9 @@ export interface components {
       /** Open Now */
       open_now: number
       /** Owners */
-      owners: components['schemas']['zendilohub__modules__reporting__ui__api__routes__GroupResponse'][]
+      owners: components['schemas']['ReportGroupResponse'][]
       /** Queues */
-      queues: components['schemas']['zendilohub__modules__reporting__ui__api__routes__GroupResponse'][]
+      queues: components['schemas']['ReportGroupResponse'][]
       /** Reopened */
       reopened: number
       /** Resolution Median */
@@ -3747,6 +3789,24 @@ export interface components {
       /** Writing */
       writing: boolean
     }
+    /** WebhookDeliveryResponse */
+    WebhookDeliveryResponse: {
+      /** Attempt */
+      attempt: number
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string
+      /** Error */
+      error: string | null
+      /** Event */
+      event: string
+      /** Id */
+      id: string
+      /** Status */
+      status: number | null
+    }
     /** @enum {string} */
     WebhookEvent: 'ticket.created' | 'ticket.changed' | 'message.added' | 'sla.breached'
     /** WebhookRequest */
@@ -3796,68 +3856,8 @@ export interface components {
     }
     /** @enum {string} */
     Weekday: 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'
-    /** GroupResponse */
-    zendilohub__modules__access__ui__api__schemas__GroupResponse: {
-      /**
-       * Created At
-       * Format: date-time
-       */
-      created_at: string
-      /** Description */
-      description: string
-      /** Id */
-      id: string
-      /** Member Ids */
-      member_ids: string[]
-      /** Name */
-      name: string
-    }
-    /** DeliveryResponse */
-    zendilohub__modules__channels__ui__api__schemas__DeliveryResponse: {
-      /** Attempts */
-      attempts: number
-      /** Error */
-      error: string | null
-      /** Message Id */
-      message_id: string
-      status: components['schemas']['DeliveryStatus']
-      /**
-       * Updated At
-       * Format: date-time
-       */
-      updated_at: string
-    }
     /** @enum {string} */
     zendilohub__modules__identity__ui__api__schemas__RoleValue: 'user' | 'admin'
-    /** DeliveryResponse */
-    zendilohub__modules__integrations__ui__api__routes__DeliveryResponse: {
-      /** Attempt */
-      attempt: number
-      /**
-       * Created At
-       * Format: date-time
-       */
-      created_at: string
-      /** Error */
-      error: string | null
-      /** Event */
-      event: string
-      /** Id */
-      id: string
-      /** Status */
-      status: number | null
-    }
-    /** GroupResponse */
-    zendilohub__modules__reporting__ui__api__routes__GroupResponse: {
-      /** Closed */
-      closed: number
-      /** Created */
-      created: number
-      /** Key */
-      key: string | null
-      /** Open */
-      open: number
-    }
     'zendilohub__modules__tenancy__ui__api__schemas__RoleValue-Input': string
     'zendilohub__modules__tenancy__ui__api__schemas__RoleValue-Output': string
   }
@@ -5751,7 +5751,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['zendilohub__modules__access__ui__api__schemas__GroupResponse'][]
+          'application/json': components['schemas']['GroupResponse'][]
         }
       }
       /** @description Validation Error */
@@ -5786,7 +5786,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['zendilohub__modules__access__ui__api__schemas__GroupResponse']
+          'application/json': components['schemas']['GroupResponse']
         }
       }
       /** @description Validation Error */
@@ -5852,7 +5852,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['zendilohub__modules__access__ui__api__schemas__GroupResponse']
+          'application/json': components['schemas']['GroupResponse']
         }
       }
       /** @description Validation Error */
@@ -5888,7 +5888,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['zendilohub__modules__access__ui__api__schemas__GroupResponse']
+          'application/json': components['schemas']['GroupResponse']
         }
       }
       /** @description Validation Error */
@@ -8193,7 +8193,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['zendilohub__modules__channels__ui__api__schemas__DeliveryResponse'][]
+          'application/json': components['schemas']['DeliveryResponse'][]
         }
       }
       /** @description Validation Error */
@@ -9053,7 +9053,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['zendilohub__modules__integrations__ui__api__routes__DeliveryResponse'][]
+          'application/json': components['schemas']['WebhookDeliveryResponse'][]
         }
       }
       /** @description Validation Error */

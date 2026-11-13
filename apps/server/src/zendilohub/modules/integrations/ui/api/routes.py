@@ -56,7 +56,7 @@ class WebhookResponse(BaseModel):
         )
 
 
-class DeliveryResponse(BaseModel):
+class WebhookDeliveryResponse(BaseModel):
     id: str
     event: str
     attempt: int
@@ -65,7 +65,7 @@ class DeliveryResponse(BaseModel):
     created_at: datetime
 
     @classmethod
-    def of(cls, delivery: Delivery) -> DeliveryResponse:
+    def of(cls, delivery: Delivery) -> WebhookDeliveryResponse:
         return cls(
             id=delivery.id,
             event=delivery.event,
@@ -130,8 +130,10 @@ def integration_routes(bus: CommandBus) -> APIRouter:
         )
 
     @router.get('/webhooks/{webhook_id}/deliveries')
-    async def deliveries(webhook_id: Id, member: Admin) -> list[DeliveryResponse]:
+    async def deliveries(webhook_id: Id, member: Admin) -> list[WebhookDeliveryResponse]:
         """The last 50 tries, newest first."""
-        return [DeliveryResponse.of(each) for each in await bus.query(ListDeliveries(member.tenant_id, webhook_id))]
+        return [
+            WebhookDeliveryResponse.of(each) for each in await bus.query(ListDeliveries(member.tenant_id, webhook_id))
+        ]
 
     return router

@@ -14,13 +14,13 @@ from ...domain.ports.repositories import Report
 Viewer = Annotated[Member, member_with('reports.view')]
 
 
-class DayResponse(BaseModel):
+class ReportDayResponse(BaseModel):
     day: date
     created: int
     closed: int
 
 
-class GroupResponse(BaseModel):
+class ReportGroupResponse(BaseModel):
     key: str | None
     """A queue id, a member's user id (null: nobody) or a channel."""
     created: int
@@ -39,10 +39,10 @@ class ReportResponse(BaseModel):
     resolution_median: float | None
     breached: int
     reopened: int
-    days: list[DayResponse]
-    queues: list[GroupResponse]
-    owners: list[GroupResponse]
-    channels: list[GroupResponse]
+    days: list[ReportDayResponse]
+    queues: list[ReportGroupResponse]
+    owners: list[ReportGroupResponse]
+    channels: list[ReportGroupResponse]
 
     @classmethod
     def of(cls, report: Report) -> ReportResponse:
@@ -56,10 +56,10 @@ class ReportResponse(BaseModel):
             resolution_median=report.resolution_median,
             breached=report.breached,
             reopened=report.reopened,
-            days=[DayResponse(day=each.day, created=each.created, closed=each.closed) for each in report.days],
-            queues=[GroupResponse(**vars(each)) for each in report.queues],
-            owners=[GroupResponse(**vars(each)) for each in report.owners],
-            channels=[GroupResponse(**vars(each)) for each in report.channels],
+            days=[ReportDayResponse(day=each.day, created=each.created, closed=each.closed) for each in report.days],
+            queues=[ReportGroupResponse(**vars(each)) for each in report.queues],
+            owners=[ReportGroupResponse(**vars(each)) for each in report.owners],
+            channels=[ReportGroupResponse(**vars(each)) for each in report.channels],
         )
 
 
