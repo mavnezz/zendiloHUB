@@ -77,3 +77,11 @@ class InstanceSetUp(IntegrationEvent):
     organization_name: str
     timezone: str
     locale: str
+
+
+@dataclass(frozen=True, kw_only=True)
+class QueueDeleted(IntegrationEvent):
+    """A queue is gone (with the rights on it); modules that keep things per queue clean up."""
+
+    tenant_id: str
+    queue_id: str

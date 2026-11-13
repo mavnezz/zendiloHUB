@@ -25,8 +25,10 @@ describe('TenantLayout', () => {
     await mountView(TenantLayout, { path: `/t/${TENANT_ID}/team` })
     expect($$('[data-test^=nav-group-]').map((group) => group.attributes('data-test'))).toEqual([
       'nav-group-workspace',
+      'nav-group-helpdesk',
       'nav-group-organization',
     ])
+    expect($('[data-test=nav-queueRights]').attributes('href')).toBe(`/t/${TENANT_ID}/queue-rights`)
     expect($('[data-test=nav-apiKeys]').attributes('href')).toBe(`/t/${TENANT_ID}/api-keys`)
     expect($('[data-test=nav-team]').attributes('data-active')).toBe('true')
     expect($('[data-test=breadcrumb-page]').text()).toBe('Team')
@@ -41,6 +43,8 @@ describe('TenantLayout', () => {
     expect(exists('[data-test=nav-settings]')).toBe(false)
     expect(exists('[data-test=nav-apiKeys]')).toBe(false)
     expect(exists('[data-test=nav-audit]')).toBe(false)
+    // Who manages no queues sees no helpdesk settings (their queues come with the tickets).
+    expect(exists('[data-test=nav-group-helpdesk]')).toBe(false)
   })
 
   it('switches organizations and creates new ones', async () => {

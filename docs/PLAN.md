@@ -413,6 +413,17 @@ mit Einladung (Vertrag `Invitations` im Core) und Einrichtungsassistent mit Einm
 `tenancy`. Docker-Image (321 MB, nicht root), `compose.yaml` mit Speicherlimits, `compose.dev.yaml`, CI.
 Der übernommene Code wurde vor der Veröffentlichung auf Geheimnisse und interne Adressen durchgesehen.
 
+**Phase 1a (2026-11-13, fertig):** Modul `access` mit Queues, Gruppen (Mitglieder nur aus der Organisation, Vertrag
+`Memberships` aus `tenancy`) und der Rechte-Matrix Gruppe × Queue mit den sieben Rechten und den Stufen Lesen,
+Mitarbeiten, Bearbeiten, Voll. Die Rechte eines Menschen sind die Vereinigung seiner Gruppen. Neue Berechtigungen
+`queues.manage` (Owner, Admin; auch für API-Schlüssel) und `queues.all` (Owner: jede Queue mit allen Rechten).
+Andere Module fragen über den Vertrag `QueueAccess` im Core (`rights`, `visible`); `QueueDeleted` meldet gelöschte
+Queues. Oberfläche: Seiten Queues, Gruppen und Queue-Rechte im neuen Bereich „Helpdesk“ der Seitenleiste.
+
+**Phase 1b (offen):** eigene Rollen mit Systemrechten statt der festen Rollen owner, admin, manager, agent. Abweichend
+von Abschnitt 4.1 bleiben die Rollen in `tenancy`, weil dort Mitgliedschaft und Berechtigungsprüfung liegen; `access`
+besitzt Queues, Gruppen und Rechte.
+
 ---
 
 ## 11. Risiken

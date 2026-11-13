@@ -14,6 +14,7 @@ from ..exceptions import InvalidApiKeyError
 
 type KeyPermission = Literal[
     'members.view',
+    'queues.manage',
     'audit.view',
 ]
 """

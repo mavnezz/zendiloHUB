@@ -36,9 +36,7 @@ async def test_creates_keys_that_are_shown_once(app: AppUnderTest) -> None:
     ada, tenant, base = await setup(app)
     manager = await member_of(app, tenant, ada, 'max@example.org', 'manager')
 
-    created = await ada.post(
-        base, json={'name': ' CRM sync ', 'permissions': ['audit.view', 'members.view']}
-    )
+    created = await ada.post(base, json={'name': ' CRM sync ', 'permissions': ['audit.view', 'members.view']})
     assert created.status_code == 201, created.text
     key = created.json()['key']
     assert key.startswith('zhk_')

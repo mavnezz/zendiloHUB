@@ -49,7 +49,7 @@ export type CreatedApiKey = Schemas['CreatedApiKeyResponse']
 export type ApiKeyPermission = ApiKeyRequest['permissions'][number]
 
 /** What a key can be given, in the server's order (what needs a person or an owner is not among them). */
-export const API_KEY_PERMISSIONS: readonly ApiKeyPermission[] = ['members.view', 'audit.view']
+export const API_KEY_PERMISSIONS: readonly ApiKeyPermission[] = ['members.view', 'queues.manage', 'audit.view']
 export const READ_PERMISSIONS = API_KEY_PERMISSIONS.filter((permission) => permission.endsWith('.view'))
 
 /** The organization's API keys: other systems call its routes with `Authorization: Bearer zhk_…`. */

@@ -503,6 +503,62 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/v1/tenants/{tenant_id}/groups': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Groups */
+    get: operations['groups_api_v1_tenants__tenant_id__groups_get']
+    put?: never
+    /** Create Group */
+    post: operations['create_group_api_v1_tenants__tenant_id__groups_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/groups/{group_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /** Delete Group */
+    delete: operations['delete_group_api_v1_tenants__tenant_id__groups__group_id__delete']
+    options?: never
+    head?: never
+    /** Update Group */
+    patch: operations['update_group_api_v1_tenants__tenant_id__groups__group_id__patch']
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/groups/{group_id}/members': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    /**
+     * Set Members
+     * @description Exactly these members of the organization are in the group afterwards.
+     */
+    put: operations['set_members_api_v1_tenants__tenant_id__groups__group_id__members_put']
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/v1/tenants/{tenant_id}/invitations': {
     parameters: {
       query?: never
@@ -577,6 +633,73 @@ export interface paths {
     head?: never
     /** Change Role */
     patch: operations['change_role_api_v1_tenants__tenant_id__members__user_id__patch']
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/queue-rights': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Rights
+     * @description The matrix: what each group may do in each queue, the rights there are and the ready-made levels.
+     */
+    get: operations['rights_api_v1_tenants__tenant_id__queue_rights_get']
+    /**
+     * Set Rights
+     * @description What a group may do in a queue from now on; no rights take them away.
+     */
+    put: operations['set_rights_api_v1_tenants__tenant_id__queue_rights_put']
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/queues': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Queues
+     * @description The queues the caller may see, with what they may do in each. Who manages queues sees every queue (with the
+     *     rights their groups give); `queues.all` gives every right in every queue.
+     */
+    get: operations['queues_api_v1_tenants__tenant_id__queues_get']
+    put?: never
+    /** Create Queue */
+    post: operations['create_queue_api_v1_tenants__tenant_id__queues_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/queues/{queue_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /**
+     * Delete Queue
+     * @description With every group's rights on it.
+     */
+    delete: operations['delete_queue_api_v1_tenants__tenant_id__queues__queue_id__delete']
+    options?: never
+    head?: never
+    /** Update Queue */
+    patch: operations['update_queue_api_v1_tenants__tenant_id__queues__queue_id__patch']
     trace?: never
   }
 }
@@ -709,6 +832,47 @@ export interface components {
       /** Email */
       email: string
     }
+    /** GrantResponse */
+    GrantResponse: {
+      /** Group Id */
+      group_id: string
+      preset: components['schemas']['RightsPreset'] | null
+      /** Queue Id */
+      queue_id: string
+      /** Rights */
+      rights: components['schemas']['QueueRight'][]
+    }
+    /** GroupMembersRequest */
+    GroupMembersRequest: {
+      /** User Ids */
+      user_ids: string[]
+    }
+    /** GroupRequest */
+    GroupRequest: {
+      /**
+       * Description
+       * @default
+       */
+      description: string
+      /** Name */
+      name: string
+    }
+    /** GroupResponse */
+    GroupResponse: {
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string
+      /** Description */
+      description: string
+      /** Id */
+      id: string
+      /** Member Ids */
+      member_ids: string[]
+      /** Name */
+      name: string
+    }
     /** HTTPValidationError */
     HTTPValidationError: {
       /** Detail */
@@ -753,7 +917,7 @@ export interface components {
       role: components['schemas']['zendilohub__modules__tenancy__ui__api__schemas__RoleValue']
     }
     /** @enum {string} */
-    KeyPermission: 'members.view' | 'audit.view'
+    KeyPermission: 'members.view' | 'queues.manage' | 'audit.view'
     /** @enum {string} */
     LocaleValue: 'de' | 'en'
     /** MemberResponse */
@@ -803,8 +967,47 @@ export interface components {
       | 'members.view'
       | 'members.manage'
       | 'members.assign_owner'
+      | 'queues.manage'
+      | 'queues.all'
       | 'integrations.manage'
       | 'audit.view'
+    /** QueueRequest */
+    QueueRequest: {
+      /**
+       * Description
+       * @default
+       */
+      description: string
+      /** Name */
+      name: string
+    }
+    /** QueueResponse */
+    QueueResponse: {
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string
+      /** Description */
+      description: string
+      /** Id */
+      id: string
+      /** Name */
+      name: string
+      /** Rights */
+      rights: components['schemas']['QueueRight'][]
+    }
+    /** @enum {string} */
+    QueueRight: 'view' | 'create' | 'note' | 'reply' | 'edit' | 'assign' | 'move'
+    /** QueueRightsRequest */
+    QueueRightsRequest: {
+      /** Group Id */
+      group_id: string
+      /** Queue Id */
+      queue_id: string
+      /** Rights */
+      rights: components['schemas']['QueueRight'][]
+    }
     /** RegisterRequest */
     RegisterRequest: {
       /** Email */
@@ -821,6 +1024,19 @@ export interface components {
       /** Token */
       token: string
     }
+    /** RightsMatrixResponse */
+    RightsMatrixResponse: {
+      /** Grants */
+      grants: components['schemas']['GrantResponse'][]
+      /** Presets */
+      presets: {
+        [key: string]: components['schemas']['QueueRight'][]
+      }
+      /** Rights */
+      rights: components['schemas']['QueueRight'][]
+    }
+    /** @enum {string} */
+    RightsPreset: 'read' | 'contribute' | 'work' | 'full'
     /**
      * RoleMatrixResponse
      * @description Which role may do what; the web app shows it on the role permissions page.
@@ -1942,6 +2158,174 @@ export interface operations {
       }
     }
   }
+  groups_api_v1_tenants__tenant_id__groups_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['GroupResponse'][]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  create_group_api_v1_tenants__tenant_id__groups_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['GroupRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['GroupResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  delete_group_api_v1_tenants__tenant_id__groups__group_id__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        group_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  update_group_api_v1_tenants__tenant_id__groups__group_id__patch: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        group_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['GroupRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['GroupResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  set_members_api_v1_tenants__tenant_id__groups__group_id__members_put: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        group_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['GroupMembersRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['GroupResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
   invitations_api_v1_tenants__tenant_id__invitations_get: {
     parameters: {
       query?: never
@@ -2122,6 +2506,204 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['MemberResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  rights_api_v1_tenants__tenant_id__queue_rights_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['RightsMatrixResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  set_rights_api_v1_tenants__tenant_id__queue_rights_put: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['QueueRightsRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['GrantResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  queues_api_v1_tenants__tenant_id__queues_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['QueueResponse'][]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  create_queue_api_v1_tenants__tenant_id__queues_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['QueueRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['QueueResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  delete_queue_api_v1_tenants__tenant_id__queues__queue_id__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        queue_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  update_queue_api_v1_tenants__tenant_id__queues__queue_id__patch: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        queue_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['QueueRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['QueueResponse']
         }
       }
       /** @description Validation Error */

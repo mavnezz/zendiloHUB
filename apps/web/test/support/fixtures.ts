@@ -20,10 +20,12 @@ export const ROLE_PERMISSIONS: Record<TenantRole, Permission[]> = {
     'members.view',
     'members.manage',
     'members.assign_owner',
+    'queues.manage',
+    'queues.all',
     'integrations.manage',
     'audit.view',
   ],
-  admin: ['tenant.manage', 'members.view', 'members.manage', 'integrations.manage', 'audit.view'],
+  admin: ['tenant.manage', 'members.view', 'members.manage', 'queues.manage', 'integrations.manage', 'audit.view'],
   manager: ['members.view'],
   agent: ['members.view'],
 }

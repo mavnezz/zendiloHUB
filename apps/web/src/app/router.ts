@@ -4,6 +4,7 @@ import { installGuard, LOGIN_ROUTE } from '@/core/router/guard'
 import { identityRoutes } from '@/modules/identity/routes'
 import { installLocaleSync, useSession } from '@/modules/identity/session'
 import type { Permission } from '@/modules/tenancy/api'
+import { accessRoutes } from '@/modules/access/routes'
 import { complianceAdminRoutes, complianceRoutes } from '@/modules/compliance/routes'
 import { tenancyRoutes, tenantRoutes } from '@/modules/tenancy/routes'
 import { takePendingInvitation, useTenants } from '@/modules/tenancy/tenants'
@@ -50,6 +51,7 @@ export function createAppRouter(history: RouterHistory = createWebHistory()): Ro
           { path: '', redirect: { name: 'overview' } },
           { path: 'overview', name: 'overview', component: () => import('./OverviewView.vue') },
           ...tenantRoutes,
+          ...accessRoutes,
           ...complianceRoutes,
         ],
       },

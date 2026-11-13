@@ -15,6 +15,8 @@ type Permission = Literal[
     'members.view',
     'members.manage',
     'members.assign_owner',
+    'queues.manage',
+    'queues.all',
     'integrations.manage',
     'audit.view',
 ]
@@ -29,6 +31,9 @@ PERMISSIONS: dict[Permission, frozenset[TenantRole]] = {
     'members.view': _ALL,
     'members.manage': _ADMINS,
     'members.assign_owner': _OWNER,
+    # Queues, groups and the rights between them; seeing every queue's tickets is a right of its own.
+    'queues.manage': _ADMINS,
+    'queues.all': _OWNER,
     'integrations.manage': _ADMINS,
     'audit.view': _ADMINS,
 }

@@ -1,4 +1,14 @@
-import { KeyRound, LayoutDashboard, ScrollText, Settings, ShieldCheck, Users } from '@lucide/vue'
+import {
+  Inbox,
+  KeyRound,
+  LayoutDashboard,
+  ScrollText,
+  Settings,
+  ShieldCheck,
+  UserCog,
+  Users,
+  UsersRound,
+} from '@lucide/vue'
 import type { Component } from 'vue'
 import type { Permission } from '@/modules/tenancy/api'
 
@@ -12,15 +22,23 @@ export interface NavItem {
 }
 
 export interface NavGroup {
-  key: 'workspace' | 'organization'
+  key: 'workspace' | 'helpdesk' | 'organization'
   items: NavItem[]
 }
 
-/** The sidebar of an organization; queues and tickets join with phases 1 and 2 (docs/PLAN.md). */
+/** The sidebar of an organization; tickets join with phase 2 (docs/PLAN.md). */
 export const navigation: NavGroup[] = [
   {
     key: 'workspace',
     items: [{ name: 'overview', path: 'overview', icon: LayoutDashboard }],
+  },
+  {
+    key: 'helpdesk',
+    items: [
+      { name: 'queues', path: 'queues', icon: Inbox, permission: 'queues.manage' },
+      { name: 'queueGroups', path: 'groups', icon: UsersRound, permission: 'queues.manage' },
+      { name: 'queueRights', path: 'queue-rights', icon: UserCog, permission: 'queues.manage' },
+    ],
   },
   {
     key: 'organization',

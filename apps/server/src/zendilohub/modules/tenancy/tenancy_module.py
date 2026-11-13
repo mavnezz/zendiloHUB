@@ -63,6 +63,7 @@ from .application.queries.tenants import (
 )
 from .domain.models.tenant import Locale
 from .infrastructure.mail_notifier import MailInvitationNotifier
+from .infrastructure.membership_directory import MembershipDirectory
 from .infrastructure.pending_invitations import PendingInvitations
 from .infrastructure.postgres_api_keys import PostgresApiKeyRepository
 from .infrastructure.postgres_tenancy import (
@@ -145,6 +146,7 @@ def create_tenancy_module(context: ModuleContext) -> AppModule:
 
     context.events.subscribe(InstanceSetUp, set_up)
     context.contracts.invitations.provide(PendingInvitations(invitations, clock))
+    context.contracts.memberships.provide(MembershipDirectory(memberships))
 
     return AppModule(
         name='tenancy',
