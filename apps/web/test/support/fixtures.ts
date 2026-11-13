@@ -22,12 +22,25 @@ export const ROLE_PERMISSIONS: Record<BuiltinRole, Permission[]> = {
     'members.assign_owner',
     'queues.manage',
     'queues.all',
+    'tickets.delete',
+    'customers.view',
+    'customers.manage',
     'integrations.manage',
     'audit.view',
   ],
-  admin: ['tenant.manage', 'members.view', 'members.manage', 'queues.manage', 'integrations.manage', 'audit.view'],
-  manager: ['members.view'],
-  agent: ['members.view'],
+  admin: [
+    'tenant.manage',
+    'members.view',
+    'members.manage',
+    'queues.manage',
+    'tickets.delete',
+    'customers.view',
+    'customers.manage',
+    'integrations.manage',
+    'audit.view',
+  ],
+  manager: ['members.view', 'customers.view', 'customers.manage'],
+  agent: ['members.view', 'customers.view', 'customers.manage'],
 }
 
 export const TENANT_ID = '00000000-0000-7000-8000-000000000001'

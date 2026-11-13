@@ -427,6 +427,18 @@ besitzt Queues, Gruppen und Rechte. Eine eigene Rolle hält beliebige Berechtigu
 selbst (`role_exceeds_own`); Rollen in Benutzung lassen sich nicht löschen. Seite „Rollen & Rechte“ mit Anlegen,
 Bearbeiten, Löschen und Mitgliederzahl je Rolle.
 
+**Phase 2 (2026-11-13, fertig):** Module `customers` (Kontakte mit E-Mail und Telefon, Firmen mit Domain, neue Kontakte
+einer Domain kommen von selbst zur Firma) und `tickets`. Abweichend von Abschnitt 4.1 liegen die Nachrichten im Modul
+`tickets` (Zusammenführen und Aufteilen brauchen beides in einer Transaktion); `conversations` entfällt. Ticketnummern
+je Organisation ab 1001, Status `new`, `open`, `pending_reminder`, `pending_close` (schließt sich per Job selbst),
+`closed`, `merged`; Prioritäten, Tags, Bearbeiter und Verantwortlicher, Beobachten und Erwähnen, Verknüpfen
+(verwandt, Eltern, Kind), Zusammenführen, Aufteilen, Zeiterfassung, lückenloser Verlauf, Ansichten mit Zählern
+(Meine, Nicht zugewiesen, Erinnerung fällig, Offen, Beobachtet, Geschlossen, Alle), Volltextsuche über Nachrichten,
+Sammelaktionen. Die Rechte jeder Gruppe in jeder Queue gelten überall (Liste, Ansicht, Ändern, Zuweisen nur an Leute
+mit `reply`, Verschieben mit `move` und `create` im Ziel). API-Schlüssel brauchen `queues.all`, um Tickets zu sehen;
+neue Berechtigungen `tickets.delete`, `customers.view`, `customers.manage`. Queues und Kontakte mit Tickets lassen sich
+nicht löschen.
+
 ---
 
 ## 11. Übernahme aus OTOBO und Zammad (2026-11-13)

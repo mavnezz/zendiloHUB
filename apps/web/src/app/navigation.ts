@@ -1,5 +1,8 @@
 import {
+  Building2,
+  Contact,
   Inbox,
+  Ticket,
   KeyRound,
   LayoutDashboard,
   ScrollText,
@@ -26,11 +29,16 @@ export interface NavGroup {
   items: NavItem[]
 }
 
-/** The sidebar of an organization; tickets join with phase 2 (docs/PLAN.md). */
+/** The sidebar of an organization. */
 export const navigation: NavGroup[] = [
   {
     key: 'workspace',
-    items: [{ name: 'overview', path: 'overview', icon: LayoutDashboard }],
+    items: [
+      { name: 'overview', path: 'overview', icon: LayoutDashboard },
+      { name: 'tickets', path: 'tickets', icon: Ticket },
+      { name: 'contacts', path: 'contacts', icon: Contact, permission: 'customers.view' },
+      { name: 'companies', path: 'companies', icon: Building2, permission: 'customers.view' },
+    ],
   },
   {
     key: 'helpdesk',
@@ -52,8 +60,13 @@ export const navigation: NavGroup[] = [
   },
 ]
 
-/** Pages below a navigation item (none yet; a ticket will belong to its queue). */
-const PARENTS: Record<string, string> = {}
+/** Pages below a navigation item. */
+const PARENTS: Record<string, string> = {
+  ticket: 'tickets',
+  newTicket: 'tickets',
+  contact: 'contacts',
+  company: 'companies',
+}
 
 /** The navigation item a page belongs to: its own, or the one it is below. */
 export function navItemOf(name: string): string {
