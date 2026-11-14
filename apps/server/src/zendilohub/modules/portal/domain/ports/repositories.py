@@ -1,7 +1,9 @@
+from collections.abc import Sequence
 from datetime import datetime
 from typing import Literal, Protocol
 
 from zendilohub.core.domain.contact_card import ContactCard
+from zendilohub.core.domain.files import FileData
 from zendilohub.core.domain.portal import PortalThread, PortalTicket
 
 from ..models.portal import PortalLogin, PortalSettings
@@ -41,7 +43,19 @@ class Tickets(Protocol):
     async def thread(self, tenant_id: str, contact_ids: list[str], ticket_id: str) -> PortalThread | None: ...
 
     async def reply(
-        self, tenant_id: str, contact_id: str, contact_ids: list[str], ticket_id: str, body: str
+        self,
+        tenant_id: str,
+        contact_id: str,
+        contact_ids: list[str],
+        ticket_id: str,
+        body: str,
+        files: Sequence[FileData] = (),
     ) -> bool: ...
 
-    async def open(self, tenant_id: str, contact_id: str, queue_id: str, subject: str, body: str) -> PortalTicket: ...
+    async def open(
+        self, tenant_id: str, contact_id: str, queue_id: str, subject: str, body: str, files: Sequence[FileData] = ()
+    ) -> PortalTicket: ...
+
+    async def attachment(
+        self, tenant_id: str, contact_ids: list[str], ticket_id: str, attachment_id: str
+    ) -> FileData | None: ...

@@ -2,6 +2,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Protocol
 
+from zendilohub.core.domain.files import FileData
 from zendilohub.core.domain.inbox import InboundEmail, OutgoingEmail, ReceivedTicket
 
 from ..models.account import EmailAccount
@@ -43,6 +44,7 @@ class OutgoingMail:
     references: tuple[str, ...] = ()
     automatic: bool = False
     """Auto replies say so (`Auto-Submitted`), so other robots do not answer them."""
+    attachments: tuple[FileData, ...] = ()
 
 
 class Outbox(Protocol):

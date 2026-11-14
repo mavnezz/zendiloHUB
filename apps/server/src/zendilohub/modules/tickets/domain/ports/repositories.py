@@ -5,6 +5,7 @@ from typing import Protocol
 
 from zendilohub.core.domain.automation import TicketCriteria
 
+from ..models.attachment import Attachment
 from ..models.custom_field import ChecklistItem, CustomField
 from ..models.history import HistoryEntry
 from ..models.link import Link, LinkKind
@@ -150,3 +151,25 @@ class ChecklistRepository(Protocol):
     async def save(self, item: ChecklistItem) -> None: ...
 
     async def delete(self, tenant_id: str, item_id: str) -> None: ...
+
+
+class AttachmentRepository(Protocol):
+    async def save(self, attachment: Attachment) -> None: ...
+
+    async def find(self, tenant_id: str, attachment_id: str) -> Attachment | None: ...
+
+    async def of_messages(self, tenant_id: str, message_ids: Sequence[str]) -> Sequence[Attachment]:
+        """Oldest first."""
+        ...
+
+    async def link(self, tenant_id: str, attachment_ids: Sequence[str], message_id: str) -> None: ...
+
+    async def delete(self, tenant_id: str, attachment_id: str) -> None: ...
+
+    async def pending_before(self, before: datetime, limit: int) -> Sequence[Attachment]:
+        """Uploads no message took."""
+        ...
+
+    async def known(self, keys: Sequence[tuple[str, str]]) -> set[tuple[str, str]]:
+        """Which (tenant, attachment) pairs still exist."""
+        ...

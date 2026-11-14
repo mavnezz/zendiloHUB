@@ -107,6 +107,7 @@ class SendReplyHandler:
                     message_id=message_id,
                     in_reply_to=reply.references[-1] if reply.references else None,
                     references=reply.references,
+                    attachments=reply.attachments,
                 ),
             )
         except MailboxError as error:

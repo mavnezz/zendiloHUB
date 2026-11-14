@@ -126,7 +126,9 @@ def create_channels_module(
     vault = Vault(accounts, context.cipher)
     writer = Writer(queues, templates, personal, names)
     auto = AutoReplier(writer, vault, outbox, context.rate_limiter, ids)
-    process = ProcessEmailHandler(accounts, filters, failed, tickets, Nh3Cleaner(), auto, ids, clock)
+    process = ProcessEmailHandler(
+        accounts, filters, failed, tickets, Nh3Cleaner(), auto, ids, clock, context.config.max_upload_bytes
+    )
     bus = (
         CommandBus()
         .register(CreateAccount, CreateAccountHandler(accounts, vault, ids, clock))

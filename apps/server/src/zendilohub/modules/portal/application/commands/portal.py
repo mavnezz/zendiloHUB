@@ -1,13 +1,16 @@
 import hashlib
 import secrets
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 from zendilohub.core.bus.message import Command, Query
 from zendilohub.core.domain.clock import Clock
 from zendilohub.core.domain.contact_card import ContactCard
 from zendilohub.core.domain.email_address import normalized_email
+from zendilohub.core.domain.files import FileData
 from zendilohub.core.domain.mailer import Mailer, MailMessage
 from zendilohub.core.domain.portal import PortalThread, PortalTicket
+from zendilohub.core.domain.rate_limited import TooManyRequestsError
 from zendilohub.core.domain.rate_limiter import RateLimit, RateLimiter
 
 from ...domain.models.portal import (
@@ -24,6 +27,20 @@ from ...domain.models.portal import (
 from ...domain.ports.repositories import Customers, PortalRepository, Tickets
 
 LINKS = RateLimit('portal-links', limit=5, window_seconds=60 * 60)
+FILES = RateLimit('portal-files', limit=30, window_seconds=60 * 60)
+"""Files a customer may send per hour."""
+FILES_PER_MESSAGE = 5
+
+
+async def _check_files(limiter: RateLimiter, visitor: Visitor, files: Sequence[FileData]) -> None:
+    if not files:
+        return
+    if len(files) > FILES_PER_MESSAGE:
+        raise InvalidPortalError('files')
+    for _ in files:
+        status = await limiter.hit(FILES, f'{visitor.tenant_id}:{visitor.contact.id}')
+        if not status.allowed:
+            raise TooManyRequestsError(status.retry_after)
 
 
 def hash_of(token: str) -> str:
@@ -246,19 +263,24 @@ class Answer(Command[PortalThread]):
     visitor: Visitor
     ticket_id: str
     body: str
+    files: Sequence[FileData] = ()
 
 
 class AnswerHandler:
-    def __init__(self, tickets: Tickets) -> None:
+    def __init__(self, tickets: Tickets, limiter: RateLimiter) -> None:
         self._tickets = tickets
+        self._limiter = limiter
 
     async def handle(self, command: Answer) -> PortalThread:
         visitor = command.visitor
         body = command.body.strip()
-        if not body or len(body) > 50_000:
+        if (not body and not command.files) or len(body) > 50_000:
             raise InvalidPortalError('body')
+        if await self._tickets.thread(visitor.tenant_id, visitor.contact_ids, command.ticket_id) is None:
+            raise PortalTicketNotFoundError()
+        await _check_files(self._limiter, visitor, command.files)
         if not await self._tickets.reply(
-            visitor.tenant_id, visitor.contact.id, visitor.contact_ids, command.ticket_id, body
+            visitor.tenant_id, visitor.contact.id, visitor.contact_ids, command.ticket_id, body, command.files
         ):
             raise PortalTicketNotFoundError()
         thread = await self._tickets.thread(visitor.tenant_id, visitor.contact_ids, command.ticket_id)
@@ -271,11 +293,13 @@ class OpenTicket(Command[PortalTicket]):
     visitor: Visitor
     subject: str
     body: str
+    files: Sequence[FileData] = ()
 
 
 class OpenTicketHandler:
-    def __init__(self, tickets: Tickets) -> None:
+    def __init__(self, tickets: Tickets, limiter: RateLimiter) -> None:
         self._tickets = tickets
+        self._limiter = limiter
 
     async def handle(self, command: OpenTicket) -> PortalTicket:
         visitor = command.visitor
@@ -285,7 +309,31 @@ class OpenTicketHandler:
         if not body or len(body) > 50_000:
             raise InvalidPortalError('body')
         assert visitor.settings.queue_id is not None
-        return await self._tickets.open(visitor.tenant_id, visitor.contact.id, visitor.settings.queue_id, subject, body)
+        await _check_files(self._limiter, visitor, command.files)
+        return await self._tickets.open(
+            visitor.tenant_id, visitor.contact.id, visitor.settings.queue_id, subject, body, command.files
+        )
+
+
+@dataclass(frozen=True)
+class MyFile(Query[FileData]):
+    visitor: Visitor
+    ticket_id: str
+    attachment_id: str
+
+
+class MyFileHandler:
+    def __init__(self, tickets: Tickets) -> None:
+        self._tickets = tickets
+
+    async def handle(self, query: MyFile) -> FileData:
+        visitor = query.visitor
+        found = await self._tickets.attachment(
+            visitor.tenant_id, visitor.contact_ids, query.ticket_id, query.attachment_id
+        )
+        if found is None:
+            raise PortalTicketNotFoundError()
+        return found
 
 
 @dataclass(frozen=True)

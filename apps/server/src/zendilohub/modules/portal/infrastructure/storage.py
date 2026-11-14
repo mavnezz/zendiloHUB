@@ -1,8 +1,10 @@
+from collections.abc import Sequence
 from datetime import datetime
 from typing import Any
 
 from zendilohub.core.contracts import ContactCard, Contracts
 from zendilohub.core.database.database import Database
+from zendilohub.core.domain.files import FileData
 from zendilohub.core.domain.portal import PortalThread, PortalTicket
 
 from ..domain.models.portal import PortalLogin, PortalSettings
@@ -101,8 +103,24 @@ class ContractTickets:
     async def thread(self, tenant_id: str, contact_ids: list[str], ticket_id: str) -> PortalThread | None:
         return await self._contracts.ticket_portal.get().thread(tenant_id, contact_ids, ticket_id)
 
-    async def reply(self, tenant_id: str, contact_id: str, contact_ids: list[str], ticket_id: str, body: str) -> bool:
-        return await self._contracts.ticket_portal.get().reply(tenant_id, contact_id, contact_ids, ticket_id, body)
+    async def reply(
+        self,
+        tenant_id: str,
+        contact_id: str,
+        contact_ids: list[str],
+        ticket_id: str,
+        body: str,
+        files: Sequence[FileData] = (),
+    ) -> bool:
+        portal = self._contracts.ticket_portal.get()
+        return await portal.reply(tenant_id, contact_id, contact_ids, ticket_id, body, files)
 
-    async def open(self, tenant_id: str, contact_id: str, queue_id: str, subject: str, body: str) -> PortalTicket:
-        return await self._contracts.ticket_portal.get().open(tenant_id, contact_id, queue_id, subject, body)
+    async def open(
+        self, tenant_id: str, contact_id: str, queue_id: str, subject: str, body: str, files: Sequence[FileData] = ()
+    ) -> PortalTicket:
+        return await self._contracts.ticket_portal.get().open(tenant_id, contact_id, queue_id, subject, body, files)
+
+    async def attachment(
+        self, tenant_id: str, contact_ids: list[str], ticket_id: str, attachment_id: str
+    ) -> FileData | None:
+        return await self._contracts.ticket_portal.get().attachment(tenant_id, contact_ids, ticket_id, attachment_id)

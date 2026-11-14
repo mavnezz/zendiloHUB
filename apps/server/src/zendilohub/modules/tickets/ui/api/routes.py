@@ -1,15 +1,17 @@
 from collections.abc import Iterable
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Query, Request, Response
+from fastapi import APIRouter, File, Query, Request, Response, UploadFile
 
 from zendilohub.core.bus.command_bus import CommandBus
 from zendilohub.core.contracts import ContactCard, Contracts
 from zendilohub.core.http.access import CurrentMember, CurrentPerson, Member, member_with
 from zendilohub.core.http.audit import Unaudited, audited, note_audit
+from zendilohub.core.http.files import file_response, read_upload
 from zendilohub.core.http.ids import Id
 
 from ...application.commands.assist import Assist, AssistantStatus
+from ...application.commands.attachments import DeleteAttachment, GetAttachment, UploadAttachment
 from ...application.commands.fields import (
     AddChecklistItem,
     BeHere,
@@ -54,6 +56,7 @@ from .schemas import (
     AssistantResponse,
     AssistRequest,
     AssistResponse,
+    AttachmentResponse,
     BulkRequest,
     BulkResponse,
     ChecklistChangeRequest,
@@ -91,7 +94,7 @@ def actor_of(member: Member) -> Actor:
     )
 
 
-def ticket_routes(bus: CommandBus, contracts: Contracts) -> APIRouter:
+def ticket_routes(bus: CommandBus, contracts: Contracts, *, max_upload_bytes: int) -> APIRouter:
     """
     Tickets. What the caller may do with one comes from their groups' rights in its queue (`rights` in every answer);
     tickets in queues they may not see do not exist for them. Changes are kept in each ticket's history, so only
@@ -273,9 +276,48 @@ def ticket_routes(bus: CommandBus, contracts: Contracts) -> APIRouter:
                 pending_until=body.pending_until,
                 time_minutes=body.time_minutes,
                 mentions=body.mentions,
+                attachment_ids=body.attachment_ids,
             )
         )
         return MessageResponse.of(message)
+
+    @router.post('/tickets/{ticket_id}/attachments', status_code=201, dependencies=[Unaudited])
+    async def upload(ticket_id: Id, member: CurrentPerson, file: Annotated[UploadFile, File()]) -> AttachmentResponse:
+        """
+        A file for the message you are writing (`note` or `reply`, multipart field `file`); send its id in
+        `attachment_ids` of the message. Uploads no message took are deleted after a day.
+        """
+        data = await read_upload(file, max_upload_bytes)
+        attachment = await bus.execute(
+            UploadAttachment(tenant_id=member.tenant_id, actor=actor_of(member), ticket_id=ticket_id, file=data)
+        )
+        return AttachmentResponse.of(attachment)
+
+    @router.get('/tickets/{ticket_id}/attachments/{attachment_id}', response_class=Response)
+    async def download(ticket_id: Id, attachment_id: Id, member: CurrentMember) -> Response:
+        """The file; images show inline, everything else downloads."""
+        found = await bus.query(
+            GetAttachment(
+                tenant_id=member.tenant_id, actor=actor_of(member), ticket_id=ticket_id, attachment_id=attachment_id
+            )
+        )
+        return file_response(
+            found.content, filename=found.attachment.filename, content_type=found.attachment.content_type
+        )
+
+    @router.delete(
+        '/tickets/{ticket_id}/attachments/{attachment_id}',
+        status_code=204,
+        response_class=Response,
+        dependencies=[Unaudited],
+    )
+    async def discard(ticket_id: Id, attachment_id: Id, member: CurrentPerson) -> None:
+        """Takes back an upload no message took yet."""
+        await bus.execute(
+            DeleteAttachment(
+                tenant_id=member.tenant_id, actor=actor_of(member), ticket_id=ticket_id, attachment_id=attachment_id
+            )
+        )
 
     @router.get('/tickets/{ticket_id}/history')
     async def history(ticket_id: Id, member: CurrentMember) -> list[HistoryEntryResponse]:

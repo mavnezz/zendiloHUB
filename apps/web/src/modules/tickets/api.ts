@@ -1,4 +1,4 @@
-import { http } from '@/core/api/http'
+import { buildUrl, http } from '@/core/api/http'
 import type { Schemas } from '@/core/api/types'
 
 export type Ticket = Schemas['TicketResponse']
@@ -6,6 +6,7 @@ export type TicketDetail = Schemas['TicketDetailResponse']
 export type TicketPage = Schemas['TicketPageResponse']
 export type TicketCounts = Schemas['TicketCountsResponse']
 export type TicketMessage = Schemas['MessageResponse']
+export type Attachment = Schemas['AttachmentResponse']
 export type HistoryEntry = Schemas['HistoryEntryResponse']
 export type TimeEntry = Schemas['TimeEntryResponse']
 export type CreateTicketRequest = Schemas['CreateTicketRequest']
@@ -75,6 +76,17 @@ export const ticketsApi = {
   messages: (tenantId: string, id: string) => http.get<TicketMessage[]>(`${one(tenantId, id)}/messages`),
   addMessage: (tenantId: string, id: string, body: MessageRequest) =>
     http.post<TicketMessage>(`${one(tenantId, id)}/messages`, body),
+  /** A file for the message being written; its id goes into `attachment_ids`. */
+  upload: (tenantId: string, id: string, file: File) => {
+    const form = new FormData()
+    form.append('file', file)
+    return http.upload<Attachment>(`${one(tenantId, id)}/attachments`, form)
+  },
+  discard: (tenantId: string, id: string, attachmentId: string) =>
+    http.delete<void>(`${one(tenantId, id)}/attachments/${attachmentId}`),
+  /** The address of a file, for links and image previews. */
+  attachmentUrl: (tenantId: string, id: string, attachmentId: string) =>
+    buildUrl(`${one(tenantId, id)}/attachments/${attachmentId}`),
   history: (tenantId: string, id: string) => http.get<HistoryEntry[]>(`${one(tenantId, id)}/history`),
   time: (tenantId: string, id: string) => http.get<TimeEntry[]>(`${one(tenantId, id)}/time`),
   recordTime: (tenantId: string, id: string, minutes: number) =>

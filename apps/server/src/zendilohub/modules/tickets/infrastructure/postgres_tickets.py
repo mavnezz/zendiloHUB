@@ -8,6 +8,7 @@ from psycopg.types.json import Jsonb
 from zendilohub.core.database.database import Database
 from zendilohub.core.domain.automation import TicketCriteria
 
+from ..domain.models.attachment import Attachment
 from ..domain.models.custom_field import ChecklistItem, CustomField, FieldKind
 from ..domain.models.history import HistoryAction, HistoryEntry
 from ..domain.models.link import OPPOSITE, Link, LinkKind
@@ -349,17 +350,52 @@ class PostgresTicketRepository(_Sql):
         await self.run('DELETE FROM ticket_counters WHERE tenant_id = %s', (tenant_id,))
 
 
+def _attachment(row: dict[str, Any]) -> Attachment:
+    return Attachment(
+        id=str(row['id']),
+        tenant_id=str(row['tenant_id']),
+        ticket_id=str(row['ticket_id']),
+        message_id=_id(row['message_id']),
+        filename=row['filename'],
+        content_type=row['content_type'],
+        size=int(row['size']),
+        sha256=row['sha256'],
+        content_id=row['content_id'],
+        created_by=_id(row['created_by']),
+        created_at=row['created_at'],
+    )
+
+
 class PostgresMessageRepository(_Sql):
+    """Messages come with their attachments."""
+
     async def of_ticket(self, tenant_id: str, ticket_id: str) -> Sequence[Message]:
         rows = await self.rows(
             'SELECT * FROM ticket_messages WHERE tenant_id = %s AND ticket_id = %s ORDER BY created_at, id',
             (tenant_id, ticket_id),
         )
-        return [_message(row) for row in rows]
+        return await self._with_files(tenant_id, [_message(row) for row in rows])
 
     async def find(self, tenant_id: str, message_id: str) -> Message | None:
         row = await self.one('SELECT * FROM ticket_messages WHERE tenant_id = %s AND id = %s', (tenant_id, message_id))
-        return _message(row) if row else None
+        return (await self._with_files(tenant_id, [_message(row)]))[0] if row else None
+
+    async def _with_files(self, tenant_id: str, messages: list[Message]) -> list[Message]:
+        if not messages:
+            return messages
+        rows = await self.rows(
+            """
+            SELECT * FROM ticket_attachments WHERE tenant_id = %s AND message_id = ANY(%s::uuid[])
+            ORDER BY created_at, id
+            """,
+            (tenant_id, [message.id for message in messages]),
+        )
+        by_message: dict[str, list[Attachment]] = {}
+        for row in rows:
+            by_message.setdefault(str(row['message_id']), []).append(_attachment(row))
+        for message in messages:
+            message.attachments = tuple(by_message.get(message.id, ()))
+        return messages
 
     async def save(self, message: Message) -> None:
         values = vars(message) | {
@@ -380,7 +416,7 @@ class PostgresMessageRepository(_Sql):
         )
 
     async def move(self, tenant_id: str, from_ticket: str, to_ticket: str) -> None:
-        for table in ('ticket_messages', 'ticket_time'):
+        for table in ('ticket_messages', 'ticket_time', 'ticket_attachments'):
             await self.run(
                 f'UPDATE {table} SET ticket_id = %s WHERE tenant_id = %s AND ticket_id = %s',
                 (to_ticket, tenant_id, from_ticket),
@@ -629,3 +665,63 @@ class PostgresChecklistRepository(_Sql):
             position=int(row['position']),
             created_at=row['created_at'],
         )
+
+
+class PostgresAttachmentRepository(_Sql):
+    async def save(self, attachment: Attachment) -> None:
+        await self.run(
+            """
+            INSERT INTO ticket_attachments (id, tenant_id, ticket_id, message_id, filename, content_type, size, sha256,
+                                            content_id, created_by, created_at)
+            VALUES (%(id)s, %(tenant_id)s, %(ticket_id)s, %(message_id)s, %(filename)s, %(content_type)s, %(size)s,
+                    %(sha256)s, %(content_id)s, %(created_by)s, %(created_at)s)
+            """,
+            vars(attachment),
+        )
+
+    async def find(self, tenant_id: str, attachment_id: str) -> Attachment | None:
+        row = await self.one(
+            'SELECT * FROM ticket_attachments WHERE tenant_id = %s AND id = %s', (tenant_id, attachment_id)
+        )
+        return _attachment(row) if row else None
+
+    async def of_messages(self, tenant_id: str, message_ids: Sequence[str]) -> Sequence[Attachment]:
+        rows = await self.rows(
+            """
+            SELECT * FROM ticket_attachments WHERE tenant_id = %s AND message_id = ANY(%s::uuid[])
+            ORDER BY created_at, id
+            """,
+            (tenant_id, list(message_ids)),
+        )
+        return [_attachment(row) for row in rows]
+
+    async def link(self, tenant_id: str, attachment_ids: Sequence[str], message_id: str) -> None:
+        await self.run(
+            'UPDATE ticket_attachments SET message_id = %s WHERE tenant_id = %s AND id = ANY(%s::uuid[])',
+            (message_id, tenant_id, list(attachment_ids)),
+        )
+
+    async def delete(self, tenant_id: str, attachment_id: str) -> None:
+        await self.run('DELETE FROM ticket_attachments WHERE tenant_id = %s AND id = %s', (tenant_id, attachment_id))
+
+    async def pending_before(self, before: datetime, limit: int) -> Sequence[Attachment]:
+        rows = await self.rows(
+            """
+            SELECT * FROM ticket_attachments WHERE message_id IS NULL AND created_at < %s
+            ORDER BY created_at LIMIT %s
+            """,
+            (before, limit),
+        )
+        return [_attachment(row) for row in rows]
+
+    async def known(self, keys: Sequence[tuple[str, str]]) -> set[tuple[str, str]]:
+        if not keys:
+            return set()
+        rows = await self.rows(
+            """
+            SELECT tenant_id, id FROM ticket_attachments
+            WHERE (tenant_id, id) IN (SELECT * FROM unnest(%s::uuid[], %s::uuid[]))
+            """,
+            ([tenant for tenant, _ in keys], [file for _, file in keys]),
+        )
+        return {(str(row['tenant_id']), str(row['id'])) for row in rows}

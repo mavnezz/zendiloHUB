@@ -95,6 +95,9 @@ async def get_ticket(api: InProcessApi, tenant: str, args: dict[str, Any]) -> st
             else ('from the customer' if each['direction'] == 'in' else 'to the customer')
         )
         text = each['body'][:BODY_LIMIT]
+        files = ', '.join(f'{file["filename"]} ({file["size"]} bytes)' for file in each.get('attachments', []))
+        if files:
+            text += f'\n[Attached: {files}]'
         body.append(f'<message from="{who}" kind="{kind}" at="{each["created_at"][:16]}">\n{text}\n</message>')
     return '\n'.join(head + body)
 

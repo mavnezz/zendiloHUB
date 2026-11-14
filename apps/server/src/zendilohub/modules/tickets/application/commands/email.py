@@ -11,6 +11,7 @@ from ...domain.models.ticket import PRIORITIES, SUBJECT_MAX, Priority, Ticket
 from ...domain.ports.repositories import MessageRepository
 from ...domain.ports.services import CustomerDirectory
 from ..services.desk import Desk
+from ..services.files import Files
 
 NO_SUBJECT = '(no subject)'
 
@@ -24,12 +25,18 @@ class ReceiveEmail(Command[ReceivedTicket]):
 
 class ReceiveEmailHandler:
     def __init__(
-        self, desk: Desk, messages: MessageRepository, customers: CustomerDirectory, transactions: TransactionManager
+        self,
+        desk: Desk,
+        messages: MessageRepository,
+        customers: CustomerDirectory,
+        transactions: TransactionManager,
+        files: Files,
     ) -> None:
         self._desk = desk
         self._messages = messages
         self._customers = customers
         self._transactions = transactions
+        self._files = files
 
     async def handle(self, command: ReceiveEmail) -> ReceivedTicket:
         email, desk = command.email, self._desk
@@ -63,8 +70,9 @@ class ReceiveEmailHandler:
                 author_kind='customer',
                 author_id=customer_id,
                 author_name=email.from_name,
-                body=email.body or ('' if email.body_html else NO_SUBJECT),
+                body=email.body or ('' if email.body_html or email.attachments else NO_SUBJECT),
                 now=now,
+                with_files=bool(email.attachments),
                 body_html=email.body_html,
                 subject=email.subject or None,
                 from_address=email.from_address,
@@ -80,6 +88,7 @@ class ReceiveEmailHandler:
                 await desk.tickets.save(ticket)
                 await desk.history.add([desk.entry(ticket, actor, 'created', new=str(ticket.number))])
             await self._messages.save(message)
+            await self._files.add_all(message, email.attachments)
             await desk.save(ticket, actor, [desk.entry(ticket, actor, 'message', new='public')])
             if created:
                 await desk.events.publish(
@@ -152,10 +161,11 @@ class OutgoingOf(Query[OutgoingEmail | None]):
 
 
 class OutgoingOfHandler:
-    def __init__(self, desk: Desk, messages: MessageRepository, customers: CustomerDirectory) -> None:
+    def __init__(self, desk: Desk, messages: MessageRepository, customers: CustomerDirectory, files: Files) -> None:
         self._desk = desk
         self._messages = messages
         self._customers = customers
+        self._files = files
 
     async def handle(self, query: OutgoingOf) -> OutgoingEmail | None:
         message = await self._messages.find(query.tenant_id, query.message_id)
@@ -180,6 +190,7 @@ class OutgoingOfHandler:
             body=message.body,
             author_id=message.author_id,
             references=tuple(earlier),
+            attachments=tuple([data for each in message.attachments if (data := await self._files.content(each))]),
         )
 
 

@@ -155,6 +155,14 @@ def _compose(mail: OutgoingMail) -> EmailMessage:
         message['Auto-Submitted'] = 'auto-replied'
         message['X-Auto-Response-Suppress'] = 'All'
     message.set_content(mail.text)
+    for file in mail.attachments:
+        maintype, _, subtype = file.content_type.partition('/')
+        message.add_attachment(
+            file.content,
+            maintype=maintype or 'application',
+            subtype=subtype or 'octet-stream',
+            filename=file.filename,
+        )
     return message
 
 

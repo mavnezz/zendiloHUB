@@ -3,6 +3,8 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 
+from .files import FileInfo
+
 
 @dataclass(frozen=True, kw_only=True)
 class PortalTicket:
@@ -24,6 +26,7 @@ class PortalMessage:
     author_name: str
     body: str
     created_at: datetime
+    attachments: tuple[FileInfo, ...] = ()
 
 
 @dataclass(frozen=True, kw_only=True)

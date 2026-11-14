@@ -26,7 +26,7 @@ from .access import (
 from .audit import AuditRecorder, AuditSink, declares_audit
 from .content_security_policy import content_security_policy
 from .error_handler import error_body, install_error_handlers
-from .middleware import CrossSiteRequestGuard, RequestLog, SecurityHeaders
+from .middleware import BodyLimit, CrossSiteRequestGuard, RequestLog, SecurityHeaders
 from .public_api import public_operations, public_schema
 
 API_PREFIX = '/api/v1'
@@ -45,7 +45,12 @@ class HttpKernel:
     """
 
     def __init__(
-        self, *, api_docs: bool = True, version: str = '0.1.0', secret: Callable[[], bytes] = lambda: b''
+        self,
+        *,
+        api_docs: bool = True,
+        version: str = '0.1.0',
+        secret: Callable[[], bytes] = lambda: b'',
+        max_body_bytes: int = 200 * 1024 * 1024,
     ) -> None:
         self.app = FastAPI(
             title='zendiloHUB API',
@@ -70,6 +75,7 @@ class HttpKernel:
         self.app.add_middleware(AuditRecorder, kernel=lambda: self)
         self.app.add_middleware(CrossSiteRequestGuard)
         self.app.add_middleware(SecurityHeaders, policy=lambda: self._policy)
+        self.app.add_middleware(BodyLimit, max_bytes=lambda: max_body_bytes)
         self.app.add_middleware(RequestLog)
 
         for path in ('/health', f'{API_PREFIX}/health'):

@@ -6,6 +6,16 @@ from zendilohub.core.events.integration_events import MemberRemoved, TenantDelet
 from zendilohub.core.module import AppModule, ModuleContext
 
 from .application.commands.assist import Assist, AssistantStatus, AssistantStatusHandler, AssistHandler
+from .application.commands.attachments import (
+    CleanAttachments,
+    CleanAttachmentsHandler,
+    DeleteAttachment,
+    DeleteAttachmentHandler,
+    GetAttachment,
+    GetAttachmentHandler,
+    UploadAttachment,
+    UploadAttachmentHandler,
+)
 from .application.commands.automation import (
     ApplyAutomation,
     ApplyAutomationHandler,
@@ -50,6 +60,8 @@ from .application.commands.forget import (
 )
 from .application.commands.messages import AddMessage, AddMessageHandler
 from .application.commands.portal import (
+    PortalAttachment,
+    PortalAttachmentHandler,
     PortalOpen,
     PortalOpenHandler,
     PortalReply,
@@ -106,6 +118,7 @@ from .application.queries.tickets import (
     TicketUsageQuery,
 )
 from .application.services.desk import Desk, TimeKeeper
+from .application.services.files import Files
 from .domain.ports.services import TicketWriter
 from .infrastructure.claude_writer import ClaudeWriter, NoWriter
 from .infrastructure.contract_adapters import (
@@ -116,7 +129,9 @@ from .infrastructure.contract_adapters import (
     ContractCustomers,
     ContractQueueRights,
 )
+from .infrastructure.file_store import DiskFileStore
 from .infrastructure.postgres_tickets import (
+    PostgresAttachmentRepository,
     PostgresChecklistRepository,
     PostgresFieldRepository,
     PostgresHistoryRepository,
@@ -131,6 +146,7 @@ from .ui.api.routes import ticket_routes
 
 MIGRATIONS = Path(__file__).parent / 'infrastructure' / 'migrations'
 CLOSE_DUE_EVERY_SECONDS = 60
+CLEAN_FILES_EVERY_SECONDS = 60 * 60
 
 
 def create_tickets_module(context: ModuleContext, writer: TicketWriter | None = None) -> AppModule:
@@ -153,13 +169,20 @@ def create_tickets_module(context: ModuleContext, writer: TicketWriter | None = 
     checklist = PostgresChecklistRepository(db)
     update = UpdateTicketHandler(desk, customers, db, fields)
     assistant = writer or _writer(context)
+    files = Files(
+        PostgresAttachmentRepository(db),
+        DiskFileStore(context.config.data_dir / 'attachments'),
+        context.ids,
+        context.clock,
+        context.config.max_upload_bytes,
+    )
     bus = (
         CommandBus()
         .register(CreateTicket, CreateTicketHandler(desk, messages, customers, db, time))
         .register(UpdateTicket, update)
         .register(BulkUpdate, BulkUpdateHandler(update))
         .register(DeleteTicket, DeleteTicketHandler(desk))
-        .register(AddMessage, AddMessageHandler(desk, messages, watchers, time, db))
+        .register(AddMessage, AddMessageHandler(desk, messages, watchers, time, db, files))
         .register(Watch, WatchHandler(desk, watchers))
         .register(LinkTickets, LinkTicketsHandler(desk, links, db))
         .register(UnlinkTickets, UnlinkTicketsHandler(desk, links))
@@ -182,12 +205,12 @@ def create_tickets_module(context: ModuleContext, writer: TicketWriter | None = 
         .register(Assist, AssistHandler(desk, messages, customers, assistant, context.rate_limiter))
         .register(PortalTickets, PortalTicketsHandler(desk))
         .register(PortalThreadQuery, PortalThreadHandler(desk, messages))
-        .register(PortalReply, PortalReplyHandler(desk, messages, db))
-        .register(PortalOpen, PortalOpenHandler(desk, messages, db))
+        .register(PortalReply, PortalReplyHandler(desk, messages, db, files))
+        .register(PortalOpen, PortalOpenHandler(desk, messages, db, files))
         .register(TicketUsageQuery, TicketUsageHandler(desk))
-        .register(ReceiveEmail, ReceiveEmailHandler(desk, messages, customers, db))
+        .register(ReceiveEmail, ReceiveEmailHandler(desk, messages, customers, db, files))
         .register(ThreadEmail, ThreadEmailHandler(desk, messages))
-        .register(OutgoingOf, OutgoingOfHandler(desk, messages, customers))
+        .register(OutgoingOf, OutgoingOfHandler(desk, messages, customers, files))
         .register(MarkSent, MarkSentHandler(messages))
         .register(SaveField, SaveFieldHandler(fields, context.ids, context.clock))
         .register(DeleteField, DeleteFieldHandler(fields))
@@ -199,6 +222,11 @@ def create_tickets_module(context: ModuleContext, writer: TicketWriter | None = 
         .register(FactsOf, FactsOfHandler(desk, watchers, customers))
         .register(FindTickets, FindTicketsHandler(desk))
         .register(ApplyAutomation, ApplyAutomationHandler(desk, messages, db))
+        .register(UploadAttachment, UploadAttachmentHandler(desk, files, context.rate_limiter))
+        .register(DeleteAttachment, DeleteAttachmentHandler(desk, files))
+        .register(GetAttachment, GetAttachmentHandler(desk, files))
+        .register(CleanAttachments, CleanAttachmentsHandler(files))
+        .register(PortalAttachment, PortalAttachmentHandler(desk, messages, files))
     )
 
     async def member_removed(event: MemberRemoved) -> None:
@@ -218,9 +246,12 @@ def create_tickets_module(context: ModuleContext, writer: TicketWriter | None = 
     context.contracts.ticket_automation.provide(BusTicketAutomation(bus))
     context.contracts.ticket_portal.provide(BusTicketPortal(bus))
     context.scheduler.every(CLOSE_DUE_EVERY_SECONDS, 'tickets.close_due', lambda: bus.execute(CloseDueTickets()))
+    context.scheduler.every(CLEAN_FILES_EVERY_SECONDS, 'tickets.clean_files', lambda: bus.execute(CleanAttachments()))
 
     return AppModule(
-        name='tickets', migrations=sql_migrations(MIGRATIONS), routers=[ticket_routes(bus, context.contracts)]
+        name='tickets',
+        migrations=sql_migrations(MIGRATIONS),
+        routers=[ticket_routes(bus, context.contracts, max_upload_bytes=context.config.max_upload_bytes)],
     )
 
 

@@ -4,6 +4,7 @@ from typing import Literal
 
 from zendilohub.core.bus.message import Command
 from zendilohub.core.domain.clock import Clock
+from zendilohub.core.domain.files import FileData
 from zendilohub.core.domain.id_generator import IdGenerator
 from zendilohub.core.domain.inbox import InboundEmail
 from zendilohub.core.domain.jobs import JobQueue
@@ -109,7 +110,9 @@ class ProcessEmailHandler:
         auto: AutoReplier,
         ids: IdGenerator,
         clock: Clock,
+        max_file_bytes: int,
     ) -> None:
+        self._max_file_bytes = max_file_bytes
         self._accounts = accounts
         self._filters = filters
         self._failed = failed
@@ -172,6 +175,17 @@ class ProcessEmailHandler:
                 cc_addresses=mail.cc,
                 priority=routing.priority,
                 tags=routing.tags,
+                # Larger files stay in the mailbox: the upload limit holds for e-mails too.
+                attachments=tuple(
+                    FileData(
+                        filename=each.filename,
+                        content_type=each.content_type,
+                        content=each.content,
+                        content_id=each.content_id,
+                    )
+                    for each in mail.files
+                    if len(each.content) <= self._max_file_bytes
+                ),
             )
         )
         if received.created and account is not None:

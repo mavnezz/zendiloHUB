@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { LogOut, MailCheck, Plus } from '@lucide/vue'
+import { LogOut, MailCheck, Paperclip, Plus } from '@lucide/vue'
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { ApiRequestError } from '@/core/api/http'
 import ErrorAlert from '@/core/components/ErrorAlert.vue'
+import FileChips from '@/core/components/FileChips.vue'
+import type { FileChip } from '@/core/files'
 import { formatDateTime } from '@/core/format'
 import { errorText } from '@/core/i18n/i18n'
 import { Badge } from '@/core/ui/badge'
@@ -27,6 +29,27 @@ const writing = ref(false)
 const subject = ref('')
 const body = ref('')
 const busy = ref(false)
+/** Up to five files go with a new request. */
+const MAX_FILES = 5
+const files = ref<File[]>([])
+const picker = ref<HTMLInputElement | null>(null)
+const chips = computed<FileChip[]>(() =>
+  files.value.map((file, index) => ({
+    id: String(index),
+    filename: file.name,
+    content_type: file.type,
+    size: file.size,
+  })),
+)
+function pick(list: FileList | null): void {
+  files.value = [...files.value, ...Array.from(list ?? [])].slice(0, MAX_FILES)
+  if (picker.value) {
+    picker.value.value = ''
+  }
+}
+function unpick(chip: FileChip): void {
+  files.value = files.value.filter((_file, index) => String(index) !== chip.id)
+}
 
 async function load(): Promise<void> {
   try {
@@ -67,7 +90,7 @@ async function open(): Promise<void> {
   error.value = null
   busy.value = true
   try {
-    const made = await portalApi.open(tenantId.value, subject.value, body.value)
+    const made = await portalApi.open(tenantId.value, subject.value, body.value, files.value)
     await router.push({ name: 'portalTicket', params: { tenantId: tenantId.value, ticketId: made.id } })
   } catch (caught) {
     error.value = errorText(caught)
@@ -145,13 +168,34 @@ const stateVariant = (state: PortalTicket['state']) =>
         <Input id="portal-subject" v-model="subject" maxlength="250" required data-test="portal-subject" />
         <Label for="portal-body">{{ $t('portal.message') }}</Label>
         <Textarea id="portal-body" v-model="body" rows="6" required data-test="portal-body" />
-        <Button
-          type="submit"
-          class="justify-self-end"
-          :disabled="busy || !subject.trim() || !body.trim()"
-          data-test="portal-submit"
-          >{{ $t('portal.submit') }}</Button
-        >
+        <FileChips :files="chips" removable @remove="unpick" />
+        <div class="flex flex-wrap items-center gap-2">
+          <input
+            ref="picker"
+            type="file"
+            multiple
+            class="hidden"
+            data-test="portal-new-file-input"
+            @change="pick(($event.target as HTMLInputElement).files)"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            class="gap-1"
+            :disabled="files.length >= MAX_FILES"
+            data-test="portal-new-attach"
+            @click="picker?.click()"
+            ><Paperclip class="size-4" />{{ $t('portal.attach', { count: MAX_FILES }) }}</Button
+          >
+          <Button
+            type="submit"
+            class="ml-auto"
+            :disabled="busy || !subject.trim() || !body.trim()"
+            data-test="portal-submit"
+            >{{ $t('portal.submit') }}</Button
+          >
+        </div>
       </form>
       <p v-if="tickets.length === 0" class="text-muted-foreground" data-test="portal-empty">{{ $t('portal.empty') }}</p>
       <div v-else class="grid gap-2">

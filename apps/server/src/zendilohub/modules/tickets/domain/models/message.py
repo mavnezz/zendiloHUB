@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Literal
 
 from ..exceptions import InvalidMessageError
+from .attachment import Attachment
 
 type MessageKind = Literal['public', 'internal']
 """Public messages go to (or came from) the customer; internal notes only the team sees."""
@@ -37,6 +38,8 @@ class Message:
     email_message_id: str | None = None
     in_reply_to: str | None = None
     references: tuple[str, ...] = field(default=())
+    attachments: tuple[Attachment, ...] = ()
+    """Filled when read; saved by the attachment repository."""
     created_at: datetime
 
     @classmethod
@@ -53,10 +56,12 @@ class Message:
         author_name: str,
         body: str,
         now: datetime,
+        with_files: bool = False,
         **email: object,
     ) -> Message:
+        """`with_files`: files come along, so the text may be empty."""
         body = body.strip()
-        if not body and not email.get('body_html'):
+        if not body and not email.get('body_html') and not with_files:
             raise InvalidMessageError('body')
         if len(body) > BODY_MAX:
             raise InvalidMessageError('body')

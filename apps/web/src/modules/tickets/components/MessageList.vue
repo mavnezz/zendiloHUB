@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { AlertTriangle, Check, Clock, Lock, Mail, Phone, RotateCcw, Scissors } from '@lucide/vue'
 import { ref } from 'vue'
+import FileChips from '@/core/components/FileChips.vue'
 import { formatDateTime } from '@/core/format'
 import { cn } from '@/core/lib/utils'
 import { Button } from '@/core/ui/button'
@@ -13,6 +14,7 @@ import type { CustomerCard, TicketMessage } from '../api'
  */
 defineProps<{
   messages: TicketMessage[]
+  fileUrl?: (messageId: string, fileId: string) => string
   customer: CustomerCard | null
   canSplit: boolean
   deliveries?: Record<string, Delivery>
@@ -116,8 +118,13 @@ function toggle(id: string): void {
           class="prose-sm text-sm"
           v-html="message.body_html"
         />
-        <p v-else class="text-sm break-words whitespace-pre-wrap">{{ message.body }}</p>
+        <p v-else-if="message.body" class="text-sm break-words whitespace-pre-wrap">{{ message.body }}</p>
         <!-- eslint-enable vue/no-v-html -->
+        <FileChips
+          :files="message.attachments"
+          :href="fileUrl ? (file) => fileUrl!(message.id, file.id) : undefined"
+          class="mt-3"
+        />
         <button
           v-if="message.body_html"
           type="button"
