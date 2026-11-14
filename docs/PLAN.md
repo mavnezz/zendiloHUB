@@ -133,7 +133,7 @@ Das ist das Fundament: Fast jede Abfrage im System hängt davon ab, wer was sehe
 **Begriffe**
 
 - **Benutzer:** ein Mensch mit Login. Kunden sind zunächst keine Benutzer, sondern Kontakte (`customers`);
-  ein Kundenportal mit eigenem Login kommt erst in Phase 7.
+  ein Kundenportal mit Anmeldung per E-Mail-Link gibt es seit Phase 7.
 - **Rolle:** legt fest, was jemand **im System** darf, unabhängig von Tickets. Vorgegeben sind _Administrator_ und
   _Agent_; eigene Rollen lassen sich anlegen. Systemrechte sind z. B. `users.manage`, `groups.manage`,
   `queues.manage`, `email_accounts.manage`, `signatures.manage`, `reports.view`, `settings.manage`.
@@ -486,6 +486,21 @@ Wunsch zu antworten. Höchstens 120 Aufrufe pro Minute je Verbindung; Widerruf u
 Entscheidung zu `send_reply` (offener Punkt 1): `reply_to_customer` ist dabei. Offen: OAuth 2.1 für Assistenten,
 die nur OAuth können (z. B. Claude.ai-Connectoren).
 
+**Phase 7 (2026-11-14, fertig):** Modul `portal`: Kundenportal unter `/portal/<organisation>`. Kunden melden sich
+ohne Passwort mit einem Link per E-Mail an (gilt 30 Minuten und einmal; höchstens 5 Links pro Stunde und Adresse;
+unbekannte Adressen bekommen keine Mail, die Antwort verrät nichts), die Sitzung (httpOnly-Cookie) hält 30 Tage.
+Sie sehen ihre Tickets mit dem öffentlichen Verlauf (nie interne Notizen), antworten (öffnet geschlossene Tickets
+wieder) und stellen neue Anfragen in der Queue, die die Organisation wählt; auf Wunsch sehen Kontakte einer Firma
+alle Tickets ihrer Firma (Zammad: „Organisation teilen“). Abschalten des Portals beendet alle Sitzungen.
+Ähnliche Tickets (Wörter des Betreffs, nur sichtbare Queues) stehen in der Seitenleiste des Tickets.
+Optionaler KI-Assistent mit Claude (`ZENDILOHUB_ANTHROPIC_API_KEY`, Modell `ZENDILOHUB_AI_MODEL`, Standard
+`claude-opus-5-5`): Zusammenfassung eines Tickets und Antwortentwurf im Editor; nichts wird gespeichert oder gesendet,
+der Text ist ein Vorschlag. Ticket-Texte gehen als markierte Daten an das Modell, interne Notizen fließen ein, werden
+aber nie zitiert; höchstens 30 Anfragen pro Stunde je Person und 300 je Organisation; ohne Schlüssel bleiben die
+Knöpfe verborgen. Bei einer Ablehnung durch die Sicherheitsfilter wiederholt die API die Anfrage serverseitig auf
+dem empfohlenen Ersatzmodell (`fallbacks: "default"`). Offen: automatische Vorsortierung (Queue und Priorität per KI)
+als Trigger-Aktion.
+
 ---
 
 ## 11. Übernahme aus OTOBO und Zammad (2026-11-13)
@@ -522,6 +537,9 @@ kein Code übernommen (OTOBO steht unter GPL-3.0, Zammad unter AGPL-3.0).
 | Checklisten im Ticket                                                              | Zammad          | 4     |
 | Berichte und Kennzahlen, Webhooks                                                  | beide           | 5     |
 | Wissensdatenbank (intern, später öffentlich)                                       | OTOBO (FAQ), Z. | 5     |
+| Kundenportal: eigene Tickets sehen, beantworten, neue Anfragen; Firma teilen       | OTOBO, Zammad   | 7     |
+| Ähnliche Tickets                                                                   | OTOBO           | 7     |
+| KI-Zusammenfassung und Antwortentwurf                                              | Zammad (AI)     | 7     |
 
 **Bewusst nicht:** Prozessmanagement und ACL-Editor (OTOBO; zu schwer für kleine Teams), CMDB/ITSM, SOAP-Schnittstellen,
 Chat und soziale Kanäle (Zammad), Telefonie (macht zendilo.ai). PGP/S/MIME bleibt für später offen.

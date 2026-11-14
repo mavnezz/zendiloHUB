@@ -1,10 +1,21 @@
 # zendiloHUB
 
 The open-source helpdesk of the zendilo family: tickets, queues and e-mail for your team, self-hosted with Docker.
-AI assistants such as Claude join later through a built-in MCP server.
+AI assistants such as Claude work with tickets through the built-in MCP server.
 
-> **Status:** phase 0 of the [plan](docs/PLAN.md). What runs today: the setup wizard, accounts, the organization with its
-> team, roles, invitations, API keys and audit log. Queues, tickets and e-mail follow in phases 1 to 3.
+> **Status:** all phases of the [plan](docs/PLAN.md) are built:
+>
+> - **Team**: organizations, roles (also custom ones), groups, queues with a rights matrix, audit log, API keys.
+> - **Tickets**: views, search, states with reminders, priorities, tags, watchers and `@` mentions, merge, split,
+>   links, time tracking, custom fields, checklists, bulk actions, collision detection, similar tickets.
+> - **E-mail**: several IMAP/SMTP accounts per queue, threading, loop protection, signatures and salutations,
+>   automatic replies, mail filters, failed e-mails.
+> - **Teamwork**: macros, triggers, scheduled jobs, text modules (`::`), SLAs with business hours, notifications.
+> - **Reports and integrations**: key figures per day, queue, owner and channel; signed webhooks.
+> - **Self-service**: knowledge base with a public help center (`/help/<organization>`) and a customer portal
+>   (`/portal/<organization>`, sign-in by e-mail link).
+> - **AI**: an MCP server (`/mcp`) for Claude and other assistants with each member's rights; optional ticket
+>   summaries and draft replies with Claude (`ZENDILOHUB_ANTHROPIC_API_KEY`).
 
 ## Quick start
 
@@ -36,6 +47,8 @@ All settings are in [`.env.example`](.env.example).
   The whole stack runs on a host with 2 GB of RAM.
 - **Workers**: `docker compose up -d --scale worker=3`.
 - **API**: keys under **API keys**; the reference is at `/api/reference`.
+- **AI assistant** (optional): set `ZENDILOHUB_ANTHROPIC_API_KEY`; the model is `ZENDILOHUB_AI_MODEL`
+  (default `claude-opus-5-5`).
 
 ## Development
 
