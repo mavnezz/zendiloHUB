@@ -8,8 +8,10 @@ from dataclasses import dataclass, field
 from typing import Protocol
 
 from .domain.automation import AutomationChanges, TicketCriteria, TicketFacts
+from .domain.contact_card import ContactCard as ContactCard
 from .domain.inbox import InboundEmail, OutgoingEmail, ReceivedTicket
 from .domain.permissions import Permission
+from .domain.portal import PortalThread, PortalTicket
 from .domain.queue_rights import QueueRight
 
 
@@ -82,18 +84,6 @@ class QueueAccess(Protocol):
         ...
 
 
-@dataclass(frozen=True, kw_only=True)
-class ContactCard:
-    """What other modules show of a customer: a contact with their company."""
-
-    id: str
-    name: str
-    email: str | None
-    phone: str | None
-    company_id: str | None
-    company_name: str | None
-
-
 class Contacts(Protocol):
     """Provided by customers, used by tickets and channels: who wrote, and what to show of them."""
 
@@ -109,6 +99,10 @@ class Contacts(Protocol):
 
     async def of_company(self, tenant_id: str, company_id: str) -> list[str]:
         """The ids of the company's contacts."""
+        ...
+
+    async def by_email(self, tenant_id: str, email: str) -> ContactCard | None:
+        """The contact with this address, without making one."""
         ...
 
 
@@ -146,6 +140,24 @@ class TicketAutomation(Protocol):
         ...
 
 
+class TicketPortal(Protocol):
+    """Provided by tickets, used by the portal: customers see and answer their own tickets."""
+
+    async def tickets_of(self, tenant_id: str, contact_ids: list[str]) -> list[PortalTicket]:
+        """Newest change first."""
+        ...
+
+    async def thread(self, tenant_id: str, contact_ids: list[str], ticket_id: str) -> PortalThread | None:
+        """None if the ticket is none of these contacts'."""
+        ...
+
+    async def reply(
+        self, tenant_id: str, contact_id: str, contact_ids: list[str], ticket_id: str, body: str
+    ) -> bool: ...
+
+    async def open(self, tenant_id: str, contact_id: str, queue_id: str, subject: str, body: str) -> PortalTicket: ...
+
+
 class OrganizationNames(Protocol):
     """Provided by tenancy: an organization's name (for signatures and auto replies)."""
 
@@ -177,6 +189,7 @@ class Contracts:
     ticket_usage: Slot[TicketUsage] = field(default_factory=lambda: Slot('TicketUsage'))
     ticket_inbox: Slot[TicketInbox] = field(default_factory=lambda: Slot('TicketInbox'))
     ticket_automation: Slot[TicketAutomation] = field(default_factory=lambda: Slot('TicketAutomation'))
+    ticket_portal: Slot[TicketPortal] = field(default_factory=lambda: Slot('TicketPortal'))
     organizations: Slot[OrganizationNames] = field(default_factory=lambda: Slot('OrganizationNames'))
     queue_names: Slot[QueueNames] = field(default_factory=lambda: Slot('QueueNames'))
 

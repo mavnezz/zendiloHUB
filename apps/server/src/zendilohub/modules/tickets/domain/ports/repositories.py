@@ -39,8 +39,16 @@ class TicketRepository(Protocol):
 
     async def search(self, criteria: TicketFilter) -> TicketPage: ...
 
+    async def similar(self, tenant_id: str, ticket_id: str, queue_ids: Sequence[str], limit: int) -> Sequence[Ticket]:
+        """Tickets whose subject shares words (four letters or more) with this one's, best match first."""
+        ...
+
     async def counts(self, criteria: TicketFilter) -> dict[TicketView, int]:
         """How many tickets each view has (`all` and `closed` left out: they only grow)."""
+        ...
+
+    async def of_customers(self, tenant_id: str, contact_ids: Sequence[str], limit: int) -> Sequence[Ticket]:
+        """Newest change first, merged ones left out."""
         ...
 
     async def in_queue(self, tenant_id: str, queue_id: str) -> int: ...

@@ -42,6 +42,7 @@ from ...application.queries.tickets import (
     GetTicket,
     ListMessages,
     SearchTickets,
+    SimilarTickets,
     TicketHistory,
     TicketTime,
 )
@@ -227,6 +228,13 @@ def ticket_routes(bus: CommandBus, contracts: Contracts) -> APIRouter:
             BulkUpdate(tenant_id=member.tenant_id, actor=actor_of(member), ticket_ids=body.ticket_ids, changes=changes)
         )
         return BulkResponse.of(result)
+
+    @router.get('/tickets/{ticket_id}/similar')
+    async def similar(ticket_id: Id, member: CurrentMember) -> TicketPageResponse:
+        """Up to five tickets with words of this one's subject (e.g. the same problem of another customer)."""
+        found = await bus.query(SimilarTickets(tenant_id=member.tenant_id, actor=actor_of(member), ticket_id=ticket_id))
+        cards_found = await cards(member.tenant_id, [each.ticket.customer_id for each in found.items])
+        return TicketPageResponse.of(list(found.items), found.total, cards_found)
 
     @router.get('/tickets/{ticket_id}/messages')
     async def messages(ticket_id: Id, member: CurrentMember) -> list[MessageResponse]:

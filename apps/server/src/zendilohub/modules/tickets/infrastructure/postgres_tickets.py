@@ -233,6 +233,26 @@ class PostgresTicketRepository(_Sql):
         total = await self.one(f'SELECT count(*) AS n FROM tickets t WHERE {where}', params)
         return TicketPage([_ticket(row) for row in rows], int(total['n']) if total else 0)
 
+    async def similar(self, tenant_id: str, ticket_id: str, queue_ids: Sequence[str], limit: int) -> Sequence[Ticket]:
+        rows = await self.rows(
+            """
+            WITH words AS (
+                SELECT string_agg(quote_literal(word), ' | ') AS query
+                FROM tickets source, unnest(tsvector_to_array(to_tsvector('simple', source.subject))) AS word
+                WHERE source.tenant_id = %(tenant)s AND source.id = %(id)s AND length(word) >= 4
+            )
+            SELECT t.* FROM tickets t, words
+            WHERE words.query IS NOT NULL AND t.tenant_id = %(tenant)s AND t.id <> %(id)s
+              AND t.state <> 'merged' AND t.queue_id = ANY(%(queues)s::uuid[])
+              AND to_tsvector('simple', t.subject) @@ to_tsquery('simple', words.query)
+            ORDER BY ts_rank(to_tsvector('simple', t.subject), to_tsquery('simple', words.query)) DESC,
+                     t.updated_at DESC
+            LIMIT %(limit)s
+            """,
+            {'tenant': tenant_id, 'id': ticket_id, 'queues': list(queue_ids), 'limit': limit},
+        )
+        return [_ticket(row) for row in rows]
+
     async def counts(self, criteria: TicketFilter) -> dict[TicketView, int]:
         views: tuple[TicketView, ...] = ('mine', 'unassigned', 'due', 'open', 'watching')
         parts, params = [], {}
@@ -243,6 +263,16 @@ class PostgresTicketRepository(_Sql):
         row = await self.one('SELECT ' + ', '.join(parts), params)
         assert row is not None
         return {view: int(row[view]) for view in views}
+
+    async def of_customers(self, tenant_id: str, contact_ids: Sequence[str], limit: int) -> Sequence[Ticket]:
+        rows = await self.rows(
+            """
+            SELECT * FROM tickets WHERE tenant_id = %s AND customer_id = ANY(%s::uuid[]) AND state <> 'merged'
+            ORDER BY updated_at DESC, number DESC LIMIT %s
+            """,
+            (tenant_id, list(contact_ids), limit),
+        )
+        return [_ticket(row) for row in rows]
 
     async def in_queue(self, tenant_id: str, queue_id: str) -> int:
         row = await self.one(

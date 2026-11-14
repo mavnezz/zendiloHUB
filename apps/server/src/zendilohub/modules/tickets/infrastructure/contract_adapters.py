@@ -4,10 +4,17 @@ from zendilohub.core.bus.command_bus import CommandBus
 from zendilohub.core.contracts import Contracts
 from zendilohub.core.domain.automation import AutomationChanges, TicketCriteria, TicketFacts
 from zendilohub.core.domain.inbox import InboundEmail, OutgoingEmail, ReceivedTicket
+from zendilohub.core.domain.portal import PortalThread, PortalTicket
 from zendilohub.core.domain.queue_rights import QueueRight
 
 from ..application.commands.automation import ApplyAutomation, FactsOf, FindTickets
 from ..application.commands.email import MarkSent, OutgoingOf, ReceiveEmail, ThreadEmail
+from ..application.commands.portal import (
+    PortalOpen,
+    PortalReply,
+    PortalThreadQuery,
+    PortalTickets,
+)
 from ..application.queries.tickets import TicketUsageQuery
 from ..domain.models.actor import Actor
 
@@ -124,4 +131,35 @@ class BusTicketAutomation:
     async def apply(self, tenant_id: str, ticket_id: str, changes: AutomationChanges, *, by: str) -> bool:
         return await self._bus.execute(
             ApplyAutomation(tenant_id=tenant_id, ticket_id=ticket_id, changes=changes, by=by)
+        )
+
+
+class BusTicketPortal:
+    """Tickets' side of the `TicketPortal` contract."""
+
+    def __init__(self, bus: CommandBus) -> None:
+        self._bus = bus
+
+    async def tickets_of(self, tenant_id: str, contact_ids: list[str]) -> list[PortalTicket]:
+        return await self._bus.query(PortalTickets(tenant_id=tenant_id, contact_ids=tuple(contact_ids)))
+
+    async def thread(self, tenant_id: str, contact_ids: list[str], ticket_id: str) -> PortalThread | None:
+        return await self._bus.query(
+            PortalThreadQuery(tenant_id=tenant_id, contact_ids=tuple(contact_ids), ticket_id=ticket_id)
+        )
+
+    async def reply(self, tenant_id: str, contact_id: str, contact_ids: list[str], ticket_id: str, body: str) -> bool:
+        return await self._bus.execute(
+            PortalReply(
+                tenant_id=tenant_id,
+                contact_id=contact_id,
+                contact_ids=tuple(contact_ids),
+                ticket_id=ticket_id,
+                body=body,
+            )
+        )
+
+    async def open(self, tenant_id: str, contact_id: str, queue_id: str, subject: str, body: str) -> PortalTicket:
+        return await self._bus.execute(
+            PortalOpen(tenant_id=tenant_id, contact_id=contact_id, queue_id=queue_id, subject=subject, body=body)
         )

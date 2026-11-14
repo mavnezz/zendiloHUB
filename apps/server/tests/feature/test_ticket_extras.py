@@ -124,3 +124,25 @@ async def test_checklists_and_who_looks_at_a_ticket(app: AppUnderTest) -> None:
     assert (await ada.put(f'{path}/presence', json={})).json() == [{'user_id': bob_id, 'writing': True}]
     app.clock.advance(seconds=31)
     assert (await ada.put(f'{path}/presence', json={})).json() == []
+
+
+async def test_finds_similar_tickets(app: AppUnderTest) -> None:
+    ada = await logged_in(app, 'ada@example.org')
+    tenant = await create_tenant(ada)
+    base = f'{TENANTS}/{tenant}'
+    support = await queue(ada, tenant)
+    billing = await queue(ada, tenant, 'Billing')
+    first = await ticket(ada, tenant, support, 'Printer in room 4 broken')
+    same = await ticket(ada, tenant, support, 'The printer is broken again')
+    await ticket(ada, tenant, support, 'Login fails')
+    await ticket(ada, tenant, billing, 'Printer invoice')
+    bob = await member_of(app, tenant, ada, 'bob@example.org', 'agent')
+    await grant(ada, tenant, support, [await user_id_of(bob)], ['view'])
+
+    found = (await ada.get(f'{base}/tickets/{first["id"]}/similar')).json()
+    assert [each['subject'] for each in found['items']] == ['The printer is broken again', 'Printer invoice']
+    # Bob does not see Billing.
+    assert (await bob.get(f'{base}/tickets/{first["id"]}/similar')).json()['total'] == 1
+    short = await ticket(ada, tenant, support, 'Hi')
+    assert (await ada.get(f'{base}/tickets/{short["id"]}/similar')).json()['items'] == []
+    assert same['number'] > first['number']

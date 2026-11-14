@@ -276,3 +276,24 @@ class TicketUsageHandler:
         if query.queue_id is not None:
             return await self._desk.tickets.in_queue(query.tenant_id, query.queue_id)
         return await self._desk.tickets.of_customer(query.tenant_id, query.contact_id or '')
+
+
+@dataclass(frozen=True, kw_only=True)
+class SimilarTickets(Query[TicketList]):
+    """Tickets about the same thing (words in the subject), among those the actor may see."""
+
+    tenant_id: str
+    actor: Actor
+    ticket_id: str
+    limit: int = 5
+
+
+class SimilarTicketsHandler:
+    def __init__(self, desk: Desk) -> None:
+        self._desk = desk
+
+    async def handle(self, query: SimilarTickets) -> TicketList:
+        ticket, _rights = await self._desk.load(query.tenant_id, query.actor, query.ticket_id)
+        visible = await self._desk.rights.visible(query.tenant_id, query.actor)
+        found = await self._desk.tickets.similar(ticket.tenant_id, ticket.id, list(visible), query.limit)
+        return TicketList([TicketWithRights(each, visible[each.queue_id]) for each in found], len(found))

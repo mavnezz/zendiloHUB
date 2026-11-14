@@ -35,6 +35,11 @@ class BusContacts:
         found = await self._bus.query(ContactCards(tenant_id=tenant_id, contact_ids=contact_ids))
         return {contact_id: card_of(each) for contact_id, each in found.items()}
 
+    async def by_email(self, tenant_id: str, email: str) -> ContactCard | None:
+        listed = await self._bus.query(SearchContacts(tenant_id=tenant_id, query=email.strip(), limit=20))
+        found = next((each for each in listed.items if each.contact.email == email.strip().lower()), None)
+        return card_of(found) if found else None
+
     async def of_company(self, tenant_id: str, company_id: str) -> list[str]:
         listed = await self._bus.query(SearchContacts(tenant_id=tenant_id, company_id=company_id, limit=10_000))
         return [each.contact.id for each in listed.items]

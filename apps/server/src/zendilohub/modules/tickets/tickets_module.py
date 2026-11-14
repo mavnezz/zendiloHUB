@@ -48,6 +48,16 @@ from .application.commands.forget import (
     ForgetTenantHandler,
 )
 from .application.commands.messages import AddMessage, AddMessageHandler
+from .application.commands.portal import (
+    PortalOpen,
+    PortalOpenHandler,
+    PortalReply,
+    PortalReplyHandler,
+    PortalThreadHandler,
+    PortalThreadQuery,
+    PortalTickets,
+    PortalTicketsHandler,
+)
 from .application.commands.relations import (
     LinkTickets,
     LinkTicketsHandler,
@@ -85,6 +95,8 @@ from .application.queries.tickets import (
     ListMessagesHandler,
     SearchTickets,
     SearchTicketsHandler,
+    SimilarTickets,
+    SimilarTicketsHandler,
     TicketHistory,
     TicketHistoryHandler,
     TicketTime,
@@ -96,6 +108,7 @@ from .application.services.desk import Desk, TimeKeeper
 from .infrastructure.contract_adapters import (
     BusTicketAutomation,
     BusTicketInbox,
+    BusTicketPortal,
     BusTicketUsage,
     ContractCustomers,
     ContractQueueRights,
@@ -160,6 +173,11 @@ def create_tickets_module(context: ModuleContext) -> AppModule:
         .register(TicketHistory, TicketHistoryHandler(desk))
         .register(TicketTime, TicketTimeHandler(desk, times))
         .register(Assignees, AssigneesHandler(desk))
+        .register(SimilarTickets, SimilarTicketsHandler(desk))
+        .register(PortalTickets, PortalTicketsHandler(desk))
+        .register(PortalThreadQuery, PortalThreadHandler(desk, messages))
+        .register(PortalReply, PortalReplyHandler(desk, messages, db))
+        .register(PortalOpen, PortalOpenHandler(desk, messages, db))
         .register(TicketUsageQuery, TicketUsageHandler(desk))
         .register(ReceiveEmail, ReceiveEmailHandler(desk, messages, customers, db))
         .register(ThreadEmail, ThreadEmailHandler(desk, messages))
@@ -192,6 +210,7 @@ def create_tickets_module(context: ModuleContext) -> AppModule:
     context.contracts.ticket_usage.provide(BusTicketUsage(bus))
     context.contracts.ticket_inbox.provide(BusTicketInbox(bus))
     context.contracts.ticket_automation.provide(BusTicketAutomation(bus))
+    context.contracts.ticket_portal.provide(BusTicketPortal(bus))
     context.scheduler.every(CLOSE_DUE_EVERY_SECONDS, 'tickets.close_due', lambda: bus.execute(CloseDueTickets()))
 
     return AppModule(
