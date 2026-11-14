@@ -1,5 +1,17 @@
 <script setup lang="ts">
-import { AlertTriangle, Check, Clock, Lock, Mail, Phone, RotateCcw, Scissors } from '@lucide/vue'
+import {
+  AlertTriangle,
+  Check,
+  Clock,
+  Lock,
+  LockKeyhole,
+  Mail,
+  Phone,
+  RotateCcw,
+  Scissors,
+  ShieldAlert,
+  ShieldCheck,
+} from '@lucide/vue'
 import { ref } from 'vue'
 import FileChips from '@/core/components/FileChips.vue'
 import { formatDateTime } from '@/core/format'
@@ -66,6 +78,31 @@ function toggle(id: string): void {
           <span v-if="message.direction === 'in' && message.from_address" class="truncate">{{
             message.from_address
           }}</span>
+          <span
+            v-if="message.security"
+            :class="
+              cn(
+                'flex items-center gap-1',
+                message.security.signature === 'valid' && 'text-emerald-600 dark:text-emerald-400',
+                message.security.signature && message.security.signature !== 'valid' && 'text-amber-600',
+                message.security.signature === 'invalid' && 'text-destructive',
+              )
+            "
+            :title="
+              message.security.signer
+                ? $t('tickets.security.signer', { address: message.security.signer })
+                : $t(`tickets.security.hint`)
+            "
+            :data-test="`security-${message.id}`"
+          >
+            <ShieldCheck v-if="message.security.signature === 'valid'" class="size-3.5" />
+            <ShieldAlert v-else-if="message.security.signature" class="size-3.5" />
+            <LockKeyhole v-if="message.security.encrypted" class="size-3.5" />
+            <span v-if="message.security.signature">{{
+              $t(`tickets.security.signature.${message.security.signature}`)
+            }}</span>
+            <span v-if="message.security.encrypted">{{ $t('tickets.security.encrypted') }}</span>
+          </span>
           <template v-if="deliveries?.[message.id]">
             <span
               v-for="delivery in [deliveries[message.id]!]"
@@ -86,7 +123,9 @@ function toggle(id: string): void {
               {{
                 delivery.status === 'skipped'
                   ? $t(`tickets.delivery.skipped.${delivery.error ?? 'no_account'}`)
-                  : $t(`tickets.delivery.${delivery.status}`)
+                  : delivery.status === 'failed' && delivery.error?.startsWith('smime_')
+                    ? $t(`tickets.delivery.smime.${delivery.error}`)
+                    : $t(`tickets.delivery.${delivery.status}`)
               }}
               <Button
                 v-if="delivery.status === 'failed'"

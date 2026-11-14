@@ -171,3 +171,42 @@ def test_cleans_html() -> None:
         '<a href="https://acme.example" rel="noopener noreferrer nofollow">y</a></p>'
     )
     assert email(text='x').startswith(b'From:')
+
+
+async def test_signed_and_encrypted_mail_survives_the_mail_server(greenmail: tuple[str, int, int]) -> None:
+    from support.smime import ENGINE, authority, person
+    from zendilohub.modules.channels.domain.models import smime_mime
+    from zendilohub.modules.channels.domain.models.smime import Seal
+
+    host, smtp_port, imap_port = greenmail
+    support = account(host, smtp_port, imap_port, address='signed@acme.example')
+    ca = authority()
+    us = person('signed@acme.example', ca)
+    for seal in (Seal(sign=us.signing), Seal(sign=us.signing, encrypt_for=(us.pem,))):
+        await SmtpOutbox().send(
+            support,
+            Credential(''),
+            OutgoingMail(
+                sender=support.sender,
+                to=('signed@acme.example',),
+                subject='Grüße',
+                text='Zeile eins\nZeile zwei mit Ümlaut',
+                message_id='<sealed@acme.example>',
+                attachments=(FileData(filename='a.pdf', content_type='application/pdf', content=b'%PDF-1'),),
+                seal=seal,
+            ),
+        )
+    fetched = await ImapMailbox().fetch(support, Credential('any'), after_uid=0, uid_validity=None, limit=10)
+    signed_raw, encrypted_raw = (raw for _, raw in fetched.messages)
+    for raw in (signed_raw, encrypted_raw):
+        layer = smime_mime.layer(raw)
+        assert layer is not None
+        if layer.kind == 'pkcs7':
+            inner = ENGINE.decrypt(layer.data, us.signing)
+            assert inner is not None
+            layer = smime_mime.layer(smime_mime.replace_content(raw, inner))
+            assert layer is not None
+        checked = ENGINE.verify(layer.data, layer.content, [ca.pem], NOW)
+        assert (checked.intact, checked.trusted) == (True, True)
+        mail = parse_email(smime_mime.replace_content(raw, layer.content))
+        assert (mail.text, [each.filename for each in mail.files]) == ('Zeile eins\nZeile zwei mit Ümlaut', ['a.pdf'])

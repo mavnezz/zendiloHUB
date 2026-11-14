@@ -252,6 +252,13 @@ class AttachmentResponse(BaseModel):
         )
 
 
+class MessageSecurityResponse(BaseModel):
+    signed: bool
+    signature: Literal['valid', 'invalid', 'untrusted', 'expired'] | None
+    signer: str | None
+    encrypted: bool
+
+
 class MessageResponse(BaseModel):
     id: str
     ticket_id: str
@@ -267,6 +274,8 @@ class MessageResponse(BaseModel):
     to_addresses: list[str]
     cc_addresses: list[str]
     attachments: list[AttachmentResponse]
+    security: MessageSecurityResponse | None
+    """S/MIME of a received e-mail; null when it was neither signed nor encrypted."""
     created_at: datetime
 
     @classmethod
@@ -286,6 +295,7 @@ class MessageResponse(BaseModel):
             to_addresses=list(message.to_addresses),
             cc_addresses=list(message.cc_addresses),
             attachments=[AttachmentResponse.of(each) for each in message.attachments],
+            security=MessageSecurityResponse(**vars(message.security)) if message.security else None,
             created_at=message.created_at,
         )
 

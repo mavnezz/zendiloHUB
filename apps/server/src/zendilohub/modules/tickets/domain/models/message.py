@@ -2,6 +2,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Literal
 
+from zendilohub.core.domain.inbox import EmailSecurity
+
 from ..exceptions import InvalidMessageError
 from .attachment import Attachment
 
@@ -38,6 +40,8 @@ class Message:
     email_message_id: str | None = None
     in_reply_to: str | None = None
     references: tuple[str, ...] = field(default=())
+    security: EmailSecurity | None = None
+    """S/MIME of a received e-mail: signed, encrypted."""
     attachments: tuple[Attachment, ...] = ()
     """Filled when read; saved by the attachment repository."""
     created_at: datetime

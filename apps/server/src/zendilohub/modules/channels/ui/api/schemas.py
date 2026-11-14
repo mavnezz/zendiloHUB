@@ -10,6 +10,7 @@ from ...application.queries.channels import AccountView
 from ...domain.models.account import Provider, Security
 from ...domain.models.mail_filter import FilterField, MailFilter, Operator
 from ...domain.models.records import Delivery, DeliveryStatus, FailedEmail
+from ...domain.models.smime import EncryptMode
 from ...domain.models.templates import PLACEHOLDERS, PersonalSettings, QueueChannel, TemplateKind, TextTemplate
 
 
@@ -151,6 +152,10 @@ class QueueChannelRequest(Request):
     auto_reply: bool = False
     auto_reply_subject: str = Field(default='', max_length=250)
     auto_reply_body: str = Field(default='', max_length=10_000)
+    smime_sign: bool = False
+    """Sign replies with the own S/MIME certificate of the sending account's address."""
+    smime_encrypt: EncryptMode = 'never'
+    """`when_possible`: if the customer's certificate is known; `always`: replies without it are not sent."""
 
 
 class QueueChannelResponse(BaseModel):
@@ -161,6 +166,8 @@ class QueueChannelResponse(BaseModel):
     auto_reply: bool
     auto_reply_subject: str
     auto_reply_body: str
+    smime_sign: bool
+    smime_encrypt: EncryptMode
 
     @classmethod
     def of(cls, settings: QueueChannel) -> QueueChannelResponse:

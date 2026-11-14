@@ -9,6 +9,7 @@ from ...domain.models.email import reply_subject
 from ...domain.models.records import Delivery, DeliveryStatus
 from ...domain.ports.repositories import AccountRepository, DeliveryRepository, QueueChannelRepository
 from ...domain.ports.services import MailboxError, Outbox, OutgoingMail, Tickets
+from ..services.smime import SealError, Smime
 from .accounts import Vault
 
 SEND_TASK = 'channels.send'
@@ -67,7 +68,9 @@ class SendReplyHandler:
         jobs: JobQueue,
         ids: IdGenerator,
         clock: Clock,
+        smime: Smime,
     ) -> None:
+        self._smime = smime
         self._deliveries = deliveries
         self._queues = queues
         self._accounts = accounts
@@ -94,6 +97,11 @@ class SendReplyHandler:
         if account is None:
             return await self._finish(delivery, 'skipped', 'no_account')
         delivery.account_id = account.id
+        try:
+            seal = await self._smime.seal(command.tenant_id, reply.queue_id, account.address, reply.customer_email)
+        except SealError as error:
+            # Never sent unprotected when the queue asks for S/MIME: a person has to add the missing certificate.
+            return await self._finish(delivery, 'failed', error.reason)
         message_id = f'<{self._ids.new_id()}@{account.address.split("@")[1]}>'
         try:
             await self._outbox.send(
@@ -108,6 +116,7 @@ class SendReplyHandler:
                     in_reply_to=reply.references[-1] if reply.references else None,
                     references=reply.references,
                     attachments=reply.attachments,
+                    seal=seal,
                 ),
             )
         except MailboxError as error:

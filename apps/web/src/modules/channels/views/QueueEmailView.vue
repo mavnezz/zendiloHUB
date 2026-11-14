@@ -19,7 +19,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Textarea } from '@/core/ui/textarea'
 import { accessApi, type Queue } from '@/modules/access/api'
 import { useTenants } from '@/modules/tenancy/tenants'
-import { channelsApi, type QueueChannel, type QueueChannelRequest } from '../api'
+import { channelsApi, ENCRYPT_MODES, type EncryptMode, type QueueChannel, type QueueChannelRequest } from '../api'
 import PlaceholderHelp from '../components/PlaceholderHelp.vue'
 
 /** How each queue writes: from which account, with which salutation and signature, and its auto reply. */
@@ -43,7 +43,13 @@ const EMPTY: QueueChannelRequest = {
   auto_reply: false,
   auto_reply_subject: '',
   auto_reply_body: '',
+  smime_sign: false,
+  smime_encrypt: 'never',
 }
+
+const encryptOptions = computed(() =>
+  ENCRYPT_MODES.map((value) => ({ value, label: t(`channels.queues.encrypt.${value}`) })),
+)
 
 function settingsOf(queue: Queue): QueueChannelRequest {
   const found: QueueChannel | undefined = data.data.value?.settings.find((each) => each.queue_id === queue.id)
@@ -134,6 +140,7 @@ async function saveAuto(): Promise<void> {
               <TableHead>{{ $t('channels.templates.kinds.salutation') }}</TableHead>
               <TableHead>{{ $t('channels.templates.kinds.signature') }}</TableHead>
               <TableHead>{{ $t('channels.queues.autoReply') }}</TableHead>
+              <TableHead>{{ $t('channels.queues.smime') }}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -172,6 +179,26 @@ async function saveAuto(): Promise<void> {
                   <Badge v-if="settingsOf(queue).auto_reply" variant="secondary">{{ $t('channels.queues.on') }}</Badge>
                   <span v-else>{{ $t('channels.queues.off') }}</span>
                 </Button>
+              </TableCell>
+              <TableCell>
+                <div class="flex items-center gap-3">
+                  <label class="flex items-center gap-2 text-sm whitespace-nowrap">
+                    <Switch
+                      :model-value="settingsOf(queue).smime_sign ?? false"
+                      :data-test="`sign-${queue.id}`"
+                      @update:model-value="(value: boolean) => save(queue, { smime_sign: value })"
+                    />
+                    {{ $t('channels.queues.sign') }}
+                  </label>
+                  <NativeSelect
+                    :model-value="settingsOf(queue).smime_encrypt ?? 'never'"
+                    :options="encryptOptions"
+                    :aria-label="$t('channels.queues.encryptLabel')"
+                    class="w-48"
+                    :data-test="`encrypt-${queue.id}`"
+                    @update:model-value="(value: string) => save(queue, { smime_encrypt: value as EncryptMode })"
+                  />
+                </div>
               </TableCell>
             </TableRow>
           </TableBody>

@@ -79,6 +79,7 @@ export const navigation: NavGroup[] = [
       { name: 'queueEmail', path: 'queue-email', icon: MailCheck, permission: 'channels.manage' },
       { name: 'textTemplates', path: 'text-templates', icon: FileSignature, permission: 'channels.manage' },
       { name: 'mailFilters', path: 'mail-filters', icon: Filter, permission: 'channels.manage' },
+      { name: 'smime', path: 'smime', icon: ShieldCheck, permission: 'channels.manage' },
       { name: 'failedEmails', path: 'failed-emails', icon: MailX, permission: 'channels.manage' },
     ],
   },

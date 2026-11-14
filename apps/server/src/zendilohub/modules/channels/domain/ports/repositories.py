@@ -7,6 +7,7 @@ from ..models.account import EmailAccount
 from ..models.mail_filter import MailFilter
 from ..models.oauth import ConnectRequest
 from ..models.records import Delivery, FailedEmail
+from ..models.smime import Certificate, CertificateKind
 from ..models.templates import PersonalSettings, QueueChannel, TemplateKind, TextTemplate
 
 
@@ -123,3 +124,19 @@ class ConnectRequestRepository(Protocol):
         ...
 
     async def delete_expired(self, now: datetime) -> None: ...
+
+
+class CertificateRepository(Protocol):
+    async def find(self, tenant_id: str, certificate_id: str) -> Certificate | None: ...
+
+    async def of_tenant(self, tenant_id: str, kind: CertificateKind | None = None) -> Sequence[Certificate]: ...
+
+    async def for_address(self, tenant_id: str, kind: CertificateKind, address: str) -> Sequence[Certificate]: ...
+
+    async def count(self, tenant_id: str, kind: CertificateKind) -> int: ...
+
+    async def add(self, certificate: Certificate) -> bool:
+        """False if the organization has this certificate of this kind already."""
+        ...
+
+    async def delete(self, tenant_id: str, certificate_id: str) -> None: ...

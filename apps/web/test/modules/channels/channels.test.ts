@@ -306,6 +306,8 @@ describe('QueueEmailView', () => {
         auto_reply: true,
         auto_reply_subject: 'Got it',
         auto_reply_body: 'Thanks',
+        smime_sign: false,
+        smime_encrypt: 'never',
       },
     ])
     await mountView(QueueEmailView, { path: `/t/${TENANT_ID}/queue-email` })
@@ -321,6 +323,11 @@ describe('QueueEmailView', () => {
     await $('[data-test=queue-q1] select[aria-label=Salutation]').setValue('s2')
     await flushPromises()
     expect(fake.last('PUT', `${BASE}/queue-channels/q1`)?.body).toMatchObject({ salutation_id: 's2' })
+    await click('[data-test=sign-q1]')
+    expect(fake.last('PUT', `${BASE}/queue-channels/q1`)?.body).toMatchObject({ smime_sign: true })
+    await $('[data-test=queue-q1] select[aria-label=Encrypt]').setValue('always')
+    await flushPromises()
+    expect(fake.last('PUT', `${BASE}/queue-channels/q1`)?.body).toMatchObject({ smime_encrypt: 'always' })
 
     await click('[data-test=auto-q2]')
     expect(($('#auto-subject').element as HTMLInputElement).value).toBe('Your request: {{ticket.subject}}')

@@ -1,11 +1,13 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Protocol
+from datetime import datetime
+from typing import Literal, Protocol
 
 from zendilohub.core.domain.files import FileData
 from zendilohub.core.domain.inbox import InboundEmail, OutgoingEmail, ReceivedTicket
 
 from ..models.account import EmailAccount, Provider
+from ..models.smime import CertificateInfo, Seal, SigningKey, Verification
 
 
 @dataclass(frozen=True)
@@ -53,6 +55,8 @@ class OutgoingMail:
     automatic: bool = False
     """Auto replies say so (`Auto-Submitted`), so other robots do not answer them."""
     attachments: tuple[FileData, ...] = ()
+    seal: Seal | None = None
+    """S/MIME: signed and/or encrypted when set."""
 
 
 class Outbox(Protocol):
@@ -129,4 +133,47 @@ class OAuthProviders(Protocol):
 
     async def refresh(self, provider: Provider, refresh_token: str) -> TokenGrant:
         """Raises OAuthError; `invalid_grant` means the connection is gone for good."""
+        ...
+
+
+class SmimeError(Exception):
+    """A certificate, key or S/MIME structure could not be read or used; `reason` says which."""
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
+        self.reason = reason
+
+
+class SmimeEngine(Protocol):
+    """The cryptography of S/MIME (CMS, RFC 5652): certificates, keys, signing, encryption and their reverse."""
+
+    def read_certificate(self, data: bytes) -> CertificateInfo:
+        """PEM or DER; raises SmimeError."""
+        ...
+
+    def read_pkcs12(self, data: bytes, password: str) -> tuple[CertificateInfo, str]:
+        """A PKCS #12 file (.p12, .pfx): the certificate and its private key (PEM); raises SmimeError."""
+        ...
+
+    def read_key(self, data: bytes, password: str, certificate: CertificateInfo) -> str:
+        """A private key (PEM or DER) that must belong to `certificate`, as PEM; raises SmimeError."""
+        ...
+
+    def sign(self, content: bytes, key: SigningKey) -> bytes:
+        """A detached signature (DER) over `content`, which is canonical already."""
+        ...
+
+    def encrypt(self, content: bytes, recipients: Sequence[str]) -> bytes:
+        """Enveloped data (DER) for the PEM certificates `recipients`; raises SmimeError."""
+        ...
+
+    def kind(self, data: bytes) -> Literal['enveloped', 'signed'] | None: ...
+
+    def decrypt(self, data: bytes, key: SigningKey) -> bytes | None:
+        """None if the data is not for this key."""
+        ...
+
+    def verify(self, data: bytes, content: bytes | None, trusted: Sequence[str], now: datetime) -> Verification:
+        """Checks a signature (DER): detached over `content`, or with the content inside. `trusted`: PEM certificates
+        that count as trusted (authorities and certificates the organization added)."""
         ...

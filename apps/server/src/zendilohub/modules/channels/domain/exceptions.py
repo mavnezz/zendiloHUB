@@ -65,3 +65,21 @@ class OAuthFailedError(ValidationError):
     def __init__(self, reason: str) -> None:
         super().__init__('oauth_failed', f'The mailbox could not be connected ({reason})', {'reason': reason})
         self.reason = reason
+
+
+class InvalidCertificateError(ValidationError):
+    """`field` says why: certificate, pkcs12 (file or password), key, key_mismatch, key_type, no_email, not_ca,
+    expired, limit."""
+
+    def __init__(self, reason: str) -> None:
+        super().__init__('invalid_certificate', f'The certificate cannot be used ({reason})', {'field': reason})
+
+
+class CertificateNotFoundError(NotFoundError):
+    def __init__(self) -> None:
+        super().__init__('certificate_not_found', 'The certificate does not exist')
+
+
+class CertificateExistsError(ConflictError):
+    def __init__(self) -> None:
+        super().__init__('certificate_exists', 'This certificate was added already')

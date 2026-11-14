@@ -56,6 +56,7 @@ export function testRouter(): Router {
         'queueEmail',
         'textTemplates',
         'mailFilters',
+        'smime',
         'failedEmails',
         'mySignature',
         'ticketFields',

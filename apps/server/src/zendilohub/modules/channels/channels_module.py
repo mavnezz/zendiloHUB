@@ -75,6 +75,14 @@ from .application.commands.settings import (
     SetQueueChannel,
     SetQueueChannelHandler,
 )
+from .application.commands.smime import (
+    AddCertificate,
+    AddCertificateHandler,
+    DeleteCertificate,
+    DeleteCertificateHandler,
+    ListCertificates,
+    ListCertificatesHandler,
+)
 from .application.queries.channels import (
     GetPersonal,
     GetPersonalHandler,
@@ -93,6 +101,7 @@ from .application.queries.channels import (
     TicketDeliveries,
     TicketDeliveriesHandler,
 )
+from .application.services.smime import Smime
 from .application.services.writer import Writer
 from .domain.ports.services import Mailbox, OAuthProviders, Outbox
 from .infrastructure.contract_adapters import ContractNames, ContractTickets
@@ -100,6 +109,7 @@ from .infrastructure.mail_servers import ImapMailbox, Nh3Cleaner, SmtpOutbox
 from .infrastructure.oauth_providers import HttpOAuthProviders
 from .infrastructure.postgres_channels import (
     PostgresAccountRepository,
+    PostgresCertificateRepository,
     PostgresConnectRequestRepository,
     PostgresDeliveryRepository,
     PostgresFailedEmailRepository,
@@ -108,7 +118,9 @@ from .infrastructure.postgres_channels import (
     PostgresQueueChannelRepository,
     PostgresTemplateRepository,
 )
+from .infrastructure.smime import CryptographySmime
 from .ui.api.routes import channel_routes, oauth_callback_routes
+from .ui.api.smime_routes import smime_routes
 
 MIGRATIONS = Path(__file__).parent / 'infrastructure' / 'migrations'
 FETCH_EVERY_SECONDS = 60
@@ -128,7 +140,8 @@ def create_channels_module(
     Tickets come and go through the tickets module's `TicketInbox` contract.
     """
     db, clock, ids, jobs = context.db, context.clock, context.ids, context.jobs
-    mailbox, outbox = mailbox or ImapMailbox(), outbox or SmtpOutbox()
+    engine = CryptographySmime()
+    mailbox, outbox = mailbox or ImapMailbox(), outbox or SmtpOutbox(engine)
     accounts = PostgresAccountRepository(db)
     templates = PostgresTemplateRepository(db)
     queues = PostgresQueueChannelRepository(db)
@@ -141,10 +154,12 @@ def create_channels_module(
     connect_requests = PostgresConnectRequestRepository(db)
     oauth = oauth or HttpOAuthProviders(context.config, context.fetcher)
     vault = Vault(accounts, context.cipher, oauth, clock)
+    certificates = PostgresCertificateRepository(db)
+    smime = Smime(certificates, queues, engine, context.cipher, ids, clock)
     writer = Writer(queues, templates, personal, names)
-    auto = AutoReplier(writer, vault, outbox, context.rate_limiter, ids)
+    auto = AutoReplier(writer, vault, outbox, context.rate_limiter, ids, smime)
     process = ProcessEmailHandler(
-        accounts, filters, failed, tickets, Nh3Cleaner(), auto, ids, clock, context.config.max_upload_bytes
+        accounts, filters, failed, tickets, Nh3Cleaner(), auto, ids, clock, context.config.max_upload_bytes, smime
     )
     bus = (
         CommandBus()
@@ -161,7 +176,9 @@ def create_channels_module(
         .register(RetryFailedEmail, RetryFailedEmailHandler(failed, process))
         .register(DeleteFailedEmail, DeleteFailedEmailHandler(failed))
         .register(QueueReply, QueueReplyHandler(deliveries, jobs, clock))
-        .register(SendReply, SendReplyHandler(deliveries, queues, accounts, vault, outbox, tickets, jobs, ids, clock))
+        .register(
+            SendReply, SendReplyHandler(deliveries, queues, accounts, vault, outbox, tickets, jobs, ids, clock, smime)
+        )
         .register(ResendReply, ResendReplyHandler(deliveries, jobs, clock))
         .register(SaveTemplate, SaveTemplateHandler(templates, ids, clock))
         .register(DeleteTemplate, DeleteTemplateHandler(templates))
@@ -181,6 +198,9 @@ def create_channels_module(
         .register(ListFailedEmails, ListFailedEmailsHandler(failed))
         .register(TicketDeliveries, TicketDeliveriesHandler(deliveries))
         .register(ReplyDraft, ReplyDraftHandler(writer))
+        .register(AddCertificate, AddCertificateHandler(certificates, engine, context.cipher, ids, clock))
+        .register(DeleteCertificate, DeleteCertificateHandler(certificates))
+        .register(ListCertificates, ListCertificatesHandler(certificates))
     )
 
     async def message_added(event: MessageAdded) -> None:
@@ -215,6 +235,10 @@ def create_channels_module(
     return AppModule(
         name='channels',
         migrations=sql_migrations(MIGRATIONS),
-        routers=[channel_routes(bus, jobs, context.config), oauth_callback_routes(bus, context.config)],
+        routers=[
+            channel_routes(bus, jobs, context.config),
+            oauth_callback_routes(bus, context.config),
+            smime_routes(bus),
+        ],
         tasks={FETCH_TASK: fetch, SEND_TASK: send},
     )
