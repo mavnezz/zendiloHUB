@@ -133,6 +133,8 @@ class SmtpOutbox:
 
     def _send(self, account: EmailAccount, credential: Credential, mail: EmailMessage | None) -> None:
         server = account.smtp
+        if server is None:
+            raise MailboxError('This mailbox is for incoming mail only')
         try:
             smtp: smtplib.SMTP = (
                 smtplib.SMTP_SSL(server.host, server.port, timeout=TIMEOUT, context=_context())

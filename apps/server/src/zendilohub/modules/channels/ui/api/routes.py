@@ -25,6 +25,7 @@ from ...application.commands.settings import (
     SaveTemplate,
     SetPersonal,
     SetQueueChannel,
+    TestFilters,
 )
 from ...application.queries.channels import (
     GetPersonal,
@@ -52,6 +53,8 @@ from .schemas import (
     FilterOrderRequest,
     FilterRequest,
     FilterResponse,
+    FilterTestRequest,
+    FilterTestResponse,
     MailProvidersResponse,
     PersonalRequest,
     PersonalResponse,
@@ -88,11 +91,11 @@ def _settings(body: AccountRequest) -> tuple[AccountSettings, Passwords]:
         display_name=body.display_name,
         queue_id=body.queue_id,
         imap=server(body.imap),
-        smtp=server(body.smtp),
+        smtp=server(body.smtp) if body.smtp else None,
         folder=body.folder,
         active=body.active,
     )
-    return settings, Passwords(imap=body.imap.password, smtp=body.smtp.password)
+    return settings, Passwords(imap=body.imap.password, smtp=body.smtp.password if body.smtp else None)
 
 
 def _filter_fields(body: FilterRequest) -> FilterFields:
@@ -106,6 +109,7 @@ def _filter_fields(body: FilterRequest) -> FilterFields:
             queue_id=actions.queue_id, priority=actions.priority, tags=tuple(actions.tags), ignore=actions.ignore
         ),
         stop=body.stop,
+        account_id=body.account_id,
     )
 
 
@@ -326,8 +330,28 @@ def channel_routes(bus: CommandBus, jobs: JobQueue, config: AppConfig) -> APIRou
 
     @router.put('/mail-filters-order', dependencies=[audited('mail_filter.reordered')])
     async def reorder_filters(body: FilterOrderRequest, member: Admin) -> list[FilterResponse]:
-        await bus.execute(ReorderFilters(tenant_id=member.tenant_id, filter_ids=tuple(body.filter_ids)))
+        await bus.execute(
+            ReorderFilters(tenant_id=member.tenant_id, filter_ids=tuple(body.filter_ids), account_id=body.account_id)
+        )
         return [FilterResponse.of(each) for each in await bus.query(ListFilters(member.tenant_id))]
+
+    @router.post('/mail-filters/test', dependencies=[Unaudited])
+    async def test_filters(body: FilterTestRequest, member: Admin) -> FilterTestResponse:
+        """Where an e-mail would go: the filters for all mailboxes, then the mailbox's rules; changes nothing."""
+        trace = await bus.query(
+            TestFilters(tenant_id=member.tenant_id, raw=body.raw.encode('utf-8', 'replace'), account_id=body.account_id)
+        )
+        return FilterTestResponse(
+            matched=[FilterResponse.of(each) for each in trace.matched],
+            stopped=trace.stopped,
+            ignore=trace.ignore,
+            queue_id=trace.queue_id,
+            priority=trace.priority,
+            tags=list(trace.tags),
+            default_queue_id=trace.default_queue_id,
+            final_queue_id=trace.final_queue_id,
+            checked=trace.checked,
+        )
 
     @router.get('/failed-emails')
     async def failed_emails(member: Admin) -> list[FailedEmailResponse]:

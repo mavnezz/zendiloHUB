@@ -13,12 +13,25 @@ import { Label } from '@/core/ui/label'
 import { Switch } from '@/core/ui/switch'
 import type { Queue } from '@/modules/access/api'
 import { PRIORITIES, type Priority } from '@/modules/tickets/api'
-import { FILTER_FIELDS, OPERATORS, type Condition, type FilterRequest, type MailFilter } from '../api'
+import {
+  FILTER_FIELDS,
+  OPERATORS,
+  type Condition,
+  type EmailAccount,
+  type FilterRequest,
+  type MailFilter,
+} from '../api'
 
-/** A rule for incoming mail: conditions (all or any), then route, set the priority, add tags or drop it. */
+/**
+ * A rule for incoming mail: conditions (all or any), then route, set the priority, add tags or drop it. It belongs to
+ * one mailbox (its rules) or to all mailboxes.
+ */
 const props = defineProps<{
   initial: MailFilter | null
   queues: Queue[]
+  accounts: EmailAccount[]
+  /** The mailbox a new filter belongs to; null: all mailboxes. */
+  scope: string | null
   save: (body: FilterRequest) => Promise<unknown>
 }>()
 const open = defineModel<boolean>('open', { default: false })
@@ -33,6 +46,7 @@ const queueId = ref('')
 const priority = ref<Priority | ''>('')
 const tags = ref('')
 const ignore = ref(false)
+const accountId = ref('')
 const error = ref<string | null>(null)
 const busy = ref(false)
 
@@ -44,7 +58,9 @@ watch(open, (opened) => {
   name.value = found?.name ?? ''
   active.value = found?.active ?? true
   match.value = found?.match ?? 'all'
-  stop.value = found?.stop ?? false
+  accountId.value = (found ? found.account_id : props.scope) ?? ''
+  // A mailbox's rule usually decides: the first one that matches routes the mail.
+  stop.value = found?.stop ?? Boolean(props.scope)
   conditions.value = found
     ? found.conditions.map((each) => ({ ...each }))
     : [{ field: 'subject', operator: 'contains', value: '', header: '' }]
@@ -71,6 +87,7 @@ async function submit(): Promise<void> {
       active: active.value,
       match: match.value,
       stop: stop.value,
+      account_id: accountId.value || null,
       conditions: conditions.value,
       actions: {
         queue_id: ignore.value ? null : queueId.value || null,
@@ -110,6 +127,18 @@ async function submit(): Promise<void> {
           <label class="flex items-center gap-3 self-end pb-2 text-sm">
             <Switch v-model="active" /> {{ $t('channels.filters.active') }}
           </label>
+        </div>
+        <div class="grid gap-2">
+          <Label for="filter-scope">{{ $t('channels.filters.scope') }}</Label>
+          <NativeSelect
+            id="filter-scope"
+            v-model="accountId"
+            data-test="filter-scope"
+            :options="[
+              { value: '', label: $t('channels.filters.everyMailbox') },
+              ...accounts.map((account) => ({ value: account.id, label: account.address })),
+            ]"
+          />
         </div>
         <fieldset class="grid gap-2 rounded-md border p-3">
           <legend class="flex items-center gap-2 px-1 text-sm font-medium">{{ $t('channels.filters.when') }}</legend>

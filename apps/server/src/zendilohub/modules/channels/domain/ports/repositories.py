@@ -95,6 +95,14 @@ class FilterRepository(Protocol):
     async def delete(self, tenant_id: str, filter_id: str) -> None: ...
 
 
+class TicketMailboxRepository(Protocol):
+    """The mailbox each ticket's latest customer e-mail came in by."""
+
+    async def remember(self, tenant_id: str, ticket_id: str, account_id: str, now: datetime) -> None: ...
+
+    async def of_ticket(self, tenant_id: str, ticket_id: str) -> str | None: ...
+
+
 class FailedEmailRepository(Protocol):
     async def add(self, failed: FailedEmail) -> None: ...
 

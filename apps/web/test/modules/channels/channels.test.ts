@@ -71,6 +71,7 @@ function template(overrides: Partial<TextTemplate> = {}): TextTemplate {
 function filter(overrides: Partial<MailFilter> = {}): MailFilter {
   return {
     id: 'f1',
+    account_id: null,
     name: 'Invoices',
     position: 1,
     active: true,
@@ -443,6 +444,7 @@ describe('MailFiltersView', () => {
         { field: 'header', operator: 'contains', value: '1', header: 'X-Priority' },
       ],
       actions: { queue_id: null, priority: 'urgent', tags: ['vip', 'boss'], ignore: false },
+      account_id: null,
     })
     expect(toasts.success()).toContain('Filter "VIP" saved.')
 
@@ -457,7 +459,7 @@ describe('MailFiltersView', () => {
     })
 
     await click('[data-test=up-Spam]')
-    expect(fake.last('PUT', `${BASE}/mail-filters-order`)?.body).toEqual({ filter_ids: ['f2', 'f1'] })
+    expect(fake.last('PUT', `${BASE}/mail-filters-order`)?.body).toEqual({ filter_ids: ['f2', 'f1'], account_id: null })
 
     await click('[data-test=delete-Invoices]')
     await click('[data-test=confirm]')

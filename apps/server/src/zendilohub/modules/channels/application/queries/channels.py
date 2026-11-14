@@ -103,7 +103,9 @@ class ListFiltersHandler:
         self._filters = filters
 
     async def handle(self, query: ListFilters) -> Sequence[MailFilter]:
-        return await self._filters.of_tenant(query.tenant_id)
+        """Those for all mailboxes first, then each mailbox's rules, each in the order they run."""
+        filters = await self._filters.of_tenant(query.tenant_id)
+        return sorted(filters, key=lambda each: (each.account_id is not None, each.account_id or '', each.position))
 
 
 @dataclass(frozen=True)

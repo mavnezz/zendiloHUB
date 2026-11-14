@@ -74,6 +74,8 @@ from .application.commands.settings import (
     SetPersonalHandler,
     SetQueueChannel,
     SetQueueChannelHandler,
+    TestFilters,
+    TestFiltersHandler,
 )
 from .application.queries.channels import (
     GetPersonal,
@@ -107,6 +109,7 @@ from .infrastructure.postgres_channels import (
     PostgresPersonalRepository,
     PostgresQueueChannelRepository,
     PostgresTemplateRepository,
+    PostgresTicketMailboxRepository,
 )
 from .ui.api.routes import channel_routes, oauth_callback_routes
 
@@ -143,8 +146,19 @@ def create_channels_module(
     vault = Vault(accounts, context.cipher, oauth, clock)
     writer = Writer(queues, templates, personal, names)
     auto = AutoReplier(writer, vault, outbox, context.rate_limiter, ids)
+    mailboxes = PostgresTicketMailboxRepository(db)
     process = ProcessEmailHandler(
-        accounts, filters, failed, tickets, Nh3Cleaner(), auto, ids, clock, context.config.max_upload_bytes
+        accounts,
+        filters,
+        failed,
+        mailboxes,
+        queues,
+        tickets,
+        Nh3Cleaner(),
+        auto,
+        ids,
+        clock,
+        context.config.max_upload_bytes,
     )
     bus = (
         CommandBus()
@@ -161,13 +175,17 @@ def create_channels_module(
         .register(RetryFailedEmail, RetryFailedEmailHandler(failed, process))
         .register(DeleteFailedEmail, DeleteFailedEmailHandler(failed))
         .register(QueueReply, QueueReplyHandler(deliveries, jobs, clock))
-        .register(SendReply, SendReplyHandler(deliveries, queues, accounts, vault, outbox, tickets, jobs, ids, clock))
+        .register(
+            SendReply,
+            SendReplyHandler(deliveries, queues, accounts, mailboxes, vault, outbox, tickets, jobs, ids, clock),
+        )
         .register(ResendReply, ResendReplyHandler(deliveries, jobs, clock))
         .register(SaveTemplate, SaveTemplateHandler(templates, ids, clock))
         .register(DeleteTemplate, DeleteTemplateHandler(templates))
         .register(SetQueueChannel, SetQueueChannelHandler(queues, accounts, templates, names))
         .register(SetPersonal, SetPersonalHandler(personal))
-        .register(SaveFilter, SaveFilterHandler(filters, names, ids, clock))
+        .register(SaveFilter, SaveFilterHandler(filters, accounts, names, ids, clock))
+        .register(TestFilters, TestFiltersHandler(filters, accounts))
         .register(DeleteFilter, DeleteFilterHandler(filters))
         .register(ReorderFilters, ReorderFiltersHandler(filters))
         .register(ForgetQueue, ForgetQueueHandler(queues))

@@ -34,7 +34,8 @@ class AccountRequest(Request):
     queue_id: Id
     """Where new mails of this account go (filters can route elsewhere)."""
     imap: ServerRequest
-    smtp: ServerRequest
+    smtp: ServerRequest | None = None
+    """Leave out (or null) for a mailbox for incoming mail only: no queue can send with it."""
     folder: str = Field(default='INBOX', max_length=200)
     active: bool = True
 
@@ -54,7 +55,8 @@ class AccountResponse(BaseModel):
     display_name: str
     queue_id: str
     imap: ServerResponse
-    smtp: ServerResponse
+    smtp: ServerResponse | None
+    """None: a mailbox for incoming mail only."""
     folder: str
     active: bool
     last_fetch_at: datetime | None
@@ -76,7 +78,7 @@ class AccountResponse(BaseModel):
             display_name=account.display_name,
             queue_id=account.queue_id,
             imap=ServerResponse(**vars(account.imap), has_password=passwords[0]),
-            smtp=ServerResponse(**vars(account.smtp), has_password=passwords[1]),
+            smtp=ServerResponse(**vars(account.smtp), has_password=passwords[1]) if account.smtp else None,
             folder=account.folder,
             active=account.active,
             last_fetch_at=account.last_fetch_at,
@@ -112,6 +114,7 @@ class ProbeResponse(BaseModel):
     imap: str | None
     """None: logging in worked; else what went wrong."""
     smtp: str | None
+    """Also None for a mailbox for incoming mail only (nothing to test)."""
 
 
 class TemplateRequest(Request):
@@ -208,10 +211,14 @@ class FilterRequest(Request):
     conditions: list[ConditionModel] = Field(min_length=1, max_length=10)
     actions: ActionsModel
     stop: bool = False
+    account_id: Id | None = None
+    """A rule of this mailbox (it runs after the filters for all mailboxes); null: a filter for all mailboxes."""
 
 
 class FilterResponse(BaseModel):
     id: str
+    account_id: str | None
+    """The mailbox whose rule it is; null: for all mailboxes."""
     name: str
     position: int
     active: bool
@@ -225,6 +232,7 @@ class FilterResponse(BaseModel):
         actions = mail_filter.actions
         return cls(
             id=mail_filter.id,
+            account_id=mail_filter.account_id,
             name=mail_filter.name,
             position=mail_filter.position,
             active=mail_filter.active,
@@ -239,6 +247,34 @@ class FilterResponse(BaseModel):
 
 class FilterOrderRequest(Request):
     filter_ids: list[Id] = Field(max_length=100)
+    account_id: Id | None = None
+    """Reorders the rules of this mailbox; null: the filters for all mailboxes."""
+
+
+class FilterTestRequest(Request):
+    raw: str = Field(max_length=1_000_000)
+    """The e-mail with its headers, as the mail program shows its source."""
+    account_id: Id | None = None
+    """As if this mailbox received it: its rules run too, and its default queue is the fallback."""
+
+
+class FilterTestResponse(BaseModel):
+    matched: list[FilterResponse]
+    """The filters that matched, in the order they ran."""
+    stopped: bool
+    """A matching filter ended the run (stop, or drop)."""
+    ignore: bool
+    """The e-mail would be dropped."""
+    queue_id: str | None
+    """The queue the filters chose; null: none did."""
+    priority: str | None
+    tags: list[str]
+    default_queue_id: str | None
+    """The mailbox's default queue."""
+    final_queue_id: str | None
+    """Where the e-mail would land; null: dropped, or no queue at all."""
+    checked: int
+    """How many active filters ran."""
 
 
 class FailedEmailResponse(BaseModel):

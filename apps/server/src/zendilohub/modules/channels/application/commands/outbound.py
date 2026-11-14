@@ -5,9 +5,15 @@ from zendilohub.core.domain.clock import Clock
 from zendilohub.core.domain.id_generator import IdGenerator
 from zendilohub.core.domain.jobs import JobQueue
 
+from ...domain.models.account import EmailAccount
 from ...domain.models.email import reply_subject
 from ...domain.models.records import Delivery, DeliveryStatus
-from ...domain.ports.repositories import AccountRepository, DeliveryRepository, QueueChannelRepository
+from ...domain.ports.repositories import (
+    AccountRepository,
+    DeliveryRepository,
+    QueueChannelRepository,
+    TicketMailboxRepository,
+)
 from ...domain.ports.services import MailboxError, Outbox, OutgoingMail, Tickets
 from .accounts import Vault
 
@@ -54,13 +60,17 @@ class SendReply(Command[DeliveryStatus]):
 
 
 class SendReplyHandler:
-    """Sends a reply from the account of the ticket's queue to the customer, in the thread of the ticket's e-mails."""
+    """
+    Sends a reply from the account of the ticket's queue to the customer, in the thread of the ticket's e-mails. A
+    queue without an account of its own sends by the mailbox the customer's latest e-mail came in by.
+    """
 
     def __init__(
         self,
         deliveries: DeliveryRepository,
         queues: QueueChannelRepository,
         accounts: AccountRepository,
+        mailboxes: TicketMailboxRepository,
         vault: Vault,
         outbox: Outbox,
         tickets: Tickets,
@@ -71,6 +81,7 @@ class SendReplyHandler:
         self._deliveries = deliveries
         self._queues = queues
         self._accounts = accounts
+        self._mailboxes = mailboxes
         self._vault = vault
         self._outbox = outbox
         self._tickets = tickets
@@ -78,17 +89,20 @@ class SendReplyHandler:
         self._ids = ids
         self._clock = clock
 
+    async def _sending_account(self, tenant_id: str, queue_id: str, ticket_id: str) -> EmailAccount | None:
+        settings = await self._queues.find(tenant_id, queue_id)
+        account_id = settings.account_id if settings and settings.account_id else None
+        account_id = account_id or await self._mailboxes.of_ticket(tenant_id, ticket_id)
+        account = await self._accounts.find(tenant_id, account_id) if account_id else None
+        # A mailbox for incoming mail only cannot send.
+        return account if account is not None and account.sends else None
+
     async def handle(self, command: SendReply) -> DeliveryStatus:
         delivery = await self._deliveries.find(command.tenant_id, command.message_id)
         reply = await self._tickets.outgoing(command.tenant_id, command.message_id)
         if delivery is None or reply is None or delivery.status == 'sent':
             return delivery.status if delivery else 'skipped'
-        settings = await self._queues.find(command.tenant_id, reply.queue_id)
-        account = (
-            await self._accounts.find(command.tenant_id, settings.account_id)
-            if settings and settings.account_id
-            else None
-        )
+        account = await self._sending_account(command.tenant_id, reply.queue_id, delivery.ticket_id)
         if reply.customer_email is None:
             return await self._finish(delivery, 'skipped', 'no_customer_address')
         if account is None:

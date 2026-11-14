@@ -21,13 +21,15 @@ export type FilterField = Condition['field']
 export type Operator = Condition['operator']
 export type FailedEmail = Schemas['FailedEmailResponse']
 export type Delivery = Schemas['DeliveryResponse']
+export type FilterTest = Schemas['FilterTestResponse']
 
 export const SECURITIES: readonly Security[] = ['ssl', 'starttls', 'none']
-export const FILTER_FIELDS: readonly FilterField[] = ['from', 'to', 'cc', 'subject', 'body', 'header']
+export const FILTER_FIELDS: readonly FilterField[] = ['from', 'to', 'cc', 'delivered_to', 'subject', 'body', 'header']
 export const OPERATORS: readonly Operator[] = [
   'contains',
   'not_contains',
   'equals',
+  'not_equals',
   'starts_with',
   'ends_with',
   'regex',
@@ -72,8 +74,12 @@ export const channelsApi = {
   updateFilter: (tenantId: string, id: string, body: FilterRequest) =>
     http.patch<MailFilter>(`${base(tenantId)}/mail-filters/${id}`, body),
   deleteFilter: (tenantId: string, id: string) => http.delete<void>(`${base(tenantId)}/mail-filters/${id}`),
-  reorderFilters: (tenantId: string, ids: string[]) =>
-    http.put<MailFilter[]>(`${base(tenantId)}/mail-filters-order`, { filter_ids: ids }),
+  /** The order of one scope: the rules of a mailbox, or (null) the filters for all mailboxes. */
+  reorderFilters: (tenantId: string, ids: string[], accountId: string | null = null) =>
+    http.put<MailFilter[]>(`${base(tenantId)}/mail-filters-order`, { filter_ids: ids, account_id: accountId }),
+  /** Where an e-mail would go; changes nothing. */
+  testFilters: (tenantId: string, raw: string, accountId: string | null) =>
+    http.post<FilterTest>(`${base(tenantId)}/mail-filters/test`, { raw, account_id: accountId }),
 
   failed: (tenantId: string) => http.get<FailedEmail[]>(`${base(tenantId)}/failed-emails`),
   retryFailed: (tenantId: string, id: string) =>

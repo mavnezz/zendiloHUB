@@ -160,3 +160,32 @@ def test_filters_match_and_route() -> None:
     with pytest.raises(InvalidFilterError) as raised:
         mail_filter((), FilterActions(tags=('x',))).check()
     assert raised.value.params == {'field': 'conditions'}
+
+
+def test_filters_see_where_mail_was_delivered() -> None:
+    mail = parse_email(email(to='info@acme.example', Delivered_To='Support <SUPPORT@acme.example>', X_Original_To='x'))
+    delivered = Condition(field='delivered_to', operator='equals', value='support@acme.example')
+    assert delivered.matches(mail)
+    assert Condition(field='delivered_to', operator='equals', value='info@acme.example').matches(mail)
+    assert not Condition(field='delivered_to', operator='equals', value='x').matches(mail)
+    assert Condition(field='subject', operator='not_equals', value='other').matches(mail)
+    assert not Condition(field='delivered_to', operator='not_equals', value='info@acme.example').matches(mail)
+
+
+def test_filters_for_all_mailboxes_run_before_the_mailbox_rules() -> None:
+    mail = parse_email(email(subject='Invoice'))
+    invoice = Condition(field='subject', operator='contains', value='invoice')
+    every = mail_filter((invoice,), FilterActions(tags=('all',)), id='every', position=5)
+    own = mail_filter((invoice,), FilterActions(queue_id='billing'), id='own', position=1, account_id='a')
+    other = mail_filter((invoice,), FilterActions(queue_id='sales'), id='other', position=1, account_id='b')
+    routing = route([own, other, every], mail, 'a')
+    assert (routing.matched, routing.queue_id, routing.tags, routing.stopped) == (
+        ('every', 'own'),
+        'billing',
+        ('all',),
+        False,
+    )
+    assert route([own, other, every], mail).matched == ('every',)
+    dropped = mail_filter((invoice,), FilterActions(ignore=True), id='drop', position=0)
+    assert route([own, dropped], mail, 'a') == route([dropped], mail) == route([dropped], mail, 'x')
+    assert route([dropped], mail).matched == ('drop',)

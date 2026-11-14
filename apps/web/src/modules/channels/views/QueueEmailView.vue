@@ -50,9 +50,20 @@ function settingsOf(queue: Queue): QueueChannelRequest {
   return found ? { ...found } : { ...EMPTY }
 }
 
+/** The mailboxes whose mail lands in this queue by default. */
+function incomingOf(queueId: string): string {
+  return (data.data.value?.accounts ?? [])
+    .filter((account) => account.queue_id === queueId)
+    .map((account) => account.address)
+    .join(', ')
+}
+
 const accountOptions = computed(() => [
   { value: '', label: t('channels.queues.noAccount') },
-  ...(data.data.value?.accounts ?? []).map((account) => ({ value: account.id, label: account.address })),
+  // A mailbox for incoming mail only cannot send.
+  ...(data.data.value?.accounts ?? [])
+    .filter((account) => account.smtp !== null)
+    .map((account) => ({ value: account.id, label: account.address })),
 ])
 
 function templateOptions(kind: 'signature' | 'salutation') {
@@ -130,6 +141,7 @@ async function saveAuto(): Promise<void> {
           <TableHeader>
             <TableRow>
               <TableHead>{{ $t('tickets.queue') }}</TableHead>
+              <TableHead>{{ $t('channels.queues.incoming') }}</TableHead>
               <TableHead>{{ $t('channels.queues.account') }}</TableHead>
               <TableHead>{{ $t('channels.templates.kinds.salutation') }}</TableHead>
               <TableHead>{{ $t('channels.templates.kinds.signature') }}</TableHead>
@@ -139,6 +151,9 @@ async function saveAuto(): Promise<void> {
           <TableBody>
             <TableRow v-for="queue in data.data.value.queues" :key="queue.id" :data-test="`queue-${queue.id}`">
               <TableCell class="font-medium">{{ queue.name }}</TableCell>
+              <TableCell class="text-xs text-muted-foreground" :data-test="`incoming-${queue.id}`">
+                {{ incomingOf(queue.id) || '–' }}
+              </TableCell>
               <TableCell>
                 <NativeSelect
                   :model-value="settingsOf(queue).account_id ?? ''"
@@ -147,6 +162,13 @@ async function saveAuto(): Promise<void> {
                   class="w-56"
                   @update:model-value="(value: string) => save(queue, { account_id: value || null })"
                 />
+                <p
+                  v-if="!settingsOf(queue).account_id"
+                  class="mt-1 max-w-56 text-xs text-muted-foreground"
+                  :data-test="`fallback-${queue.id}`"
+                >
+                  {{ $t('channels.queues.fallback') }}
+                </p>
               </TableCell>
               <TableCell>
                 <NativeSelect

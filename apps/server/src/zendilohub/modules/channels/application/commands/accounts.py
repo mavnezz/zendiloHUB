@@ -196,7 +196,7 @@ class TestAccountHandler:
         if account is None:
             raise AccountNotFoundError()
         imap = await self._try(self._mailbox.probe, account, 'imap')
-        smtp = await self._try(self._outbox.probe, account, 'smtp')
+        smtp = await self._try(self._outbox.probe, account, 'smtp') if account.sends else None
         return ProbeResult(imap=imap, smtp=smtp)
 
     async def _try(

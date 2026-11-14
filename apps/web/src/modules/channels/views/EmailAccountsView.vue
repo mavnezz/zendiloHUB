@@ -1,5 +1,18 @@
 <script setup lang="ts">
-import { AlertTriangle, CheckCircle2, Link2, Mail, Pencil, Plug, Plus, RefreshCw, Trash2 } from '@lucide/vue'
+import {
+  AlertTriangle,
+  ArrowDown,
+  CheckCircle2,
+  FlaskConical,
+  Inbox,
+  Link2,
+  Mail,
+  Pencil,
+  Plug,
+  Plus,
+  RefreshCw,
+  Trash2,
+} from '@lucide/vue'
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
@@ -25,9 +38,16 @@ import {
 } from '../api'
 import AccountDialog from '../components/AccountDialog.vue'
 import ConnectDialog from '../components/ConnectDialog.vue'
+import FilterDialog from '../components/FilterDialog.vue'
+import FilterList from '../components/FilterList.vue'
+import FilterTestDialog from '../components/FilterTestDialog.vue'
+import { useFilterEditor } from '../filter-editor'
 import { leaveTo } from '../leave'
 
-/** The organization's mailboxes: mail is fetched every minute into their queues, replies go out by their servers. */
+/**
+ * The organization's mailboxes. Each shows the way of its mail: fetched every minute, through the filters for all
+ * mailboxes and its own rules in order, otherwise into its default queue. Replies go out by their servers.
+ */
 const i18n = useI18n()
 const { t } = i18n
 const tenants = useTenants()
@@ -35,6 +55,21 @@ const tenantId = computed(() => tenants.current.value!.id)
 const accounts = useAsyncData(() => channelsApi.accounts(tenantId.value))
 const queues = useAsyncData(() => accessApi.queues(tenantId.value))
 const providers = useAsyncData(() => channelsApi.mailProviders(tenantId.value))
+const filters = useAsyncData(() => channelsApi.filters(tenantId.value))
+const editor = useFilterEditor(tenantId, () => filters.reload())
+const testing = ref<string | null>(null)
+const testOpen = ref(false)
+
+const everyMailbox = computed(() => (filters.data.value ?? []).filter((each) => each.account_id === null).length)
+
+function rulesOf(account: EmailAccount) {
+  return (filters.data.value ?? []).filter((each) => each.account_id === account.id)
+}
+
+function openTest(account: EmailAccount): void {
+  testing.value = account.id
+  testOpen.value = true
+}
 const route = useRoute()
 const router = useRouter()
 
@@ -101,7 +136,7 @@ async function test(account: EmailAccount): Promise<void> {
   try {
     const result = await channelsApi.testAccount(tenantId.value, account.id)
     probes.value = { ...probes.value, [account.id]: result }
-    if (!result.imap && !result.smtp) {
+    if (!result.imap && !(account.smtp && result.smtp)) {
       notify.success(t('channels.accounts.testOk'))
     }
   } catch (caught) {
@@ -169,6 +204,9 @@ async function remove(): Promise<void> {
               <Badge v-else-if="account.last_error" variant="destructive" data-test="failing">{{
                 $t('channels.accounts.failing')
               }}</Badge>
+              <Badge v-if="!account.smtp" variant="secondary" data-test="incoming-only">{{
+                $t('channels.accounts.incomingOnly')
+              }}</Badge>
             </span>
             <span class="flex gap-1">
               <Button
@@ -204,8 +242,7 @@ async function remove(): Promise<void> {
             </span>
           </CardTitle>
           <CardDescription>
-            {{ account.display_name ? `${account.display_name} <${account.address}>` : account.address }} →
-            {{ queueName(account.queue_id) }}
+            {{ account.display_name ? `${account.display_name} <${account.address}>` : account.address }}
           </CardDescription>
         </CardHeader>
         <CardContent class="grid gap-2 text-sm">
@@ -217,8 +254,50 @@ async function remove(): Promise<void> {
             }}
           </p>
           <p v-else class="text-muted-foreground">
-            IMAP {{ account.imap.host }}:{{ account.imap.port }} · SMTP {{ account.smtp.host }}:{{ account.smtp.port }}
+            IMAP {{ account.imap.host }}:{{ account.imap.port }}
+            <template v-if="account.smtp"> · SMTP {{ account.smtp.host }}:{{ account.smtp.port }}</template>
           </p>
+          <div class="grid gap-2 rounded-md bg-muted/40 p-3" :data-test="`flow-${account.address}`">
+            <p class="flex items-center gap-2 font-medium">
+              <Inbox class="size-4" /> {{ $t('channels.accounts.flow.incoming', { address: account.address }) }}
+            </p>
+            <p v-if="everyMailbox" class="flex items-center gap-2 text-xs text-muted-foreground">
+              <ArrowDown class="size-3.5" /> {{ $t('channels.accounts.flow.everyMailbox', { count: everyMailbox }) }}
+            </p>
+            <p class="flex items-center gap-2 text-xs text-muted-foreground">
+              <ArrowDown class="size-3.5" />
+              {{
+                rulesOf(account).length
+                  ? $t('channels.accounts.flow.rules', { count: rulesOf(account).length })
+                  : $t('channels.accounts.flow.noRules')
+              }}
+            </p>
+            <FilterList
+              v-if="rulesOf(account).length"
+              :filters="rulesOf(account)"
+              :queues="queues.data.value ?? []"
+              numbered
+              @edit="editor.open($event)"
+              @delete="editor.askDelete($event)"
+              @reorder="editor.reorder($event, account.id)"
+            />
+            <span class="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                :data-test="`add-rule-${account.address}`"
+                @click="editor.open(null, account.id)"
+                ><Plus class="size-4" /> {{ $t('channels.accounts.flow.addRule') }}</Button
+              >
+              <Button variant="ghost" size="sm" :data-test="`test-rules-${account.address}`" @click="openTest(account)"
+                ><FlaskConical class="size-4" /> {{ $t('channels.filters.test.open') }}</Button
+              >
+            </span>
+            <p class="flex items-center gap-2 font-medium" :data-test="`default-${account.address}`">
+              <ArrowDown class="size-4" />
+              {{ $t('channels.accounts.flow.otherwise', { queue: queueName(account.queue_id) }) }}
+            </p>
+          </div>
           <p v-if="account.last_error" class="flex items-start gap-2 text-destructive" data-test="last-error">
             <AlertTriangle class="mt-0.5 size-4 shrink-0" />
             {{ $t('channels.accounts.failingSince', { date: formatDateTime(account.failing_since) }) }}:
@@ -229,7 +308,7 @@ async function remove(): Promise<void> {
           </p>
           <div v-if="probes[account.id]" class="grid gap-1 text-xs" :data-test="`probe-${account.address}`">
             <span
-              v-for="kind in ['imap', 'smtp'] as const"
+              v-for="kind in account.smtp ? (['imap', 'smtp'] as const) : (['imap'] as const)"
               :key="kind"
               :class="probes[account.id]![kind] ? 'text-destructive' : 'text-emerald-600 dark:text-emerald-400'"
               class="flex items-center gap-1"
@@ -248,6 +327,28 @@ async function remove(): Promise<void> {
       :initial="editing"
       :queues="queues.data.value ?? []"
       :save="save"
+    />
+    <FilterDialog
+      v-model:open="editor.dialogOpen.value"
+      :initial="editor.editing.value"
+      :scope="editor.scope.value"
+      :queues="queues.data.value ?? []"
+      :accounts="accounts.data.value ?? []"
+      :save="editor.save"
+    />
+    <FilterTestDialog
+      v-model:open="testOpen"
+      :start="testing"
+      :accounts="accounts.data.value ?? []"
+      :queues="queues.data.value ?? []"
+    />
+    <ConfirmDialog
+      v-model:open="editor.deleteOpen.value"
+      :title="$t('channels.filters.deleteTitle', { name: editor.deleting.value?.name })"
+      :description="$t('channels.filters.deleteText')"
+      :confirm-label="$t('common.delete')"
+      destructive
+      :action="editor.remove"
     />
     <ConnectDialog
       v-model:open="connectOpen"

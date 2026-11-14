@@ -1346,6 +1346,26 @@ export interface paths {
     patch: operations['update_filter_api_v1_tenants__tenant_id__mail_filters__filter_id__patch']
     trace?: never
   }
+  '/api/v1/tenants/{tenant_id}/mail-filters/test': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Test Filters
+     * @description Where an e-mail would go: the filters for all mailboxes, then the mailbox's rules; changes nothing.
+     */
+    post: operations['test_filters_api_v1_tenants__tenant_id__mail_filters_test_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/v1/tenants/{tenant_id}/mcp-connections': {
     parameters: {
       query?: never
@@ -2594,7 +2614,7 @@ export interface components {
       name: string
       /** Queue Id */
       queue_id: string
-      smtp: components['schemas']['ServerRequest']
+      smtp?: components['schemas']['ServerRequest'] | null
     }
     /** AccountResponse */
     AccountResponse: {
@@ -2627,7 +2647,7 @@ export interface components {
       provider: components['schemas']['Provider'] | null
       /** Queue Id */
       queue_id: string
-      smtp: components['schemas']['ServerResponse']
+      smtp: components['schemas']['ServerResponse'] | null
     }
     /** ActionsModel */
     ActionsModel: {
@@ -3268,14 +3288,18 @@ export interface components {
       position: number
     }
     /** @enum {string} */
-    FilterField: 'from' | 'to' | 'cc' | 'subject' | 'body' | 'header'
+    FilterField: 'from' | 'to' | 'cc' | 'delivered_to' | 'subject' | 'body' | 'header'
     /** FilterOrderRequest */
     FilterOrderRequest: {
+      /** Account Id */
+      account_id?: string | null
       /** Filter Ids */
       filter_ids: string[]
     }
     /** FilterRequest */
     FilterRequest: {
+      /** Account Id */
+      account_id?: string | null
       actions: components['schemas']['ActionsModel']
       /**
        * Active
@@ -3300,6 +3324,8 @@ export interface components {
     }
     /** FilterResponse */
     FilterResponse: {
+      /** Account Id */
+      account_id: string | null
       actions: components['schemas']['ActionsModel']
       /** Active */
       active: boolean
@@ -3318,6 +3344,34 @@ export interface components {
       position: number
       /** Stop */
       stop: boolean
+    }
+    /** FilterTestRequest */
+    FilterTestRequest: {
+      /** Account Id */
+      account_id?: string | null
+      /** Raw */
+      raw: string
+    }
+    /** FilterTestResponse */
+    FilterTestResponse: {
+      /** Checked */
+      checked: number
+      /** Default Queue Id */
+      default_queue_id: string | null
+      /** Final Queue Id */
+      final_queue_id: string | null
+      /** Ignore */
+      ignore: boolean
+      /** Matched */
+      matched: components['schemas']['FilterResponse'][]
+      /** Priority */
+      priority: string | null
+      /** Queue Id */
+      queue_id: string | null
+      /** Stopped */
+      stopped: boolean
+      /** Tags */
+      tags: string[]
     }
     /** @enum {string} */
     FirstMessage: 'customer' | 'reply' | 'note'
@@ -3589,7 +3643,7 @@ export interface components {
       ticket_number: number
     }
     /** @enum {string} */
-    Operator: 'contains' | 'not_contains' | 'equals' | 'starts_with' | 'ends_with' | 'regex'
+    Operator: 'contains' | 'not_contains' | 'equals' | 'not_equals' | 'starts_with' | 'ends_with' | 'regex'
     /**
      * OwnTenantResponse
      * @description A tenant as the caller sees it: with their role and what it allows.
@@ -7721,6 +7775,41 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['FilterResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  test_filters_api_v1_tenants__tenant_id__mail_filters_test_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['FilterTestRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['FilterTestResponse']
         }
       }
       /** @description Validation Error */

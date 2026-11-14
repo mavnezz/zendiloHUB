@@ -72,8 +72,10 @@ class EmailAccount:
     address: str
     display_name: str
     queue_id: str
+    """The default queue: where its mail lands when no rule picks another one."""
     imap: Server
-    smtp: Server
+    smtp: Server | None
+    """None: a mailbox for incoming mail only; no queue sends with it."""
     folder: str
     active: bool
     created_at: datetime
@@ -181,7 +183,8 @@ class EmailAccount:
             raise InvalidAccountError('display_name')
         if len(folder) > 200:
             raise InvalidAccountError('folder')
-        imap, smtp = settings.imap.checked('imap'), settings.smtp.checked('smtp')
+        imap = settings.imap.checked('imap')
+        smtp = settings.smtp.checked('smtp') if settings.smtp else None
         if imap != self.imap or address != self.address or folder != self.folder:
             # Another mailbox: start reading it from where it is now.
             self.uid_validity = None
@@ -199,6 +202,11 @@ class EmailAccount:
         self.last_fetch_at = now
 
     @property
+    def sends(self) -> bool:
+        """It has an SMTP server, so queues can send with it (else it is for incoming mail only)."""
+        return self.smtp is not None
+
+    @property
     def sender(self) -> str:
         """`Name <address>` for the From header."""
         return f'{self.display_name} <{self.address}>' if self.display_name else self.address
@@ -211,7 +219,7 @@ class AccountSettings:
     display_name: str
     queue_id: str
     imap: Server
-    smtp: Server
+    smtp: Server | None
     folder: str = 'INBOX'
     active: bool = True
 

@@ -6,10 +6,11 @@ from typing import Literal, get_args
 from ..exceptions import InvalidFilterError
 from .email import ParsedEmail
 
-type FilterField = Literal['from', 'to', 'cc', 'subject', 'body', 'header']
+type FilterField = Literal['from', 'to', 'cc', 'delivered_to', 'subject', 'body', 'header']
 FILTER_FIELDS: tuple[FilterField, ...] = get_args(FilterField.__value__)
-type Operator = Literal['contains', 'not_contains', 'equals', 'starts_with', 'ends_with', 'regex']
+type Operator = Literal['contains', 'not_contains', 'equals', 'not_equals', 'starts_with', 'ends_with', 'regex']
 OPERATORS: tuple[Operator, ...] = get_args(Operator.__value__)
+DELIVERED_TO_HEADERS = ('delivered-to', 'x-original-to', 'envelope-to', 'x-envelope-to')
 FILTERS_MAX = 100
 CONDITIONS_MAX = 10
 
@@ -38,19 +39,30 @@ class Condition:
                 raise InvalidFilterError('conditions.value') from None
 
     def matches(self, mail: ParsedEmail) -> bool:
-        values = {
-            'from': [mail.from_address, mail.from_name],
-            'to': list(mail.to),
-            'cc': list(mail.cc),
-            'subject': [mail.subject],
-            'body': [mail.text],
-            'header': [mail.headers.get(self.header.lower(), '')],
-        }[self.field]
-        return (
-            any(self._test(value) for value in values)
-            if self.operator != 'not_contains'
-            else all(self._test(value) for value in values)
-        )
+        match self.field:
+            case 'from':
+                values = [mail.from_address, mail.from_name]
+            case 'to':
+                values = list(mail.to)
+            case 'cc':
+                values = list(mail.cc)
+            case 'delivered_to':
+                # Where the mail was delivered: To and Cc, and what the mail server noted (a Bcc or an alias).
+                values = [
+                    *mail.to,
+                    *mail.cc,
+                    *(_addresses(mail.headers.get(name, '')) for name in DELIVERED_TO_HEADERS),
+                ]
+                values = [value for value in values if value]
+            case 'subject':
+                values = [mail.subject]
+            case 'body':
+                values = [mail.text]
+            case _:
+                values = [mail.headers.get(self.header.lower(), '')]
+        if self.operator in ('not_contains', 'not_equals'):
+            return all(self._test(value) for value in values)
+        return any(self._test(value) for value in values)
 
     def _test(self, value: str) -> bool:
         text, wanted = value.lower(), self.value.lower()
@@ -61,6 +73,8 @@ class Condition:
                 return wanted not in text
             case 'equals':
                 return text == wanted
+            case 'not_equals':
+                return text != wanted
             case 'starts_with':
                 return text.startswith(wanted)
             case 'ends_with':
@@ -83,6 +97,9 @@ class MailFilter:
     """
     A rule for incoming mail (like OTOBO's postmaster filters): if its conditions match (all, or any), it routes the
     mail to a queue, sets the priority, adds tags or drops it. Filters run in order; `stop` ends the run.
+
+    A filter belongs to one mailbox (`account_id`, the rules of that mailbox) or to all of them (None); the filters for
+    all mailboxes run first. Each scope has its own order.
     """
 
     id: str
@@ -96,6 +113,7 @@ class MailFilter:
     stop: bool
     created_at: datetime
     updated_at: datetime = field(compare=False)
+    account_id: str | None = None
 
     def check(self) -> None:
         self.name = ' '.join(self.name.split())
@@ -122,20 +140,42 @@ class Routing:
     priority: str | None = None
     tags: tuple[str, ...] = ()
     ignore: bool = False
+    matched: tuple[str, ...] = ()
+    """The ids of the filters that matched, in order (to test the filters)."""
+    stopped: bool = False
+    """A matching filter with `stop` ended the run."""
 
 
-def route(filters: list[MailFilter], mail: ParsedEmail) -> Routing:
+def in_order(filters: list[MailFilter], account_id: str | None) -> list[MailFilter]:
+    """The filters that run for mail of this mailbox, in order: those for all mailboxes, then the mailbox's own."""
+    every = sorted((each for each in filters if each.account_id is None), key=lambda item: item.position)
+    own = sorted(
+        (each for each in filters if account_id and each.account_id == account_id), key=lambda item: item.position
+    )
+    return [*every, *own]
+
+
+def route(filters: list[MailFilter], mail: ParsedEmail, account_id: str | None = None) -> Routing:
+    """What the filters decide for mail received by this mailbox (None: no mailbox, only the filters for all)."""
     queue_id: str | None = None
     priority: str | None = None
     tags: list[str] = []
-    for each in sorted(filters, key=lambda item: item.position):
+    matched: list[str] = []
+    for each in in_order(filters, account_id):
         if not each.active or not each.matches(mail):
             continue
+        matched.append(each.id)
         if each.actions.ignore:
-            return Routing(ignore=True)
+            return Routing(ignore=True, matched=tuple(matched), stopped=True)
         queue_id = each.actions.queue_id or queue_id
         priority = each.actions.priority or priority
         tags.extend(each.actions.tags)
         if each.stop:
-            break
-    return Routing(queue_id, priority, tuple(dict.fromkeys(tags)))
+            return Routing(queue_id, priority, tuple(dict.fromkeys(tags)), matched=tuple(matched), stopped=True)
+    return Routing(queue_id, priority, tuple(dict.fromkeys(tags)), matched=tuple(matched))
+
+
+def _addresses(value: str) -> str:
+    """The address of a header like `Delivered-To: <support@example.org>`, lower case."""
+    found = re.search(r'[^\s<>,;"]+@[^\s<>,;"]+', value)
+    return found.group(0).lower() if found else ''

@@ -182,18 +182,27 @@ async def test_replies_go_out_by_email_in_the_thread(app: AppUnderTest) -> None:
     await app.run_jobs()
     assert [mail.text for _, mail in app.mail.sent][-1] == 'Second try'
 
-    # Without an account for the queue (or an address of the customer), replies stay in the ticket.
+    # Without an account for the queue, replies go out by the mailbox the customer wrote to.
     await ada.put(f'{base}/queue-channels/{support}', json={})
     third = await posted(ada, f'{path}/messages', kind='public', body='Third')
     await app.run_jobs()
+    statuses = {each['message_id']: each for each in (await ada.get(f'{path}/deliveries')).json()}
+    assert (statuses[third['id']]['status'], app.mail.sent[-1][0]) == ('sent', SUPPORT)
+    # A ticket that never came in by e-mail has no such mailbox: the reply stays in the ticket.
+    typed = await posted(
+        ada, f'{base}/tickets', queue_id=support, subject='Typed', body='By hand', customer={'email': 'bob@c.example'}
+    )
+    fifth = await posted(ada, f'{base}/tickets/{typed["id"]}/messages', kind='public', body='Fifth')
+    await app.run_jobs()
+    typed_status = (await ada.get(f'{base}/tickets/{typed["id"]}/deliveries')).json()
+    assert [(each['message_id'], each['error']) for each in typed_status] == [(fifth['id'], 'no_account')]
+    # Without an address of the customer, too.
     phone = await posted(
         ada, f'{base}/tickets', queue_id=support, subject='Call', body='Called', customer={'phone': '+49 30 1'}
     )
     await ada.put(f'{base}/queue-channels/{support}', json={'account_id': account['id']})
     fourth = await posted(ada, f'{base}/tickets/{phone["id"]}/messages', kind='public', body='Fourth')
     await app.run_jobs()
-    statuses = {each['message_id']: each for each in (await ada.get(f'{path}/deliveries')).json()}
-    assert (statuses[third['id']]['status'], statuses[third['id']]['error']) == ('skipped', 'no_account')
     phone_status = (await ada.get(f'{base}/tickets/{phone["id"]}/deliveries')).json()
     assert [(each['message_id'], each['error']) for each in phone_status] == [(fourth['id'], 'no_customer_address')]
     assert tenant

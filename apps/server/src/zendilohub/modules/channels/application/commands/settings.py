@@ -1,6 +1,6 @@
 from dataclasses import dataclass, replace
 
-from zendilohub.core.bus.message import Command
+from zendilohub.core.bus.message import Command, Query
 from zendilohub.core.domain.clock import Clock
 from zendilohub.core.domain.id_generator import IdGenerator
 
@@ -12,7 +12,8 @@ from ...domain.exceptions import (
     TemplateInUseError,
     TemplateNotFoundError,
 )
-from ...domain.models.mail_filter import FILTERS_MAX, Condition, FilterActions, MailFilter
+from ...domain.models.email import parse_email
+from ...domain.models.mail_filter import FILTERS_MAX, Condition, FilterActions, MailFilter, in_order, route
 from ...domain.models.templates import PersonalSettings, QueueChannel, TemplateKind, TextTemplate
 from ...domain.ports.repositories import (
     AccountRepository,
@@ -105,8 +106,12 @@ class SetQueueChannelHandler:
         tenant_id = settings.tenant_id
         if await self._names.queue(tenant_id, settings.queue_id) is None:
             raise InvalidQueueSettingsError('queue_id')
-        if settings.account_id and await self._accounts.find(tenant_id, settings.account_id) is None:
+        account = await self._accounts.find(tenant_id, settings.account_id) if settings.account_id else None
+        if settings.account_id and account is None:
             raise AccountNotFoundError()
+        if account is not None and not account.sends:
+            # A mailbox for incoming mail only has no server to send with.
+            raise InvalidQueueSettingsError('account_id')
         for template_id, kind in ((settings.signature_id, 'signature'), (settings.salutation_id, 'salutation')):
             template = await self._templates.find(tenant_id, template_id) if template_id else None
             if template_id and (template is None or template.kind != kind):
@@ -146,6 +151,8 @@ class FilterFields:
     conditions: tuple[Condition, ...]
     actions: FilterActions
     stop: bool
+    account_id: str | None = None
+    """A rule of this mailbox; None: a filter for all mailboxes."""
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -156,8 +163,11 @@ class SaveFilter(Command[MailFilter]):
 
 
 class SaveFilterHandler:
-    def __init__(self, filters: FilterRepository, names: Names, ids: IdGenerator, clock: Clock) -> None:
+    def __init__(
+        self, filters: FilterRepository, accounts: AccountRepository, names: Names, ids: IdGenerator, clock: Clock
+    ) -> None:
         self._filters = filters
+        self._accounts = accounts
         self._names = names
         self._ids = ids
         self._clock = clock
@@ -166,15 +176,20 @@ class SaveFilterHandler:
         fields, now = command.fields, self._clock.now()
         if fields.match not in ('all', 'any'):
             raise InvalidFilterError('match')
+        if fields.account_id and await self._accounts.find(command.tenant_id, fields.account_id) is None:
+            raise InvalidFilterError('account_id')
         existing = list(await self._filters.of_tenant(command.tenant_id))
+        # Each scope (all mailboxes, or one mailbox) has its own order; a filter joins the end of its scope.
+        last = max((each.position for each in existing if each.account_id == fields.account_id), default=0)
         if command.filter_id is None:
             if len(existing) >= FILTERS_MAX:
                 raise InvalidFilterError('limit')
             mail_filter = MailFilter(
                 id=self._ids.new_id(),
                 tenant_id=command.tenant_id,
+                account_id=fields.account_id,
                 name=fields.name,
-                position=max((each.position for each in existing), default=0) + 1,
+                position=last + 1,
                 active=fields.active,
                 match='all' if fields.match == 'all' else 'any',
                 conditions=fields.conditions,
@@ -189,6 +204,8 @@ class SaveFilterHandler:
                 raise FilterNotFoundError()
             mail_filter = replace(
                 found,
+                account_id=fields.account_id,
+                position=found.position if found.account_id == fields.account_id else last + 1,
                 name=fields.name,
                 active=fields.active,
                 match='all' if fields.match == 'all' else 'any',
@@ -225,10 +242,12 @@ class DeleteFilterHandler:
 
 @dataclass(frozen=True, kw_only=True)
 class ReorderFilters(Command[None]):
-    """The filters in this order (ids); filters not named keep their place after them."""
+    """The filters of one scope in this order (ids); filters not named keep their place after them."""
 
     tenant_id: str
     filter_ids: tuple[str, ...]
+    account_id: str | None = None
+    """The rules of this mailbox; None: the filters for all mailboxes."""
 
 
 class ReorderFiltersHandler:
@@ -236,7 +255,10 @@ class ReorderFiltersHandler:
         self._filters = filters
 
     async def handle(self, command: ReorderFilters) -> None:
-        existing = list(await self._filters.of_tenant(command.tenant_id))
+        existing = [
+            each for each in await self._filters.of_tenant(command.tenant_id) if each.account_id == command.account_id
+        ]
+        existing.sort(key=lambda each: each.position)
         known = {each.id: each for each in existing}
         if any(filter_id not in known for filter_id in command.filter_ids):
             raise FilterNotFoundError()
@@ -287,3 +309,58 @@ class ForgetTenantHandler:
 
     async def handle(self, command: ForgetTenant) -> None:
         await self._accounts.forget_tenant(command.tenant_id)
+
+
+@dataclass(frozen=True, kw_only=True)
+class FilterTrace:
+    """Where a test e-mail would go: the filters that matched in order, what they decided, and the queue."""
+
+    matched: tuple[MailFilter, ...]
+    stopped: bool
+    ignore: bool
+    queue_id: str | None
+    """What the filters chose; None: none chose a queue."""
+    priority: str | None
+    tags: tuple[str, ...]
+    default_queue_id: str | None
+    """The mailbox's default queue."""
+    final_queue_id: str | None
+    """Where the e-mail lands (None: dropped, or no mailbox and no filter chose a queue)."""
+    checked: int
+    """How many filters ran for this mailbox."""
+
+
+@dataclass(frozen=True, kw_only=True)
+class TestFilters(Query[FilterTrace]):
+    """Runs the filters for all mailboxes, then the mailbox's rules, on a pasted e-mail; changes nothing."""
+
+    tenant_id: str
+    raw: bytes
+    account_id: str | None = None
+
+
+class TestFiltersHandler:
+    def __init__(self, filters: FilterRepository, accounts: AccountRepository) -> None:
+        self._filters = filters
+        self._accounts = accounts
+
+    async def handle(self, query: TestFilters) -> FilterTrace:
+        account = await self._accounts.find(query.tenant_id, query.account_id) if query.account_id else None
+        if query.account_id and account is None:
+            raise AccountNotFoundError()
+        mail = parse_email(query.raw)
+        filters = list(await self._filters.of_tenant(query.tenant_id))
+        routing = route(filters, mail, query.account_id)
+        by_id = {each.id: each for each in filters}
+        default = account.queue_id if account else None
+        return FilterTrace(
+            matched=tuple(by_id[each] for each in routing.matched),
+            stopped=routing.stopped,
+            ignore=routing.ignore,
+            queue_id=routing.queue_id,
+            priority=routing.priority,
+            tags=routing.tags,
+            default_queue_id=default,
+            final_queue_id=None if routing.ignore else routing.queue_id or default,
+            checked=len([each for each in in_order(filters, query.account_id) if each.active]),
+        )

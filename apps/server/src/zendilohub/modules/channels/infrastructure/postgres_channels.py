@@ -33,7 +33,7 @@ def _account(row: dict[str, Any]) -> EmailAccount:
         display_name=row['display_name'],
         queue_id=str(row['queue_id']),
         imap=_server(row['imap']),
-        smtp=_server(row['smtp']),
+        smtp=_server(row['smtp']) if row['smtp'] else None,
         folder=row['folder'],
         active=row['active'],
         created_at=row['created_at'],
@@ -100,6 +100,7 @@ def _filter(row: dict[str, Any]) -> MailFilter:
         stop=row['stop'],
         created_at=row['created_at'],
         updated_at=row['updated_at'],
+        account_id=_id(row['account_id']),
     )
 
 
@@ -146,7 +147,10 @@ class PostgresAccountRepository(_Sql):
         return row is not None
 
     async def save(self, account: EmailAccount) -> None:
-        values = vars(account) | {'imap': Jsonb(vars(account.imap)), 'smtp': Jsonb(vars(account.smtp))}
+        values = vars(account) | {
+            'imap': Jsonb(vars(account.imap)),
+            'smtp': Jsonb(vars(account.smtp)) if account.smtp else None,
+        }
         await self.run(
             """
             INSERT INTO email_accounts (id, tenant_id, name, address, display_name, queue_id, imap, smtp, folder, active,
@@ -220,6 +224,7 @@ class PostgresAccountRepository(_Sql):
             'queue_channels',
             'channel_templates',
             'email_connect_requests',
+            'ticket_mailboxes',
             'email_accounts',
         ):
             await self.run(f'DELETE FROM {table} WHERE tenant_id = %s', (tenant_id,))
@@ -354,10 +359,10 @@ class PostgresFilterRepository(_Sql):
         }
         await self.run(
             """
-            INSERT INTO mail_filters (id, tenant_id, name, position, active, match, conditions, actions, stop,
-                                      created_at, updated_at)
-            VALUES (%(id)s, %(tenant_id)s, %(name)s, %(position)s, %(active)s, %(match)s, %(conditions)s, %(actions)s,
-                    %(stop)s, %(created_at)s, %(updated_at)s)
+            INSERT INTO mail_filters (id, tenant_id, account_id, name, position, active, match, conditions, actions,
+                                      stop, created_at, updated_at)
+            VALUES (%(id)s, %(tenant_id)s, %(account_id)s, %(name)s, %(position)s, %(active)s, %(match)s,
+                    %(conditions)s, %(actions)s, %(stop)s, %(created_at)s, %(updated_at)s)
             ON CONFLICT (id) DO UPDATE SET
                 name = EXCLUDED.name,
                 position = EXCLUDED.position,
@@ -373,6 +378,23 @@ class PostgresFilterRepository(_Sql):
 
     async def delete(self, tenant_id: str, filter_id: str) -> None:
         await self.run('DELETE FROM mail_filters WHERE tenant_id = %s AND id = %s', (tenant_id, filter_id))
+
+
+class PostgresTicketMailboxRepository(_Sql):
+    async def remember(self, tenant_id: str, ticket_id: str, account_id: str, now: datetime) -> None:
+        await self.run(
+            """
+            INSERT INTO ticket_mailboxes (ticket_id, tenant_id, account_id, updated_at) VALUES (%s, %s, %s, %s)
+            ON CONFLICT (ticket_id) DO UPDATE SET account_id = EXCLUDED.account_id, updated_at = EXCLUDED.updated_at
+            """,
+            (ticket_id, tenant_id, account_id, now),
+        )
+
+    async def of_ticket(self, tenant_id: str, ticket_id: str) -> str | None:
+        row = await self.one(
+            'SELECT account_id FROM ticket_mailboxes WHERE tenant_id = %s AND ticket_id = %s', (tenant_id, ticket_id)
+        )
+        return str(row['account_id']) if row else None
 
 
 class PostgresFailedEmailRepository(_Sql):

@@ -11,7 +11,10 @@ import { Switch } from '@/core/ui/switch'
 import type { Queue } from '@/modules/access/api'
 import { SECURITIES, type AccountRequest, type EmailAccount, type Security } from '../api'
 
-/** Sets up a mailbox: address, queue, IMAP to fetch and SMTP to send. Passwords are only sent when typed. */
+/**
+ * Sets up a mailbox: address, IMAP to fetch, SMTP to send (or incoming mail only), and its default queue. Passwords are
+ * only sent when typed.
+ */
 const props = defineProps<{
   title: string
   initial: EmailAccount | null
@@ -38,6 +41,8 @@ const form = ref({
 })
 const imap = ref<ServerForm>({ host: '', port: '993', security: 'ssl', username: '', password: '' })
 const smtp = ref<ServerForm>({ host: '', port: '587', security: 'starttls', username: '', password: '' })
+/** Replies can go out by it (SMTP); off: a mailbox for incoming mail only. */
+const sends = ref(true)
 const error = ref<string | null>(null)
 const busy = ref(false)
 
@@ -57,9 +62,10 @@ watch(open, (opened) => {
   imap.value = account
     ? { ...account.imap, port: String(account.imap.port), password: '' }
     : { host: '', port: '993', security: 'ssl', username: '', password: '' }
-  smtp.value = account
+  smtp.value = account?.smtp
     ? { ...account.smtp, port: String(account.smtp.port), password: '' }
-    : { host: '', port: '587', security: 'starttls', username: '', password: '' }
+    : { host: '', port: '587', security: 'starttls', username: account?.address ?? '', password: '' }
+  sends.value = account ? account.smtp !== null : true
   error.value = null
 })
 
@@ -100,7 +106,7 @@ async function submit(): Promise<void> {
   busy.value = true
   error.value = null
   try {
-    await props.save({ ...form.value, imap: server(imap.value), smtp: server(smtp.value) })
+    await props.save({ ...form.value, imap: server(imap.value), smtp: sends.value ? server(smtp.value) : null })
     open.value = false
   } catch (caught) {
     error.value = errorText(caught)
@@ -145,22 +151,20 @@ async function submit(): Promise<void> {
               :placeholder="$t('channels.accounts.displayNamePlaceholder')"
             />
           </div>
-          <div class="grid gap-2">
-            <Label for="account-queue">{{ $t('channels.accounts.queue') }}</Label>
-            <NativeSelect
-              id="account-queue"
-              v-model="form.queue_id"
-              :options="queues.map((queue) => ({ value: queue.id, label: queue.name }))"
-            />
-          </div>
         </div>
+        <label v-if="!initial?.provider" class="flex items-center gap-3 text-sm">
+          <Switch v-model="sends" data-test="account-sends" />
+          {{ $t('channels.accounts.sends') }}
+        </label>
         <fieldset
           v-for="[kind, values] in initial?.provider
             ? []
-            : ([
-                ['imap', imap],
-                ['smtp', smtp],
-              ] as const)"
+            : sends
+              ? ([
+                  ['imap', imap],
+                  ['smtp', smtp],
+                ] as const)
+              : ([['imap', imap]] as const)"
           :key="kind"
           class="grid gap-3 rounded-md border p-3"
         >
@@ -191,7 +195,7 @@ async function submit(): Promise<void> {
                 v-model="values.password"
                 type="password"
                 autocomplete="new-password"
-                :placeholder="initial?.[kind].has_password ? $t('channels.accounts.keepPassword') : ''"
+                :placeholder="initial?.[kind]?.has_password ? $t('channels.accounts.keepPassword') : ''"
               />
             </div>
           </div>
@@ -205,6 +209,15 @@ async function submit(): Promise<void> {
             <Switch v-model="form.active" data-test="account-active" />
             {{ $t('channels.accounts.active') }}
           </label>
+        </div>
+        <div class="grid gap-2 rounded-md border p-3">
+          <Label for="account-queue">{{ $t('channels.accounts.queue') }}</Label>
+          <NativeSelect
+            id="account-queue"
+            v-model="form.queue_id"
+            :options="queues.map((queue) => ({ value: queue.id, label: queue.name }))"
+          />
+          <p class="text-xs text-muted-foreground">{{ $t('channels.accounts.queueHint') }}</p>
         </div>
         <DialogFooter>
           <Button type="submit" :disabled="busy || !form.address.trim() || !form.queue_id" data-test="save-account">

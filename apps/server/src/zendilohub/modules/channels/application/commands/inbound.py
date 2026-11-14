@@ -15,7 +15,13 @@ from ...domain.models.account import EmailAccount
 from ...domain.models.email import ParsedEmail, parse_email
 from ...domain.models.mail_filter import route
 from ...domain.models.records import FailedEmail
-from ...domain.ports.repositories import AccountRepository, FailedEmailRepository, FilterRepository
+from ...domain.ports.repositories import (
+    AccountRepository,
+    FailedEmailRepository,
+    FilterRepository,
+    QueueChannelRepository,
+    TicketMailboxRepository,
+)
 from ...domain.ports.services import HtmlCleaner, Mailbox, MailboxError, Outbox, OutgoingMail, Tickets
 from ..services.writer import Context, Writer
 from .accounts import Vault
@@ -105,6 +111,8 @@ class ProcessEmailHandler:
         accounts: AccountRepository,
         filters: FilterRepository,
         failed: FailedEmailRepository,
+        mailboxes: TicketMailboxRepository,
+        queues: QueueChannelRepository,
         tickets: Tickets,
         cleaner: HtmlCleaner,
         auto: AutoReplier,
@@ -116,6 +124,8 @@ class ProcessEmailHandler:
         self._accounts = accounts
         self._filters = filters
         self._failed = failed
+        self._mailboxes = mailboxes
+        self._queues = queues
         self._tickets = tickets
         self._cleaner = cleaner
         self._auto = auto
@@ -151,7 +161,7 @@ class ProcessEmailHandler:
             return 'own'
         if mail.message_id and await self._tickets.thread(command.tenant_id, [mail.message_id], None):
             return 'duplicate'
-        routing = route(list(await self._filters.of_tenant(command.tenant_id)), mail)
+        routing = route(list(await self._filters.of_tenant(command.tenant_id)), mail, command.account_id)
         if routing.ignore:
             return 'ignored'
         ticket_id = await self._tickets.thread(command.tenant_id, mail.thread_ids, mail.ticket_number)
@@ -188,9 +198,25 @@ class ProcessEmailHandler:
                 ),
             )
         )
-        if received.created and account is not None:
-            await self._auto.answer(account, queue_id, mail, received.number)
+        if account is not None:
+            # Replies of a queue without its own sending account go out by the mailbox the customer wrote to.
+            await self._mailboxes.remember(command.tenant_id, received.ticket_id, account.id, self._clock.now())
+        replier = await self._replier(account, queue_id) if received.created else None
+        if replier is not None:
+            await self._auto.answer(replier, queue_id, mail, received.number)
         return 'created' if received.created else 'appended'
+
+    async def _replier(self, account: EmailAccount | None, queue_id: str) -> EmailAccount | None:
+        """Who acknowledges a new ticket: the receiving mailbox, or (for incoming mail only) the queue's account."""
+        if account is None or account.sends:
+            return account
+        settings = await self._queues.find(account.tenant_id, queue_id)
+        other = (
+            await self._accounts.find(account.tenant_id, settings.account_id)
+            if settings and settings.account_id
+            else None
+        )
+        return other if other is not None and other.sends else None
 
 
 class AutoReplier:
