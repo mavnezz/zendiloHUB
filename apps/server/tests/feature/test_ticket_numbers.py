@@ -82,6 +82,19 @@ async def test_parallel_tickets_never_share_a_number(app: AppUnderTest) -> None:
     assert sorted(each['number'] for each in created) == list(range(1001, 1013))
 
 
+async def test_parallel_tickets_of_one_new_customer_share_the_contact(app: AppUnderTest) -> None:
+    ada = await logged_in(app, 'ada@example.org')
+    tenant = await create_tenant(ada)
+    support = await queue(ada, tenant)
+
+    created = await asyncio.gather(
+        *(ticket(ada, tenant, support, customer={'email': 'new@customer.example', 'name': 'N'}) for _ in range(6))
+    )
+
+    assert len({each['number'] for each in created}) == 6
+    assert len({each['customer']['id'] for each in created}) == 1
+
+
 async def test_mails_carry_the_prefix_and_answers_find_the_ticket_by_old_and_new_tags(app: AppUnderTest) -> None:
     ada, _tenant, base, support, account = await mail_desk(app)
     await ada.put(

@@ -177,4 +177,11 @@ class IdentifyContactHandler:
         if phone is not None and (found := await self._contacts.find_by_phone(command.tenant_id, phone)):
             return found
         fields = ContactFields(name=command.name, email=email, phone=phone)
-        return await self._create.handle(CreateContact(tenant_id=command.tenant_id, fields=fields))
+        try:
+            return await self._create.handle(CreateContact(tenant_id=command.tenant_id, fields=fields))
+        except ContactEmailTakenError:
+            # Made at the same moment by another request (two mails of a new customer): that one is theirs.
+            found = await self._contacts.find_by_email(command.tenant_id, email) if email is not None else None
+            if found is None:
+                raise
+            return found

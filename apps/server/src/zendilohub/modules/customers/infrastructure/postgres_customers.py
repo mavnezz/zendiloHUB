@@ -1,8 +1,11 @@
 from collections.abc import Sequence
 from typing import Any
 
+from psycopg import errors
+
 from zendilohub.core.database.database import Database
 
+from ..domain.exceptions import ContactEmailTakenError
 from ..domain.models.company import Company
 from ..domain.models.contact import Contact
 from ..domain.ports.repositories import CompanyPage, ContactPage
@@ -93,6 +96,14 @@ class PostgresContactRepository(_Rows):
         return ContactPage([_contact(row) for row in rows], int(total['n']) if total else 0)
 
     async def save(self, contact: Contact) -> None:
+        try:
+            # A savepoint: a clash with a contact made at the same moment must not break the caller's transaction.
+            async with self._db.transaction():
+                await self._upsert(contact)
+        except errors.UniqueViolation as error:
+            raise ContactEmailTakenError() from error
+
+    async def _upsert(self, contact: Contact) -> None:
         await self.run(
             """
             INSERT INTO contacts (id, tenant_id, name, email, phone, company_id, notes, created_at, updated_at)
