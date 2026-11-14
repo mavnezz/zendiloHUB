@@ -1,6 +1,6 @@
 import re
 from collections.abc import Sequence
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, cast
 
 from psycopg.types.json import Jsonb
@@ -13,13 +13,14 @@ from ..domain.models.custom_field import ChecklistItem, CustomField, FieldKind
 from ..domain.models.history import HistoryAction, HistoryEntry
 from ..domain.models.link import OPPOSITE, Link, LinkKind
 from ..domain.models.message import AuthorKind, Direction, Message, MessageKind
+from ..domain.models.numbering import Counter, NumberFormat, Numbering
 from ..domain.models.ticket import OPEN_STATES, PENDING_STATES, Channel, Priority, Ticket, TicketState
 from ..domain.models.time_entry import TimeEntry
 from ..domain.models.views import TicketFilter, TicketView
 from ..domain.ports.repositories import TicketPage
 
 _NUMBER = re.compile(r'^#?(\d{1,15})$')
-FIRST_NUMBER = 1001
+NUMBER_TRIES = 1000
 
 _SORTS = {
     'updated': 't.updated_at',
@@ -159,17 +160,41 @@ def _where(criteria: TicketFilter, view: TicketView) -> tuple[str, dict[str, Any
 
 
 class PostgresTicketRepository(_Sql):
-    async def next_number(self, tenant_id: str) -> int:
+    async def next_number(self, tenant_id: str, numbering: Numbering, today: date) -> int:
+        async with self._db.transaction():
+            # The row lock makes parallel tickets of the organization wait for each other until the commit.
+            await self.run(
+                'INSERT INTO ticket_counters (tenant_id, last_number) VALUES (%s, 0) ON CONFLICT DO NOTHING',
+                (tenant_id,),
+            )
+            counter = await self._counter(tenant_id, lock=True)
+            for _ in range(NUMBER_TRIES):
+                number, counter = numbering.issue(counter, today)
+                # A changed format or check digit may meet a number handed out before; then the next one.
+                taken = await self.one(
+                    'SELECT 1 AS taken FROM tickets WHERE tenant_id = %s AND number = %s', (tenant_id, number)
+                )
+                if taken is None:
+                    break
+            else:
+                raise RuntimeError('No free ticket number found')
+            await self.run(
+                'UPDATE ticket_counters SET last_number = %s, day = %s, day_count = %s WHERE tenant_id = %s',
+                (counter.last, counter.day, counter.day_count, tenant_id),
+            )
+            return number
+
+    async def counter(self, tenant_id: str) -> Counter:
+        return await self._counter(tenant_id, lock=False)
+
+    async def _counter(self, tenant_id: str, *, lock: bool) -> Counter:
         row = await self.one(
-            """
-            INSERT INTO ticket_counters (tenant_id, last_number) VALUES (%s, %s)
-            ON CONFLICT (tenant_id) DO UPDATE SET last_number = ticket_counters.last_number + 1
-            RETURNING last_number
-            """,
-            (tenant_id, FIRST_NUMBER),
+            f'SELECT last_number, day, day_count FROM ticket_counters WHERE tenant_id = %s{" FOR UPDATE" if lock else ""}',
+            (tenant_id,),
         )
-        assert row is not None
-        return int(row['last_number'])
+        if row is None:
+            return Counter()
+        return Counter(last=int(row['last_number']), day=row['day'], day_count=int(row['day_count']))
 
     async def find(self, tenant_id: str, ticket_id: str) -> Ticket | None:
         row = await self.one('SELECT * FROM tickets WHERE tenant_id = %s AND id = %s', (tenant_id, ticket_id))
@@ -348,6 +373,7 @@ class PostgresTicketRepository(_Sql):
     async def forget_tenant(self, tenant_id: str) -> None:
         await self.run('DELETE FROM tickets WHERE tenant_id = %s', (tenant_id,))
         await self.run('DELETE FROM ticket_counters WHERE tenant_id = %s', (tenant_id,))
+        await self.run('DELETE FROM ticket_numberings WHERE tenant_id = %s', (tenant_id,))
 
 
 def _attachment(row: dict[str, Any]) -> Attachment:
@@ -725,3 +751,35 @@ class PostgresAttachmentRepository(_Sql):
             ([tenant for tenant, _ in keys], [file for _, file in keys]),
         )
         return {(str(row['tenant_id']), str(row['id'])) for row in rows}
+
+
+class PostgresNumberingRepository(_Sql):
+    async def find(self, tenant_id: str) -> Numbering:
+        row = await self.one('SELECT * FROM ticket_numberings WHERE tenant_id = %s', (tenant_id,))
+        if row is None:
+            return Numbering(tenant_id=tenant_id)
+        return Numbering(
+            tenant_id=tenant_id,
+            format=cast(NumberFormat, row['format']),
+            start=int(row['start']),
+            date_digits=int(row['date_digits']),
+            checksum=bool(row['checksum']),
+            prefix=row['prefix'],
+            updated_at=row['updated_at'],
+        )
+
+    async def save(self, numbering: Numbering) -> None:
+        await self.run(
+            """
+            INSERT INTO ticket_numberings (tenant_id, format, start, date_digits, checksum, prefix, updated_at)
+            VALUES (%(tenant_id)s, %(format)s, %(start)s, %(date_digits)s, %(checksum)s, %(prefix)s, %(updated_at)s)
+            ON CONFLICT (tenant_id) DO UPDATE SET
+                format = EXCLUDED.format,
+                start = EXCLUDED.start,
+                date_digits = EXCLUDED.date_digits,
+                checksum = EXCLUDED.checksum,
+                prefix = EXCLUDED.prefix,
+                updated_at = EXCLUDED.updated_at
+            """,
+            vars(numbering),
+        )

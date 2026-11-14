@@ -155,7 +155,7 @@ class PortalOpenHandler:
             ticket = Ticket.open(
                 id=desk.ids.new_id(),
                 tenant_id=command.tenant_id,
-                number=await desk.tickets.next_number(command.tenant_id),
+                number=await desk.next_number(command.tenant_id),
                 subject=command.subject,
                 queue_id=command.queue_id,
                 channel='web',

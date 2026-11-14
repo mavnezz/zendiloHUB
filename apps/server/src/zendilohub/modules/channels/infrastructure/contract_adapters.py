@@ -24,6 +24,9 @@ class ContractTickets:
             tenant_id, message_id, email_message_id=email_message_id, from_address=from_address, to=to
         )
 
+    async def subject_prefix(self, tenant_id: str) -> str:
+        return await self._contracts.ticket_inbox.get().subject_prefix(tenant_id)
+
 
 class ContractNames:
     """`Names` through tenancy's and access's contracts."""

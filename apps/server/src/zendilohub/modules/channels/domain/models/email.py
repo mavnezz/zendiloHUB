@@ -7,7 +7,16 @@ from email.message import EmailMessage
 from email.utils import getaddresses, parseaddr
 from html.parser import HTMLParser
 
+DEFAULT_PREFIX = '#'
 _NUMBER = re.compile(r'\[#(\d{1,15})\]')
+
+
+def _tags(prefixes: tuple[str, ...]) -> re.Pattern[str]:
+    """`[<prefix><number>]` for any of the prefixes (the organization's and the default `#` of older mails)."""
+    known = sorted({DEFAULT_PREFIX, *(each for each in prefixes if each)}, key=len, reverse=True)
+    return re.compile(rf'\[(?:{"|".join(re.escape(each) for each in known)})(\d{{1,15}})\]')
+
+
 _MESSAGE_ID = re.compile(r'<[^<>\s]+>')
 
 
@@ -45,7 +54,11 @@ class ParsedEmail:
 
     @property
     def ticket_number(self) -> int | None:
-        found = _NUMBER.findall(self.subject)
+        return self.number_tagged(DEFAULT_PREFIX)
+
+    def number_tagged(self, prefix: str) -> int | None:
+        """The last `[<prefix>1001]` (or `[#1001]`) in the subject."""
+        found = (_NUMBER if prefix == DEFAULT_PREFIX else _tags((prefix,))).findall(self.subject)
         return int(found[-1]) if found else None
 
 
@@ -187,8 +200,12 @@ def html_to_text(html: str) -> str:
     return re.sub(r'\n{3,}', '\n\n', '\n'.join(lines)).strip()
 
 
-def reply_subject(subject: str, number: int) -> str:
+def reply_subject(subject: str, number: int, prefix: str = DEFAULT_PREFIX) -> str:
     """`Re: Printer broken [#1001]`: the number lets answers find the ticket even without their headers."""
-    base = _NUMBER.sub('', subject).strip()
+    base = _tags((prefix,)).sub('', subject).strip()
     base = re.sub(r'^((re|aw|fw|fwd|wg)\s*:\s*)+', '', base, flags=re.IGNORECASE).strip()
-    return f'Re: {base} [#{number}]'
+    return f'Re: {base} {tagged(number, prefix)}'
+
+
+def tagged(number: int, prefix: str = DEFAULT_PREFIX) -> str:
+    return f'[{prefix}{number}]'

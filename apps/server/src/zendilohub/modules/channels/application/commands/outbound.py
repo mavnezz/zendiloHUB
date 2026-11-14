@@ -116,7 +116,9 @@ class SendReplyHandler:
                 OutgoingMail(
                     sender=account.sender,
                     to=(reply.customer_email,),
-                    subject=reply_subject(reply.subject, reply.number),
+                    subject=reply_subject(
+                        reply.subject, reply.number, await self._tickets.subject_prefix(command.tenant_id)
+                    ),
                     text=reply.body,
                     message_id=message_id,
                     in_reply_to=reply.references[-1] if reply.references else None,

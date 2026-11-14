@@ -59,6 +59,7 @@ export const en = {
     aiAssistants: 'AI assistants',
     webhooks: 'Webhooks',
     customerPortal: 'Customer portal',
+    ticketNumbers: 'Ticket numbers',
     mySignature: 'My signature',
     emailAccounts: 'E-mail accounts',
     queueEmail: 'E-mail per queue',
@@ -325,6 +326,7 @@ export const en = {
       article: { created: 'Wrote an article', updated: 'Changed an article', deleted: 'Deleted an article' },
       mcp_connection: { created: 'Connected an AI assistant', deleted: 'Disconnected an AI assistant' },
       portal: { changed: 'Changed the customer portal' },
+      ticket_numbers: { changed: 'Changed the ticket numbers' },
       macro: { created: 'Created a macro', updated: 'Changed a macro', deleted: 'Deleted a macro' },
       trigger: { created: 'Created a trigger', updated: 'Changed a trigger', deleted: 'Deleted a trigger' },
       schedule: {
@@ -824,6 +826,24 @@ export const en = {
     neverUsed: 'not used yet',
     disconnect: 'Disconnect',
     disconnected: 'Disconnected: the token no longer works.',
+  },
+  ticketNumbers: {
+    title: 'Ticket numbers',
+    description: 'How new tickets are numbered and how the number stands in e-mail subjects.',
+    format: 'Format',
+    increment: 'Counting up',
+    incrementHint: '1001, 1002, 1003, …',
+    date: 'Date and counter',
+    dateHint: 'The day and its counter, e.g. 202611140001; starts again every day.',
+    start: 'Start number',
+    startHint: 'Numbers only grow: the start has to lie above the last number.',
+    dateDigits: 'Digits of the day counter',
+    checksum: 'Append a check digit',
+    checksumHint: 'A mistyped number in a subject then finds no wrong ticket.',
+    prefix: 'Prefix in e-mail subjects',
+    prefixHint: 'Up to 16 letters, digits, #, -, _ or :. Answers with the old tag [#…] are still recognized.',
+    next: 'Next ticket',
+    saved: 'The ticket numbers are saved.',
   },
   portal: {
     attach: 'Attach files (up to {count})',
@@ -1439,6 +1459,7 @@ export const en = {
     portal_login_required: 'Please sign in again.',
     portal_link_invalid: 'This link is invalid or has expired. Ask for a new one.',
     invalid_portal: 'Please check your request ({field}).',
+    invalid_numbering: 'Please check the ticket numbers ({field}).',
     assistant_off: 'The AI assistant is not set up on this server.',
     assistant_busy: 'The AI assistant was asked too often. Try again later.',
     assistant_failed: 'The AI assistant could not answer ({reason}).',
@@ -1547,6 +1568,10 @@ export const en = {
   },
   /** Errors worded for the field they name (`params.field`); others use `errors`. */
   fieldErrors: {
+    invalid_numbering: {
+      start: 'The start has to lie above the last number: {minimum} or more.',
+      prefix: 'The prefix may have up to 16 letters, digits, #, -, _ or :.',
+    },
     invalid_portal: {
       files: 'You can send at most five files at once.',
       body: 'Please write a message or attach a file (at most 50,000 characters).',

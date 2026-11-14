@@ -18,6 +18,8 @@ export type TicketState = Ticket['state']
 export type SettableState = NonNullable<TicketChanges['state']>
 export type Priority = Ticket['priority']
 export type LinkKind = Schemas['LinkRequest']['kind']
+export type TicketNumbering = Schemas['TicketNumberingBody']
+export type TicketNumberingView = Schemas['TicketNumberingResponse']
 export type FirstMessage = NonNullable<CreateTicketRequest['first']>
 export type TicketView = 'mine' | 'unassigned' | 'due' | 'escalated' | 'open' | 'watching' | 'closed' | 'all'
 export type TicketSort = 'updated' | 'created' | 'priority' | 'number' | 'pending'
@@ -63,6 +65,9 @@ const one = (tenantId: string, id: string) => `${base(tenantId)}/tickets/${id}`
 
 /** Tickets: what the caller may do with each is in its `rights` (their groups' rights in its queue). */
 export const ticketsApi = {
+  numbering: (tenantId: string) => http.get<TicketNumberingView>(`${base(tenantId)}/ticket-numbers`),
+  saveNumbering: (tenantId: string, body: TicketNumbering) =>
+    http.put<TicketNumberingView>(`${base(tenantId)}/ticket-numbers`, body),
   list: (tenantId: string, query: TicketQuery = {}) => http.get<TicketPage>(`${base(tenantId)}/tickets`, { ...query }),
   counts: (tenantId: string) => http.get<TicketCounts>(`${base(tenantId)}/tickets/counts`),
   create: (tenantId: string, body: CreateTicketRequest) => http.post<TicketDetail>(`${base(tenantId)}/tickets`, body),

@@ -69,3 +69,9 @@ class FileStore(Protocol):
     def stored(self, older_than: datetime) -> Iterable[tuple[str, str]]:
         """(tenant, file) of the files last written before `older_than`."""
         ...
+
+
+class OrganizationTime(Protocol):
+    """The organization's time zone (tenancy knows it): date numbers start a new day at its midnight."""
+
+    async def timezone_of(self, tenant_id: str) -> str | None: ...

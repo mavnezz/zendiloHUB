@@ -2018,6 +2018,30 @@ export interface paths {
     patch: operations['update_field_api_v1_tenants__tenant_id__ticket_fields__field_id__patch']
     trace?: never
   }
+  '/api/v1/tenants/{tenant_id}/ticket-numbers': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Show
+     * @description How the organization numbers its tickets, with the next number.
+     */
+    get: operations['show_api_v1_tenants__tenant_id__ticket_numbers_get']
+    /**
+     * Save
+     * @description Numbers already handed out stay; a new start must lie above the last number.
+     */
+    put: operations['save_api_v1_tenants__tenant_id__ticket_numbers_put']
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/v1/tenants/{tenant_id}/tickets': {
     parameters: {
       query?: never
@@ -4450,6 +4474,68 @@ export interface components {
       watchers: string[]
       /** Watching */
       watching: boolean
+    }
+    /** TicketNumberingBody */
+    TicketNumberingBody: {
+      /**
+       * Checksum
+       * @default false
+       */
+      checksum: boolean
+      /**
+       * Date Digits
+       * @default 4
+       */
+      date_digits: number
+      /**
+       * Format
+       * @default increment
+       * @enum {string}
+       */
+      format: 'increment' | 'date'
+      /**
+       * Prefix
+       * @default #
+       */
+      prefix: string
+      /**
+       * Start
+       * @default 1001
+       */
+      start: number
+    }
+    /** TicketNumberingResponse */
+    TicketNumberingResponse: {
+      /**
+       * Checksum
+       * @default false
+       */
+      checksum: boolean
+      /**
+       * Date Digits
+       * @default 4
+       */
+      date_digits: number
+      /**
+       * Format
+       * @default increment
+       * @enum {string}
+       */
+      format: 'increment' | 'date'
+      /** Next Number */
+      next_number: number
+      /** Next Tag */
+      next_tag: string
+      /**
+       * Prefix
+       * @default #
+       */
+      prefix: string
+      /**
+       * Start
+       * @default 1001
+       */
+      start: number
     }
     /** TicketPageResponse */
     TicketPageResponse: {
@@ -9601,6 +9687,72 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['FieldResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  show_api_v1_tenants__tenant_id__ticket_numbers_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['TicketNumberingResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  save_api_v1_tenants__tenant_id__ticket_numbers_put: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['TicketNumberingBody']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['TicketNumberingResponse']
         }
       }
       /** @description Validation Error */

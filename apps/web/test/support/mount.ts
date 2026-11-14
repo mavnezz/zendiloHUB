@@ -69,6 +69,7 @@ export function testRouter(): Router {
         'aiAssistants',
         'webhooks',
         'customerPortal',
+        'ticketNumbers',
       ].map((name) => ({
         path: `/t/:tenantId/${name}`,
         name,

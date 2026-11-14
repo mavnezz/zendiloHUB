@@ -198,7 +198,7 @@ class SplitTicketHandler:
             ticket = Ticket.open(
                 id=desk.ids.new_id(),
                 tenant_id=source.tenant_id,
-                number=await desk.tickets.next_number(source.tenant_id),
+                number=await desk.next_number(source.tenant_id),
                 subject=command.subject or source.subject,
                 queue_id=source.queue_id,
                 channel=source.channel,

@@ -28,3 +28,7 @@ class TenantNames:
     async def name_of(self, tenant_id: str) -> str | None:
         tenant = await self._tenants.find(tenant_id)
         return tenant.name if tenant else None
+
+    async def timezone_of(self, tenant_id: str) -> str | None:
+        tenant = await self._tenants.find(tenant_id)
+        return tenant.timezone if tenant else None

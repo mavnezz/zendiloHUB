@@ -12,7 +12,7 @@ from zendilohub.core.domain.rate_limiter import RateLimit, RateLimiter
 
 from ...domain.exceptions import AccountNotFoundError, FailedEmailNotFoundError
 from ...domain.models.account import EmailAccount
-from ...domain.models.email import ParsedEmail, parse_email
+from ...domain.models.email import DEFAULT_PREFIX, ParsedEmail, parse_email, tagged
 from ...domain.models.mail_filter import route
 from ...domain.models.records import FailedEmail
 from ...domain.ports.repositories import (
@@ -164,7 +164,8 @@ class ProcessEmailHandler:
         routing = route(list(await self._filters.of_tenant(command.tenant_id)), mail, command.account_id)
         if routing.ignore:
             return 'ignored'
-        ticket_id = await self._tickets.thread(command.tenant_id, mail.thread_ids, mail.ticket_number)
+        prefix = await self._tickets.subject_prefix(command.tenant_id)
+        ticket_id = await self._tickets.thread(command.tenant_id, mail.thread_ids, mail.number_tagged(prefix))
         queue_id = routing.queue_id or (account.queue_id if account else None)
         if queue_id is None:
             raise ValueError('No queue for the e-mail')
@@ -203,7 +204,7 @@ class ProcessEmailHandler:
             await self._mailboxes.remember(command.tenant_id, received.ticket_id, account.id, self._clock.now())
         replier = await self._replier(account, queue_id) if received.created else None
         if replier is not None:
-            await self._auto.answer(replier, queue_id, mail, received.number)
+            await self._auto.answer(replier, queue_id, mail, received.number, prefix)
         return 'created' if received.created else 'appended'
 
     async def _replier(self, account: EmailAccount | None, queue_id: str) -> EmailAccount | None:
@@ -229,7 +230,9 @@ class AutoReplier:
         self._limiter = limiter
         self._ids = ids
 
-    async def answer(self, account: EmailAccount, queue_id: str, mail: ParsedEmail, number: int) -> None:
+    async def answer(
+        self, account: EmailAccount, queue_id: str, mail: ParsedEmail, number: int, prefix: str = DEFAULT_PREFIX
+    ) -> None:
         if mail.automatic:
             return
         text = await self._writer.auto_reply(
@@ -255,7 +258,7 @@ class AutoReplier:
                 OutgoingMail(
                     sender=account.sender,
                     to=(mail.from_address,),
-                    subject=f'{subject} [#{number}]' if f'[#{number}]' not in subject else subject,
+                    subject=f'{subject} {tagged(number, prefix)}' if tagged(number, prefix) not in subject else subject,
                     text=body,
                     message_id=f'<{self._ids.new_id()}@{account.address.split("@")[1]}>',
                     in_reply_to=mail.message_id,
