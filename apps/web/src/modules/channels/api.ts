@@ -6,6 +6,8 @@ export type AccountRequest = Schemas['AccountRequest']
 export type ServerRequest = Schemas['ServerRequest']
 export type Security = ServerRequest['security']
 export type Probe = Schemas['ProbeResponse']
+export type MailProvider = Schemas['ConnectStartRequest']['provider']
+export type ConnectStart = Schemas['ConnectStartRequest']
 export type TextTemplate = Schemas['TemplateResponse']
 export type TemplateKind = TextTemplate['kind']
 export type Templates = Schemas['TemplatesResponse']
@@ -43,6 +45,11 @@ export const channelsApi = {
   deleteAccount: (tenantId: string, id: string) => http.delete<void>(`${base(tenantId)}/email-accounts/${id}`),
   testAccount: (tenantId: string, id: string) => http.post<Probe>(`${base(tenantId)}/email-accounts/${id}/test`),
   fetchNow: (tenantId: string, id: string) => http.post<void>(`${base(tenantId)}/email-accounts/${id}/fetch`),
+  mailProviders: (tenantId: string) =>
+    http.get<Schemas['MailProvidersResponse']>(`${base(tenantId)}/email-accounts/oauth-providers`),
+  /** The provider's sign-in page; it sends the browser back to the e-mail account settings afterwards. */
+  startConnect: (tenantId: string, body: ConnectStart) =>
+    http.post<Schemas['ConnectStartResponse']>(`${base(tenantId)}/email-accounts/oauth`, body),
 
   templates: (tenantId: string) => http.get<Templates>(`${base(tenantId)}/text-templates`),
   createTemplate: (tenantId: string, body: Schemas['TemplateRequest']) =>

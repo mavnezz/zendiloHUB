@@ -1,15 +1,20 @@
+import re
 from typing import Annotated
+from urllib.parse import urlencode
 
 from fastapi import APIRouter, Query, Request, Response
+from fastapi.responses import RedirectResponse
 
 from zendilohub.core.bus.command_bus import CommandBus
+from zendilohub.core.config import AppConfig
 from zendilohub.core.domain.jobs import JobQueue
-from zendilohub.core.http.access import CurrentMember, CurrentPerson, Member, member_with
+from zendilohub.core.http.access import CurrentMember, CurrentPerson, Member, OptionalUser, Public, member_with
 from zendilohub.core.http.audit import Unaudited, audited, note_audit
 from zendilohub.core.http.ids import Id
 
 from ...application.commands.accounts import CreateAccount, DeleteAccount, TestAccount, UpdateAccount
 from ...application.commands.inbound import FETCH_TASK, DeleteFailedEmail, RetryFailedEmail
+from ...application.commands.oauth import FinishConnect, MailProviders, StartConnect
 from ...application.commands.outbound import ResendReply
 from ...application.commands.settings import (
     DeleteFilter,
@@ -32,18 +37,22 @@ from ...application.queries.channels import (
     TicketDeliveries,
 )
 from ...application.services.writer import Context
+from ...domain.exceptions import OAuthFailedError
 from ...domain.models.account import AccountSettings, Passwords, Server
 from ...domain.models.mail_filter import Condition, FilterActions
 from ...domain.models.templates import QueueChannel
 from .schemas import (
     AccountRequest,
     AccountResponse,
+    ConnectStartRequest,
+    ConnectStartResponse,
     DeliveryResponse,
     DraftResponse,
     FailedEmailResponse,
     FilterOrderRequest,
     FilterRequest,
     FilterResponse,
+    MailProvidersResponse,
     PersonalRequest,
     PersonalResponse,
     ProbeResponse,
@@ -57,6 +66,16 @@ from .schemas import (
 )
 
 Admin = Annotated[Member, member_with('channels.manage', people_only=True)]
+
+CALLBACK_PATH = '/email-oauth/callback'
+_TENANT = re.compile(r'^[0-9a-f-]{36}$')
+_REASON = re.compile(r'[^a-z0-9_]')
+
+
+def redirect_uri(config: AppConfig, request: Request) -> str:
+    """Where the providers send the browser back; register exactly this address with them."""
+    base = config.public_url or str(request.base_url).rstrip('/')
+    return f'{base}/api/v1{CALLBACK_PATH}'
 
 
 def _settings(body: AccountRequest) -> tuple[AccountSettings, Passwords]:
@@ -90,7 +109,47 @@ def _filter_fields(body: FilterRequest) -> FilterFields:
     )
 
 
-def channel_routes(bus: CommandBus, jobs: JobQueue) -> APIRouter:
+def oauth_callback_routes(bus: CommandBus, config: AppConfig) -> APIRouter:
+    """The providers' way back: outside the organization's paths, since its address is registered with them."""
+    router = APIRouter(tags=['channels'], dependencies=[Public])
+
+    @router.get(CALLBACK_PATH, response_class=RedirectResponse, dependencies=[audited('email_account.connected')])
+    async def callback(
+        request: Request,
+        principal: OptionalUser,
+        state: Annotated[str, Query(max_length=200)] = '',
+        code: Annotated[str | None, Query(max_length=4096)] = None,
+        error: Annotated[str | None, Query(max_length=200)] = None,
+    ) -> RedirectResponse:
+        """Finishes connecting a mailbox and goes back to the e-mail account settings."""
+        tenant_id = state.split('.', 1)[0]
+        page = f'/t/{tenant_id}/email-accounts' if _TENANT.match(tenant_id) else '/'
+        try:
+            connected = await bus.execute(
+                FinishConnect(
+                    state=state,
+                    code=code,
+                    error=error,
+                    user_id=principal.user_id if principal else None,
+                    redirect_uri=redirect_uri(config, request),
+                )
+            )
+        except OAuthFailedError as failure:
+            reason = _REASON.sub('_', failure.reason.lower())[:40] or 'failed'
+            return RedirectResponse(f'{page}?{urlencode({"oauth_error": reason})}', status_code=303)
+        note_audit(
+            request,
+            tenant_id=connected.tenant_id,
+            target=connected.account.address,
+            actor_id=principal.user_id if principal else None,
+        )
+        query = urlencode({'connected': connected.account.id})
+        return RedirectResponse(f'/t/{connected.tenant_id}/email-accounts?{query}', status_code=303)
+
+    return router
+
+
+def channel_routes(bus: CommandBus, jobs: JobQueue, config: AppConfig) -> APIRouter:
     """E-mail: accounts, signatures and salutations, queue settings, filters, failed mails and what was sent."""
     router = APIRouter(prefix='/tenants/{tenant_id}', tags=['channels'])
 
@@ -128,6 +187,31 @@ def channel_routes(bus: CommandBus, jobs: JobQueue) -> APIRouter:
     async def delete_account(account_id: Id, request: Request, member: Admin) -> None:
         account = await bus.execute(DeleteAccount(tenant_id=member.tenant_id, account_id=account_id))
         note_audit(request, target=account.address)
+
+    @router.get('/email-accounts/oauth-providers')
+    async def mail_providers(_member: Admin) -> MailProvidersResponse:
+        return MailProvidersResponse(providers=list(await bus.query(MailProviders())))
+
+    @router.post('/email-accounts/oauth', dependencies=[audited('email_account.connect_started')])
+    async def start_connect(body: ConnectStartRequest, request: Request, member: Admin) -> ConnectStartResponse:
+        """
+        Connects a mailbox with OAuth (Google, Microsoft 365): a new account in `queue_id`, or `account_id` again.
+        The browser then goes to the returned address; the provider sends it back to the settings.
+        """
+        url = await bus.execute(
+            StartConnect(
+                tenant_id=member.tenant_id,
+                user_id=member.user_id,
+                provider=body.provider,
+                redirect_uri=redirect_uri(config, request),
+                account_id=body.account_id,
+                queue_id=body.queue_id,
+                name=body.name,
+                display_name=body.display_name,
+            )
+        )
+        note_audit(request, target=body.account_id or body.provider)
+        return ConnectStartResponse(url=url)
 
     @router.post('/email-accounts/{account_id}/test', dependencies=[Unaudited])
     async def test_account(account_id: Id, member: Admin) -> ProbeResponse:

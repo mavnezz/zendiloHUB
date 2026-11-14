@@ -36,6 +36,14 @@ from .application.commands.inbound import (
     RetryFailedEmail,
     RetryFailedEmailHandler,
 )
+from .application.commands.oauth import (
+    FinishConnect,
+    FinishConnectHandler,
+    MailProviders,
+    MailProvidersHandler,
+    StartConnect,
+    StartConnectHandler,
+)
 from .application.commands.outbound import (
     SEND_TASK,
     QueueReply,
@@ -86,11 +94,13 @@ from .application.queries.channels import (
     TicketDeliveriesHandler,
 )
 from .application.services.writer import Writer
-from .domain.ports.services import Mailbox, Outbox
+from .domain.ports.services import Mailbox, OAuthProviders, Outbox
 from .infrastructure.contract_adapters import ContractNames, ContractTickets
 from .infrastructure.mail_servers import ImapMailbox, Nh3Cleaner, SmtpOutbox
+from .infrastructure.oauth_providers import HttpOAuthProviders
 from .infrastructure.postgres_channels import (
     PostgresAccountRepository,
+    PostgresConnectRequestRepository,
     PostgresDeliveryRepository,
     PostgresFailedEmailRepository,
     PostgresFilterRepository,
@@ -98,18 +108,23 @@ from .infrastructure.postgres_channels import (
     PostgresQueueChannelRepository,
     PostgresTemplateRepository,
 )
-from .ui.api.routes import channel_routes
+from .ui.api.routes import channel_routes, oauth_callback_routes
 
 MIGRATIONS = Path(__file__).parent / 'infrastructure' / 'migrations'
 FETCH_EVERY_SECONDS = 60
 
 
 def create_channels_module(
-    context: ModuleContext, *, mailbox: Mailbox | None = None, outbox: Outbox | None = None
+    context: ModuleContext,
+    *,
+    mailbox: Mailbox | None = None,
+    outbox: Outbox | None = None,
+    oauth: OAuthProviders | None = None,
 ) -> AppModule:
     """
     E-mail: several accounts per organization (IMAP in, SMTP out), each with its queue; signatures, salutations and
     auto replies per queue; filters for incoming mail; threading and loop protection; failed mails to process again.
+    Mailboxes at Google and Microsoft 365 can be connected with OAuth instead of passwords.
     Tickets come and go through the tickets module's `TicketInbox` contract.
     """
     db, clock, ids, jobs = context.db, context.clock, context.ids, context.jobs
@@ -123,7 +138,9 @@ def create_channels_module(
     deliveries = PostgresDeliveryRepository(db)
     tickets = ContractTickets(context.contracts)
     names = ContractNames(context.contracts)
-    vault = Vault(accounts, context.cipher)
+    connect_requests = PostgresConnectRequestRepository(db)
+    oauth = oauth or HttpOAuthProviders(context.config, context.fetcher)
+    vault = Vault(accounts, context.cipher, oauth, clock)
     writer = Writer(queues, templates, personal, names)
     auto = AutoReplier(writer, vault, outbox, context.rate_limiter, ids)
     process = ProcessEmailHandler(accounts, filters, failed, tickets, Nh3Cleaner(), auto, ids, clock)
@@ -133,6 +150,9 @@ def create_channels_module(
         .register(UpdateAccount, UpdateAccountHandler(accounts, vault, clock))
         .register(DeleteAccount, DeleteAccountHandler(accounts))
         .register(TestAccount, TestAccountHandler(accounts, vault, mailbox, outbox))
+        .register(StartConnect, StartConnectHandler(accounts, connect_requests, oauth, clock))
+        .register(FinishConnect, FinishConnectHandler(accounts, connect_requests, oauth, vault, ids, clock))
+        .register(MailProviders, MailProvidersHandler(oauth))
         .register(FetchDue, FetchDueHandler(accounts, jobs))
         .register(FetchAccount, FetchAccountHandler(accounts, vault, mailbox, process, clock))
         .register(ProcessEmail, process)
@@ -193,6 +213,6 @@ def create_channels_module(
     return AppModule(
         name='channels',
         migrations=sql_migrations(MIGRATIONS),
-        routers=[channel_routes(bus, jobs)],
+        routers=[channel_routes(bus, jobs, context.config), oauth_callback_routes(bus, context.config)],
         tasks={FETCH_TASK: fetch, SEND_TASK: send},
     )

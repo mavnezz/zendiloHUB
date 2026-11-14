@@ -119,8 +119,16 @@ async function submit(): Promise<void> {
       </DialogHeader>
       <form class="grid gap-4" @submit.prevent="submit">
         <ErrorAlert v-if="error" :message="error" />
+        <p v-if="initial?.provider" class="text-sm text-muted-foreground" data-test="oauth-note">
+          {{
+            $t('channels.accounts.connect.fixed', {
+              provider: $t(`channels.accounts.connect.name.${initial.provider}`),
+              address: initial.address,
+            })
+          }}
+        </p>
         <div class="grid gap-4 sm:grid-cols-2">
-          <div class="grid gap-2">
+          <div v-if="!initial?.provider" class="grid gap-2">
             <Label for="account-address">{{ $t('channels.accounts.address') }}</Label>
             <Input id="account-address" v-model="form.address" type="email" required autofocus />
           </div>
@@ -147,10 +155,12 @@ async function submit(): Promise<void> {
           </div>
         </div>
         <fieldset
-          v-for="[kind, values] in [
-            ['imap', imap],
-            ['smtp', smtp],
-          ] as const"
+          v-for="[kind, values] in initial?.provider
+            ? []
+            : ([
+                ['imap', imap],
+                ['smtp', smtp],
+              ] as const)"
           :key="kind"
           class="grid gap-3 rounded-md border p-3"
         >

@@ -13,7 +13,7 @@ from email.utils import formatdate
 import nh3
 
 from ..domain.models.account import EmailAccount, Server
-from ..domain.ports.services import Fetched, MailboxError, OutgoingMail
+from ..domain.ports.services import Credential, Fetched, MailboxError, OutgoingMail
 
 TIMEOUT = 30
 _UIDVALIDITY = re.compile(rb'UIDVALIDITY (\d+)')
@@ -23,23 +23,28 @@ def _context() -> ssl.SSLContext:
     return ssl.create_default_context()
 
 
+def xoauth2(username: str, token: str) -> str:
+    """The SASL XOAUTH2 initial response (Google, Microsoft); IMAP and SMTP base64-encode it themselves."""
+    return f'user={username}\x01auth=Bearer {token}\x01\x01'
+
+
 class ImapMailbox:
     async def fetch(
-        self, account: EmailAccount, password: str, *, after_uid: int, uid_validity: int | None, limit: int
+        self, account: EmailAccount, credential: Credential, *, after_uid: int, uid_validity: int | None, limit: int
     ) -> Fetched:
-        return await asyncio.to_thread(self._fetch, account, password, after_uid, uid_validity, limit)
+        return await asyncio.to_thread(self._fetch, account, credential, after_uid, uid_validity, limit)
 
-    async def probe(self, account: EmailAccount, password: str) -> None:
-        await asyncio.to_thread(self._probe, account, password)
+    async def probe(self, account: EmailAccount, credential: Credential) -> None:
+        await asyncio.to_thread(self._probe, account, credential)
 
-    def _probe(self, account: EmailAccount, password: str) -> None:
-        with _imap(account.imap, password) as imap:
+    def _probe(self, account: EmailAccount, credential: Credential) -> None:
+        with _imap(account.imap, credential) as imap:
             _select(imap, account.folder)
 
     def _fetch(
-        self, account: EmailAccount, password: str, after_uid: int, uid_validity: int | None, limit: int
+        self, account: EmailAccount, credential: Credential, after_uid: int, uid_validity: int | None, limit: int
     ) -> Fetched:
-        with _imap(account.imap, password) as imap:
+        with _imap(account.imap, credential) as imap:
             validity = _select(imap, account.folder)
             start = after_uid + 1 if uid_validity == validity else 1
             status, data = imap.uid('SEARCH', f'UID {start}:*' if uid_validity == validity else 'UNSEEN')
@@ -57,8 +62,8 @@ class ImapMailbox:
 
 
 class _Imap:
-    def __init__(self, server: Server, password: str) -> None:
-        self._server, self._password = server, password
+    def __init__(self, server: Server, credential: Credential) -> None:
+        self._server, self._credential = server, credential
         self._imap: imaplib.IMAP4 | None = None
 
     def __enter__(self) -> imaplib.IMAP4:
@@ -72,7 +77,12 @@ class _Imap:
                 imap = imaplib.IMAP4(server.host, server.port, timeout=TIMEOUT)
                 if server.security == 'starttls':
                     imap.starttls(ssl_context=_context())
-            imap.login(server.username, self._password)
+            credential = self._credential
+            if credential.oauth:
+                response = xoauth2(server.username, credential.secret).encode()
+                imap.authenticate('XOAUTH2', lambda _: response)
+            else:
+                imap.login(server.username, credential.secret)
         except (OSError, imaplib.IMAP4.error, ssl.SSLError) as error:
             raise MailboxError(_reason(error)) from None
         self._imap = imap
@@ -84,8 +94,8 @@ class _Imap:
                 self._imap.logout()
 
 
-def _imap(server: Server, password: str) -> _Imap:
-    return _Imap(server, password)
+def _imap(server: Server, credential: Credential) -> _Imap:
+    return _Imap(server, credential)
 
 
 def _select(imap: imaplib.IMAP4, folder: str) -> int:
@@ -115,13 +125,13 @@ def _reason(error: BaseException) -> str:
 
 
 class SmtpOutbox:
-    async def send(self, account: EmailAccount, password: str, mail: OutgoingMail) -> None:
-        await asyncio.to_thread(self._send, account, password, _compose(mail))
+    async def send(self, account: EmailAccount, credential: Credential, mail: OutgoingMail) -> None:
+        await asyncio.to_thread(self._send, account, credential, _compose(mail))
 
-    async def probe(self, account: EmailAccount, password: str) -> None:
-        await asyncio.to_thread(self._send, account, password, None)
+    async def probe(self, account: EmailAccount, credential: Credential) -> None:
+        await asyncio.to_thread(self._send, account, credential, None)
 
-    def _send(self, account: EmailAccount, password: str, mail: EmailMessage | None) -> None:
+    def _send(self, account: EmailAccount, credential: Credential, mail: EmailMessage | None) -> None:
         server = account.smtp
         try:
             smtp: smtplib.SMTP = (
@@ -132,8 +142,12 @@ class SmtpOutbox:
             with smtp:
                 if server.security == 'starttls':
                     smtp.starttls(context=_context())
-                if server.username:
-                    smtp.login(server.username, password)
+                if credential.oauth:
+                    response = xoauth2(server.username, credential.secret)
+                    # A second call carries the server's error challenge: answering empty ends the exchange.
+                    smtp.auth('XOAUTH2', lambda challenge=None: '' if challenge else response)
+                elif server.username:
+                    smtp.login(server.username, credential.secret)
                 if mail is not None:
                     smtp.send_message(mail)
         except (OSError, smtplib.SMTPException, ssl.SSLError) as error:

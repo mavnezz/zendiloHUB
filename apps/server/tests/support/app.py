@@ -18,6 +18,7 @@ from zendilohub.providers import providers
 
 from .fakes import FakeClock, FakeWebsites, MemoryJobs, MemoryMailer, SequenceIds
 from .mail_server import FakeMailServer
+from .oauth import FakeOAuth
 from .services import Services
 from .writer import FakeWriter
 
@@ -29,16 +30,19 @@ def _fast_identity(context: ModuleContext) -> AppModule:
     return create_identity_module(context, hasher=FAST_HASHER)
 
 
-def fast_providers(mail_server: FakeMailServer | None = None, writer: FakeWriter | None = None) -> list[ModuleFactory]:
-    """The real modules, with test doubles where the real thing is slow (or a mail server, or Claude)."""
+def fast_providers(
+    mail_server: FakeMailServer | None = None, writer: FakeWriter | None = None, oauth: FakeOAuth | None = None
+) -> list[ModuleFactory]:
+    """The real modules, with test doubles where the real thing is slow (or a mail server, Claude, OAuth)."""
     server = mail_server or FakeMailServer()
     assistant = writer or FakeWriter()
+    providers_ = oauth or FakeOAuth()
 
     def tickets(context: ModuleContext) -> AppModule:
         return create_tickets_module(context, writer=assistant)
 
     def channels(context: ModuleContext) -> AppModule:
-        return create_channels_module(context, mailbox=server, outbox=server)
+        return create_channels_module(context, mailbox=server, outbox=server, oauth=providers_)
 
     replacements: dict[ModuleFactory, ModuleFactory] = {
         create_identity_module: _fast_identity,
@@ -86,6 +90,7 @@ class AppUnderTest:
     websites: FakeWebsites
     mail: FakeMailServer
     writer: FakeWriter
+    oauth: FakeOAuth
 
     async def run_jobs(self) -> None:
         """Runs the enqueued jobs (and the ones they enqueue), as a worker would."""
@@ -129,9 +134,10 @@ async def running_app(
     websites = FakeWebsites()
     mail = FakeMailServer()
     writer = FakeWriter()
+    oauth = FakeOAuth()
     app = Application.create(
         make_config(services, data_dir, name, **overrides),
-        modules=fast_providers(mail, writer) if modules is None else modules,
+        modules=fast_providers(mail, writer, oauth) if modules is None else modules,
         clock=clock,
         ids=ids,
         mailer=mailer,
@@ -144,7 +150,7 @@ async def running_app(
     transport = httpx.ASGITransport(app=app.http.app, raise_app_exceptions=False)
     try:
         async with httpx.AsyncClient(transport=transport, base_url=BASE_URL) as client:
-            yield AppUnderTest(app, client, clock, ids, mailer, jobs, websites, mail, writer)
+            yield AppUnderTest(app, client, clock, ids, mailer, jobs, websites, mail, writer, oauth)
     finally:
         await app.shutdown()
         services.drop_database(name)

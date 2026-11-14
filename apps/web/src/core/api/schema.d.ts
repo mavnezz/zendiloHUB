@@ -308,6 +308,26 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/v1/email-oauth/callback': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Callback
+     * @description Finishes connecting a mailbox and goes back to the e-mail account settings.
+     */
+    get: operations['callback_api_v1_email_oauth_callback_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/v1/help/{tenant_id}': {
     parameters: {
       query?: never
@@ -862,6 +882,44 @@ export interface paths {
      * @description Logs in to the IMAP and the SMTP server with the stored settings.
      */
     post: operations['test_account_api_v1_tenants__tenant_id__email_accounts__account_id__test_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/email-accounts/oauth': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Start Connect
+     * @description Connects a mailbox with OAuth (Google, Microsoft 365): a new account in `queue_id`, or `account_id` again.
+     *     The browser then goes to the returned address; the provider sends it back to the settings.
+     */
+    post: operations['start_connect_api_v1_tenants__tenant_id__email_accounts_oauth_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/email-accounts/oauth-providers': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Mail Providers */
+    get: operations['mail_providers_api_v1_tenants__tenant_id__email_accounts_oauth_providers_get']
+    put?: never
+    post?: never
     delete?: never
     options?: never
     head?: never
@@ -2338,6 +2396,9 @@ export interface components {
       last_fetch_at: string | null
       /** Name */
       name: string
+      /** Needs Reconnect */
+      needs_reconnect: boolean
+      provider: components['schemas']['Provider'] | null
       /** Queue Id */
       queue_id: string
       smtp: components['schemas']['ServerResponse']
@@ -2699,6 +2760,29 @@ export interface components {
     ConnectRequest: {
       /** Name */
       name: string
+    }
+    /** ConnectStartRequest */
+    ConnectStartRequest: {
+      /** Account Id */
+      account_id?: string | null
+      /**
+       * Display Name
+       * @default
+       */
+      display_name: string
+      /**
+       * Name
+       * @default
+       */
+      name: string
+      provider: components['schemas']['Provider']
+      /** Queue Id */
+      queue_id?: string | null
+    }
+    /** ConnectStartResponse */
+    ConnectStartResponse: {
+      /** Url */
+      url: string
     }
     /** ContactPageResponse */
     ContactPageResponse: {
@@ -3124,6 +3208,11 @@ export interface components {
     }
     /** @enum {string} */
     LocaleValue: 'de' | 'en'
+    /** MailProvidersResponse */
+    MailProvidersResponse: {
+      /** Providers */
+      providers: components['schemas']['Provider'][]
+    }
     /** MemberResponse */
     MemberResponse: {
       /** Email */
@@ -3431,6 +3520,8 @@ export interface components {
       /** Smtp */
       smtp: string | null
     }
+    /** @enum {string} */
+    Provider: 'google' | 'microsoft'
     /** QueueChannelRequest */
     QueueChannelRequest: {
       /** Account Id */
@@ -4784,6 +4875,37 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['SessionResponse']
+        }
+      }
+    }
+  }
+  callback_api_v1_email_oauth_callback_get: {
+    parameters: {
+      query?: {
+        code?: string | null
+        error?: string | null
+        state?: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      307: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
         }
       }
     }
@@ -6265,6 +6387,72 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['ProbeResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  start_connect_api_v1_tenants__tenant_id__email_accounts_oauth_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ConnectStartRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ConnectStartResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  mail_providers_api_v1_tenants__tenant_id__email_accounts_oauth_providers_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['MailProvidersResponse']
         }
       }
       /** @description Validation Error */

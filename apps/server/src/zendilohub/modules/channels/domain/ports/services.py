@@ -4,7 +4,7 @@ from typing import Protocol
 
 from zendilohub.core.domain.inbox import InboundEmail, OutgoingEmail, ReceivedTicket
 
-from ..models.account import EmailAccount
+from ..models.account import EmailAccount, Provider
 
 
 @dataclass(frozen=True)
@@ -18,16 +18,24 @@ class MailboxError(Exception):
     """The mail server refused or could not be reached; the message says why (shown to admins)."""
 
 
+@dataclass(frozen=True)
+class Credential:
+    """How to log in to a mail server: a password, or an OAuth access token (SASL XOAUTH2)."""
+
+    secret: str
+    oauth: bool = False
+
+
 class Mailbox(Protocol):
     """Reads an account's mailbox by IMAP."""
 
     async def fetch(
-        self, account: EmailAccount, password: str, *, after_uid: int, uid_validity: int | None, limit: int
+        self, account: EmailAccount, credential: Credential, *, after_uid: int, uid_validity: int | None, limit: int
     ) -> Fetched:
         """Mails with a UID above `after_uid`; all new ones when the mailbox's UIDVALIDITY changed. Marks them seen."""
         ...
 
-    async def probe(self, account: EmailAccount, password: str) -> None:
+    async def probe(self, account: EmailAccount, credential: Credential) -> None:
         """Logs in and opens the folder; raises MailboxError."""
         ...
 
@@ -48,11 +56,11 @@ class OutgoingMail:
 class Outbox(Protocol):
     """Sends mail by an account's SMTP server."""
 
-    async def send(self, account: EmailAccount, password: str, mail: OutgoingMail) -> None:
+    async def send(self, account: EmailAccount, credential: Credential, mail: OutgoingMail) -> None:
         """Raises MailboxError."""
         ...
 
-    async def probe(self, account: EmailAccount, password: str) -> None: ...
+    async def probe(self, account: EmailAccount, credential: Credential) -> None: ...
 
 
 class HtmlCleaner(Protocol):
@@ -83,3 +91,40 @@ class Names(Protocol):
     async def queue(self, tenant_id: str, queue_id: str) -> str | None: ...
 
     async def member_email(self, tenant_id: str, user_id: str) -> str | None: ...
+
+
+@dataclass(frozen=True, kw_only=True)
+class TokenGrant:
+    access_token: str
+    expires_in: int
+    """Seconds."""
+    refresh_token: str | None
+    """None: the provider keeps the one it gave before."""
+    address: str | None = None
+    """The mailbox's address (from the ID token); only when a code was exchanged."""
+
+
+class OAuthError(Exception):
+    """The provider refused; `code` is its OAuth error (e.g. `invalid_grant`) or ours (`unreachable`, `no_address`)."""
+
+    def __init__(self, code: str) -> None:
+        super().__init__(code)
+        self.code = code
+
+
+class OAuthProviders(Protocol):
+    """The mail providers' OAuth endpoints (authorization code flow with PKCE)."""
+
+    def configured(self) -> tuple[Provider, ...]:
+        """The providers the instance has app credentials for."""
+        ...
+
+    def authorize_url(self, provider: Provider, *, state: str, challenge: str, redirect_uri: str) -> str: ...
+
+    async def exchange(self, provider: Provider, *, code: str, verifier: str, redirect_uri: str) -> TokenGrant:
+        """Raises OAuthError."""
+        ...
+
+    async def refresh(self, provider: Provider, refresh_token: str) -> TokenGrant:
+        """Raises OAuthError; `invalid_grant` means the connection is gone for good."""
+        ...

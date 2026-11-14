@@ -1,10 +1,20 @@
 from collections.abc import Sequence
+from dataclasses import dataclass
+from datetime import datetime
 from typing import Literal, Protocol
 
 from ..models.account import EmailAccount
 from ..models.mail_filter import MailFilter
+from ..models.oauth import ConnectRequest
 from ..models.records import Delivery, FailedEmail
 from ..models.templates import PersonalSettings, QueueChannel, TemplateKind, TextTemplate
+
+
+@dataclass(frozen=True)
+class OAuthTokens:
+    refresh: bytes | None
+    access: bytes | None
+    access_expires_at: datetime | None
 
 
 class AccountRepository(Protocol):
@@ -27,6 +37,12 @@ class AccountRepository(Protocol):
     async def password(self, account_id: str, kind: Literal['imap', 'smtp']) -> bytes | None: ...
 
     async def set_password(self, account_id: str, kind: Literal['imap', 'smtp'], sealed: bytes) -> None: ...
+
+    async def oauth_tokens(self, account_id: str) -> OAuthTokens:
+        """The sealed tokens of an account connected with OAuth."""
+        ...
+
+    async def set_oauth_tokens(self, account_id: str, tokens: OAuthTokens) -> None: ...
 
     async def delete(self, tenant_id: str, account_id: str) -> None:
         """Queues that sent with it send with none."""
@@ -97,3 +113,13 @@ class DeliveryRepository(Protocol):
     async def save(self, delivery: Delivery) -> None: ...
 
     async def of_ticket(self, tenant_id: str, ticket_id: str) -> Sequence[Delivery]: ...
+
+
+class ConnectRequestRepository(Protocol):
+    async def add(self, request: ConnectRequest) -> None: ...
+
+    async def take(self, request_id: str) -> ConnectRequest | None:
+        """Removes and returns it: each one is used once."""
+        ...
+
+    async def delete_expired(self, now: datetime) -> None: ...
