@@ -1173,7 +1173,7 @@ export const de: MessageSchema = {
       deleteText:
         'Es werden keine Mails mehr abgeholt; Queues, die damit gesendet haben, senden keine E-Mails, bis du ein anderes Konto wählst.',
       empty: 'Noch keine E-Mail-Konten',
-      emptyHint: 'Füge ein Postfach wie support@ hinzu, um seine Mails zu Tickets zu machen.',
+      emptyHint: "Füge ein Postfach wie support{'@'}… hinzu, um seine Mails zu Tickets zu machen.",
       queueFirst: 'Lege zuerst eine Queue an: Die Mails eines Kontos landen in einer Queue.',
       connect: {
         google: 'Mit Google verbinden',

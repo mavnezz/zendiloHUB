@@ -1145,7 +1145,7 @@ export const en = {
       deleteText:
         'No more mail is fetched from it; queues that sent with it send no e-mails until you choose another account.',
       empty: 'No e-mail accounts yet',
-      emptyHint: 'Add a mailbox such as support@ to turn its mail into tickets.',
+      emptyHint: "Add a mailbox such as support{'@'}… to turn its mail into tickets.",
       queueFirst: 'Create a queue first: mail of an account goes into a queue.',
       connect: {
         google: 'Connect Google',

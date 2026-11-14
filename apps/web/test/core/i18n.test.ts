@@ -1,3 +1,4 @@
+import { baseCompile } from '@intlify/message-compiler'
 import { describe, expect, it } from 'vitest'
 import { ApiRequestError } from '@/core/api/http'
 import { codeText, detectLocale, errorText, i18n, LOCALE_STORAGE_KEY, setLocale, useLocale } from '@/core/i18n/i18n'
@@ -34,7 +35,24 @@ describe('setLocale', () => {
   })
 })
 
+function texts(messages: object, prefix = ''): [string, string][] {
+  return Object.entries(messages).flatMap(([key, value]) =>
+    typeof value === 'object' && value !== null
+      ? texts(value as object, `${prefix}${key}.`)
+      : [[`${prefix}${key}`, String(value)] as [string, string]],
+  )
+}
+
 describe('messages', () => {
+  it('compiles every text (a bare @, | or { breaks the page that shows it)', () => {
+    const broken = [...texts(en), ...texts(de)].filter(([, text]) => {
+      let failed = false
+      baseCompile(text, { onError: () => (failed = true) })
+      return failed
+    })
+    expect(broken.map(([key]) => key)).toEqual([])
+  })
+
   it('has every text in German and English', () => {
     expect(keys(de)).toEqual(keys(en))
   })
