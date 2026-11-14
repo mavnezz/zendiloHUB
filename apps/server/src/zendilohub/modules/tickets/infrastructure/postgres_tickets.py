@@ -7,6 +7,7 @@ from psycopg.types.json import Jsonb
 
 from zendilohub.core.database.database import Database
 from zendilohub.core.domain.automation import TicketCriteria
+from zendilohub.core.domain.inbox import EmailSecurity, SignatureStatus
 
 from ..domain.models.attachment import Attachment
 from ..domain.models.custom_field import ChecklistItem, CustomField, FieldKind
@@ -79,7 +80,19 @@ def _message(row: dict[str, Any]) -> Message:
         email_message_id=row['email_message_id'],
         in_reply_to=row['in_reply_to'],
         references=tuple(row['references']),
+        security=_security(row.get('security')),
         created_at=row['created_at'],
+    )
+
+
+def _security(data: dict[str, Any] | None) -> EmailSecurity | None:
+    if not data:
+        return None
+    return EmailSecurity(
+        signed=bool(data.get('signed')),
+        signature=cast(SignatureStatus | None, data.get('signature')),
+        signer=data.get('signer'),
+        encrypted=bool(data.get('encrypted')),
     )
 
 
@@ -428,15 +441,17 @@ class PostgresMessageRepository(_Sql):
             'to_addresses': list(message.to_addresses),
             'cc_addresses': list(message.cc_addresses),
             'references': list(message.references),
+            'security': Jsonb(vars(message.security)) if message.security else None,
         }
         await self.run(
             """
             INSERT INTO ticket_messages (id, tenant_id, ticket_id, kind, direction, author_kind, author_id,
                                          author_name, body, body_html, subject, from_address, to_addresses,
-                                         cc_addresses, email_message_id, in_reply_to, "references", created_at)
+                                         cc_addresses, email_message_id, in_reply_to, "references", security, created_at)
             VALUES (%(id)s, %(tenant_id)s, %(ticket_id)s, %(kind)s, %(direction)s, %(author_kind)s, %(author_id)s,
                     %(author_name)s, %(body)s, %(body_html)s, %(subject)s, %(from_address)s, %(to_addresses)s,
-                    %(cc_addresses)s, %(email_message_id)s, %(in_reply_to)s, %(references)s, %(created_at)s)
+                    %(cc_addresses)s, %(email_message_id)s, %(in_reply_to)s, %(references)s, %(security)s,
+                    %(created_at)s)
             """,
             values,
         )

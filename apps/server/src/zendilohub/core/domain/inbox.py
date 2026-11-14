@@ -1,8 +1,25 @@
 """What the tickets and channels modules hand each other about e-mails (see the `TicketInbox` contract)."""
 
 from dataclasses import dataclass
+from typing import Literal
 
 from .files import FileData
+
+type SignatureStatus = Literal['valid', 'invalid', 'untrusted', 'expired']
+"""`valid`: intact, from a trusted certificate of the sender's address; `invalid`: the content was changed or the
+signature is broken; `untrusted`: intact, but the certificate is not trusted or not the sender's; `expired`: intact,
+but the certificate has expired."""
+
+
+@dataclass(frozen=True, kw_only=True)
+class EmailSecurity:
+    """What S/MIME said about a received e-mail."""
+
+    signed: bool = False
+    signature: SignatureStatus | None = None
+    signer: str | None = None
+    """The address of the signing certificate."""
+    encrypted: bool = False
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -26,6 +43,8 @@ class InboundEmail:
     tags: tuple[str, ...] = ()
     attachments: tuple[FileData, ...] = ()
     """Within the upload limit; larger parts are left out."""
+    security: EmailSecurity | None = None
+    """None: neither signed nor encrypted."""
 
 
 @dataclass(frozen=True, kw_only=True)

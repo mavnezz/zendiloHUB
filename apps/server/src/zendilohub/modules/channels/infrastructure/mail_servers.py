@@ -7,13 +7,16 @@ import re
 import smtplib
 import socket
 import ssl
-from email.message import EmailMessage
-from email.utils import formatdate
+from email import policy
+from email.message import EmailMessage, MIMEPart
+from email.utils import formatdate, parseaddr
 
 import nh3
 
+from ..domain.models import smime_mime
 from ..domain.models.account import EmailAccount, Server
-from ..domain.ports.services import Credential, Fetched, MailboxError, OutgoingMail
+from ..domain.ports.services import Credential, Fetched, MailboxError, OutgoingMail, SmimeEngine, SmimeError
+from .smime import CryptographySmime
 
 TIMEOUT = 30
 _UIDVALIDITY = re.compile(rb'UIDVALIDITY (\d+)')
@@ -125,13 +128,26 @@ def _reason(error: BaseException) -> str:
 
 
 class SmtpOutbox:
+    def __init__(self, smime: SmimeEngine | None = None) -> None:
+        self._smime = smime or CryptographySmime()
+
     async def send(self, account: EmailAccount, credential: Credential, mail: OutgoingMail) -> None:
-        await asyncio.to_thread(self._send, account, credential, _compose(mail))
+        if mail.seal is not None and mail.seal.any:
+            raw = compose_sealed(mail, self._smime)
+            await asyncio.to_thread(self._send, account, credential, raw, (parseaddr(mail.sender)[1], mail.to))
+        else:
+            await asyncio.to_thread(self._send, account, credential, _compose(mail))
 
     async def probe(self, account: EmailAccount, credential: Credential) -> None:
         await asyncio.to_thread(self._send, account, credential, None)
 
-    def _send(self, account: EmailAccount, credential: Credential, mail: EmailMessage | None) -> None:
+    def _send(
+        self,
+        account: EmailAccount,
+        credential: Credential,
+        mail: EmailMessage | bytes | None,
+        envelope: tuple[str, tuple[str, ...]] = ('', ()),
+    ) -> None:
         server = account.smtp
         if server is None:
             raise MailboxError('This mailbox is for incoming mail only')
@@ -150,14 +166,16 @@ class SmtpOutbox:
                     smtp.auth('XOAUTH2', lambda challenge=None: '' if challenge else response)
                 elif server.username:
                     smtp.login(server.username, credential.secret)
-                if mail is not None:
+                if isinstance(mail, bytes):
+                    # Byte-exact: re-encoding a signed mail would break its signature.
+                    smtp.sendmail(envelope[0], list(envelope[1]), mail)
+                elif mail is not None:
                     smtp.send_message(mail)
         except (OSError, smtplib.SMTPException, ssl.SSLError) as error:
             raise MailboxError(_reason(error)) from None
 
 
-def _compose(mail: OutgoingMail) -> EmailMessage:
-    message = EmailMessage()
+def _headers(message: EmailMessage, mail: OutgoingMail) -> None:
     message['From'] = mail.sender
     message['To'] = ', '.join(mail.to)
     message['Subject'] = mail.subject
@@ -170,6 +188,9 @@ def _compose(mail: OutgoingMail) -> EmailMessage:
     if mail.automatic:
         message['Auto-Submitted'] = 'auto-replied'
         message['X-Auto-Response-Suppress'] = 'All'
+
+
+def _content(message: MIMEPart, mail: OutgoingMail) -> None:
     message.set_content(mail.text)
     for file in mail.attachments:
         maintype, _, subtype = file.content_type.partition('/')
@@ -179,7 +200,32 @@ def _compose(mail: OutgoingMail) -> EmailMessage:
             subtype=subtype or 'octet-stream',
             filename=file.filename,
         )
+
+
+def _compose(mail: OutgoingMail) -> EmailMessage:
+    message = EmailMessage()
+    _headers(message, mail)
+    _content(message, mail)
     return message
+
+
+def compose_sealed(mail: OutgoingMail, smime: SmimeEngine) -> bytes:
+    """The mail signed and/or encrypted with S/MIME (RFC 8551), as the bytes to send; raises MailboxError."""
+    assert mail.seal is not None
+    body = MIMEPart(policy=policy.SMTP)
+    _content(body, mail)
+    entity = smime_mime.canonical(body.as_bytes(policy=policy.SMTP))
+    try:
+        if mail.seal.sign is not None:
+            entity = smime_mime.signed_entity(entity, smime.sign(entity, mail.seal.sign))
+        if mail.seal.encrypt_for:
+            entity = smime_mime.enveloped_entity(smime.encrypt(entity, mail.seal.encrypt_for))
+    except SmimeError as error:
+        raise MailboxError(f'S/MIME failed ({error.reason})') from None
+    headers = EmailMessage(policy=policy.SMTP)
+    _headers(headers, mail)
+    block, _ = smime_mime.split(headers.as_bytes(policy=policy.SMTP))
+    return smime_mime.with_headers(block, entity)
 
 
 class Nh3Cleaner:

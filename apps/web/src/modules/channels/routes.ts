@@ -27,6 +27,12 @@ export const channelRoutes: RouteRecordRaw[] = [
     meta: { permission: 'channels.manage' },
   },
   {
+    path: 'smime',
+    name: 'smime',
+    component: () => import('./views/SmimeView.vue'),
+    meta: { permission: 'channels.manage' },
+  },
+  {
     path: 'failed-emails',
     name: 'failedEmails',
     component: () => import('./views/FailedEmailsView.vue'),

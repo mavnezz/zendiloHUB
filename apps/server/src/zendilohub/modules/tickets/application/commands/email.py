@@ -81,6 +81,7 @@ class ReceiveEmailHandler:
                 email_message_id=email.email_message_id,
                 in_reply_to=email.in_reply_to,
                 references=email.references,
+                security=email.security,
             )
             ticket.received(now)
             if created:

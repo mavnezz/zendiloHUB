@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Literal
 
 from ..exceptions import InvalidTemplateError
+from .smime import ENCRYPT_MODES, EncryptMode
 
 type TemplateKind = Literal['signature', 'salutation']
 NAME_MAX = 80
@@ -108,8 +109,13 @@ class QueueChannel:
     auto_reply: bool = False
     auto_reply_subject: str = ''
     auto_reply_body: str = ''
+    smime_sign: bool = False
+    """S/MIME: replies are signed with the own certificate of the sending account's address."""
+    smime_encrypt: EncryptMode = 'never'
 
     def check(self) -> None:
+        if self.smime_encrypt not in ENCRYPT_MODES:
+            raise InvalidTemplateError('smime_encrypt')
         if len(self.auto_reply_subject) > 250:
             raise InvalidTemplateError('auto_reply_subject')
         if len(self.auto_reply_body) > BODY_MAX:

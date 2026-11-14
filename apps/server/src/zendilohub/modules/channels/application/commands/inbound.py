@@ -23,6 +23,7 @@ from ...domain.ports.repositories import (
     TicketMailboxRepository,
 )
 from ...domain.ports.services import HtmlCleaner, Mailbox, MailboxError, Outbox, OutgoingMail, Tickets
+from ..services.smime import OpenError, SealError, Smime
 from ..services.writer import Context, Writer
 from .accounts import Vault
 
@@ -119,7 +120,9 @@ class ProcessEmailHandler:
         ids: IdGenerator,
         clock: Clock,
         max_file_bytes: int,
+        smime: Smime,
     ) -> None:
+        self._smime = smime
         self._max_file_bytes = max_file_bytes
         self._accounts = accounts
         self._filters = filters
@@ -153,7 +156,12 @@ class ProcessEmailHandler:
         account = await self._accounts.find(command.tenant_id, command.account_id) if command.account_id else None
         if command.account_id and account is None:
             raise AccountNotFoundError()
-        mail = parse_email(command.raw)
+        try:
+            opened = await self._smime.open(command.tenant_id, command.raw)
+        except OpenError:
+            # Kept in the failed e-mails: after adding the right key it can be processed again.
+            raise ValueError('smime_decrypt_failed: none of the S/MIME keys opens this e-mail') from None
+        mail = parse_email(opened.raw)
         if not mail.from_address:
             raise ValueError('The e-mail has no sender')
         if mail.from_address in await self._accounts.addresses(command.tenant_id):
@@ -197,6 +205,7 @@ class ProcessEmailHandler:
                     for each in mail.files
                     if len(each.content) <= self._max_file_bytes
                 ),
+                security=opened.security,
             )
         )
         if account is not None:
@@ -223,7 +232,10 @@ class ProcessEmailHandler:
 class AutoReplier:
     """The queue's acknowledgement of a new ticket ("We got your message, number #1001"), never to robots."""
 
-    def __init__(self, writer: Writer, vault: Vault, outbox: Outbox, limiter: RateLimiter, ids: IdGenerator) -> None:
+    def __init__(
+        self, writer: Writer, vault: Vault, outbox: Outbox, limiter: RateLimiter, ids: IdGenerator, smime: Smime
+    ) -> None:
+        self._smime = smime
         self._writer = writer
         self._vault = vault
         self._outbox = outbox
@@ -252,6 +264,11 @@ class AutoReplier:
             return
         subject, body = text
         try:
+            seal = await self._smime.seal(account.tenant_id, queue_id, account.address, mail.from_address)
+        except SealError:
+            logger.warning('The auto reply was not sent: S/MIME is not possible', extra={'account': account.id})
+            return
+        try:
             await self._outbox.send(
                 account,
                 await self._vault.credential(account, 'smtp'),
@@ -264,6 +281,7 @@ class AutoReplier:
                     in_reply_to=mail.message_id,
                     references=(*mail.references, *([mail.message_id] if mail.message_id else [])),
                     automatic=True,
+                    seal=seal,
                 ),
             )
         except MailboxError:

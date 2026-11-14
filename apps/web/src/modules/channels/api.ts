@@ -22,6 +22,12 @@ export type Operator = Condition['operator']
 export type FailedEmail = Schemas['FailedEmailResponse']
 export type Delivery = Schemas['DeliveryResponse']
 export type FilterTest = Schemas['FilterTestResponse']
+export type SmimeCertificate = Schemas['CertificateResponse']
+export type CertificateKind = SmimeCertificate['kind']
+export type EncryptMode = QueueChannel['smime_encrypt']
+
+export const CERTIFICATE_KINDS: readonly CertificateKind[] = ['own', 'contact', 'ca']
+export const ENCRYPT_MODES: readonly EncryptMode[] = ['never', 'when_possible', 'always']
 
 export const SECURITIES: readonly Security[] = ['ssl', 'starttls', 'none']
 export const FILTER_FIELDS: readonly FilterField[] = ['from', 'to', 'cc', 'delivered_to', 'subject', 'body', 'header']
@@ -80,6 +86,18 @@ export const channelsApi = {
   /** Where an e-mail would go; changes nothing. */
   testFilters: (tenantId: string, raw: string, accountId: string | null) =>
     http.post<FilterTest>(`${base(tenantId)}/mail-filters/test`, { raw, account_id: accountId }),
+
+  certificates: (tenantId: string) => http.get<SmimeCertificate[]>(`${base(tenantId)}/smime/certificates`),
+  /** `own`: a PKCS #12 file with its password, or a certificate with its `key`; others: a certificate. */
+  addCertificate: (tenantId: string, kind: CertificateKind, file: File, password = '', key: File | null = null) => {
+    const form = new FormData()
+    form.append('kind', kind)
+    form.append('file', file)
+    form.append('password', password)
+    if (key) form.append('key', key)
+    return http.post<SmimeCertificate>(`${base(tenantId)}/smime/certificates`, form)
+  },
+  deleteCertificate: (tenantId: string, id: string) => http.delete<void>(`${base(tenantId)}/smime/certificates/${id}`),
 
   failed: (tenantId: string) => http.get<FailedEmail[]>(`${base(tenantId)}/failed-emails`),
   retryFailed: (tenantId: string, id: string) =>

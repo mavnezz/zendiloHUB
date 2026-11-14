@@ -1895,6 +1895,45 @@ export interface paths {
     patch: operations['update_policy_api_v1_tenants__tenant_id__service_policies__policy_id__patch']
     trace?: never
   }
+  '/api/v1/tenants/{tenant_id}/smime/certificates': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Certificates */
+    get: operations['certificates_api_v1_tenants__tenant_id__smime_certificates_get']
+    put?: never
+    /**
+     * Add
+     * @description `own`: a PKCS #12 file (.p12, .pfx) with its `password`, or a certificate with its private `key`.
+     *     `contact`, `ca`: a certificate (PEM or DER).
+     */
+    post: operations['add_api_v1_tenants__tenant_id__smime_certificates_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/smime/certificates/{certificate_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /** Delete */
+    delete: operations['delete_api_v1_tenants__tenant_id__smime_certificates__certificate_id__delete']
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/v1/tenants/{tenant_id}/text-modules': {
     parameters: {
       query?: never
@@ -2854,6 +2893,19 @@ export interface components {
     }
     /** @enum {string} */
     AuthorKind: 'agent' | 'customer' | 'system'
+    /** Body_add_api_v1_tenants__tenant_id__smime_certificates_post */
+    Body_add_api_v1_tenants__tenant_id__smime_certificates_post: {
+      /** File */
+      file: string
+      /** Key */
+      key?: string | null
+      kind: components['schemas']['CertificateKind']
+      /**
+       * Password
+       * @default
+       */
+      password: string
+    }
     /** Body_answer_api_v1_portal__tenant_id__tickets__ticket_id__messages_post */
     Body_answer_api_v1_portal__tenant_id__tickets__ticket_id__messages_post: {
       /**
@@ -2932,6 +2984,45 @@ export interface components {
       name: string
       /** Timezone */
       timezone: string
+    }
+    /** @enum {string} */
+    CertificateKind: 'own' | 'contact' | 'ca'
+    /** CertificateResponse */
+    CertificateResponse: {
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string
+      /** Emails */
+      emails: string[]
+      /** Fingerprint */
+      fingerprint: string
+      /** Has Key */
+      has_key: boolean
+      /** Id */
+      id: string
+      /** Issuer */
+      issuer: string
+      /**
+       * Kind
+       * @enum {string}
+       */
+      kind: 'own' | 'contact' | 'ca'
+      /**
+       * Not After
+       * Format: date-time
+       */
+      not_after: string
+      /**
+       * Not Before
+       * Format: date-time
+       */
+      not_before: string
+      /** Serial */
+      serial: string
+      /** Subject */
+      subject: string
     }
     /** ChangePasswordRequest */
     ChangePasswordRequest: {
@@ -3264,6 +3355,8 @@ export interface components {
       /** Email */
       email: string
     }
+    /** @enum {string} */
+    EncryptMode: 'never' | 'when_possible' | 'always'
     /** FailedEmailResponse */
     FailedEmailResponse: {
       /** Account Id */
@@ -3636,12 +3729,24 @@ export interface components {
       /** Id */
       id: string
       kind: components['schemas']['MessageKind']
+      security: components['schemas']['MessageSecurityResponse'] | null
       /** Subject */
       subject: string | null
       /** Ticket Id */
       ticket_id: string
       /** To Addresses */
       to_addresses: string[]
+    }
+    /** MessageSecurityResponse */
+    MessageSecurityResponse: {
+      /** Encrypted */
+      encrypted: boolean
+      /** Signature */
+      signature: ('valid' | 'invalid' | 'untrusted' | 'expired') | null
+      /** Signed */
+      signed: boolean
+      /** Signer */
+      signer: string | null
     }
     /** @enum {string} */
     NotificationKind: 'assigned' | 'mentioned' | 'message' | 'sla_breached' | 'created' | 'moved'
@@ -3910,6 +4015,13 @@ export interface components {
       salutation_id?: string | null
       /** Signature Id */
       signature_id?: string | null
+      /** @default never */
+      smime_encrypt: components['schemas']['EncryptMode']
+      /**
+       * Smime Sign
+       * @default false
+       */
+      smime_sign: boolean
     }
     /** QueueChannelResponse */
     QueueChannelResponse: {
@@ -3927,6 +4039,9 @@ export interface components {
       salutation_id: string | null
       /** Signature Id */
       signature_id: string | null
+      smime_encrypt: components['schemas']['EncryptMode']
+      /** Smime Sign */
+      smime_sign: boolean
     }
     /** QueueRequest */
     QueueRequest: {
@@ -9290,6 +9405,104 @@ export interface operations {
         content: {
           'application/json': components['schemas']['PolicyResponse']
         }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  certificates_api_v1_tenants__tenant_id__smime_certificates_get: {
+    parameters: {
+      query?: {
+        kind?: components['schemas']['CertificateKind'] | null
+      }
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['CertificateResponse'][]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  add_api_v1_tenants__tenant_id__smime_certificates_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'multipart/form-data': components['schemas']['Body_add_api_v1_tenants__tenant_id__smime_certificates_post']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['CertificateResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  delete_api_v1_tenants__tenant_id__smime_certificates__certificate_id__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        certificate_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
       }
       /** @description Validation Error */
       422: {

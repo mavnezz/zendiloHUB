@@ -10,6 +10,7 @@ from ..domain.models.account import EmailAccount, Provider, Security, Server, Se
 from ..domain.models.mail_filter import Condition, FilterActions, FilterField, MailFilter, Operator
 from ..domain.models.oauth import ConnectRequest
 from ..domain.models.records import Delivery, DeliveryStatus, FailedEmail
+from ..domain.models.smime import Certificate, CertificateInfo, CertificateKind, EncryptMode
 from ..domain.models.templates import PersonalSettings, QueueChannel, TemplateKind, TextTemplate
 from ..domain.ports.repositories import OAuthTokens
 
@@ -70,6 +71,8 @@ def _queue(row: dict[str, Any]) -> QueueChannel:
         auto_reply=row['auto_reply'],
         auto_reply_subject=row['auto_reply_subject'],
         auto_reply_body=row['auto_reply_body'],
+        smime_sign=row['smime_sign'],
+        smime_encrypt=cast(EncryptMode, row['smime_encrypt']),
     )
 
 
@@ -222,6 +225,7 @@ class PostgresAccountRepository(_Sql):
             'mail_filters',
             'personal_settings',
             'queue_channels',
+            'smime_certificates',
             'channel_templates',
             'email_connect_requests',
             'ticket_mailboxes',
@@ -284,16 +288,18 @@ class PostgresQueueChannelRepository(_Sql):
         await self.run(
             """
             INSERT INTO queue_channels (tenant_id, queue_id, account_id, signature_id, salutation_id, auto_reply,
-                                        auto_reply_subject, auto_reply_body)
+                                        auto_reply_subject, auto_reply_body, smime_sign, smime_encrypt)
             VALUES (%(tenant_id)s, %(queue_id)s, %(account_id)s, %(signature_id)s, %(salutation_id)s, %(auto_reply)s,
-                    %(auto_reply_subject)s, %(auto_reply_body)s)
+                    %(auto_reply_subject)s, %(auto_reply_body)s, %(smime_sign)s, %(smime_encrypt)s)
             ON CONFLICT (queue_id) DO UPDATE SET
                 account_id = EXCLUDED.account_id,
                 signature_id = EXCLUDED.signature_id,
                 salutation_id = EXCLUDED.salutation_id,
                 auto_reply = EXCLUDED.auto_reply,
                 auto_reply_subject = EXCLUDED.auto_reply_subject,
-                auto_reply_body = EXCLUDED.auto_reply_body
+                auto_reply_body = EXCLUDED.auto_reply_body,
+                smime_sign = EXCLUDED.smime_sign,
+                smime_encrypt = EXCLUDED.smime_encrypt
             """,
             vars(settings),
         )
@@ -508,3 +514,87 @@ class PostgresConnectRequestRepository(_Sql):
 
     async def delete_expired(self, now: datetime) -> None:
         await self.run('DELETE FROM email_connect_requests WHERE expires_at <= %s', (now,))
+
+
+def _certificate(row: dict[str, Any]) -> Certificate:
+    return Certificate(
+        id=str(row['id']),
+        tenant_id=str(row['tenant_id']),
+        kind=cast(CertificateKind, row['kind']),
+        info=CertificateInfo(
+            fingerprint=row['fingerprint'],
+            subject=row['subject'],
+            issuer=row['issuer'],
+            serial=row['serial'],
+            emails=tuple(row['emails']),
+            not_before=row['not_before'],
+            not_after=row['not_after'],
+            pem=row['certificate'],
+            is_ca=row['is_ca'],
+        ),
+        private_key=bytes(row['private_key']) if row['private_key'] is not None else None,
+        created_at=row['created_at'],
+    )
+
+
+class PostgresCertificateRepository(_Sql):
+    async def find(self, tenant_id: str, certificate_id: str) -> Certificate | None:
+        row = await self.one(
+            'SELECT * FROM smime_certificates WHERE tenant_id = %s AND id = %s', (tenant_id, certificate_id)
+        )
+        return _certificate(row) if row else None
+
+    async def of_tenant(self, tenant_id: str, kind: CertificateKind | None = None) -> Sequence[Certificate]:
+        rows = await self.rows(
+            """
+            SELECT * FROM smime_certificates WHERE tenant_id = %s AND (%s::text IS NULL OR kind = %s)
+            ORDER BY kind, emails[1] NULLS LAST, not_after DESC, id
+            """,
+            (tenant_id, kind, kind),
+        )
+        return [_certificate(row) for row in rows]
+
+    async def for_address(self, tenant_id: str, kind: CertificateKind, address: str) -> Sequence[Certificate]:
+        rows = await self.rows(
+            'SELECT * FROM smime_certificates WHERE tenant_id = %s AND kind = %s AND emails @> ARRAY[%s]::text[]',
+            (tenant_id, kind, address.strip().lower()),
+        )
+        return [_certificate(row) for row in rows]
+
+    async def count(self, tenant_id: str, kind: CertificateKind) -> int:
+        row = await self.one(
+            'SELECT count(*) AS n FROM smime_certificates WHERE tenant_id = %s AND kind = %s', (tenant_id, kind)
+        )
+        return int(row['n']) if row else 0
+
+    async def add(self, certificate: Certificate) -> bool:
+        info = certificate.info
+        async with self._db.connection() as connection:
+            cursor = await connection.execute(
+                """
+                INSERT INTO smime_certificates (id, tenant_id, kind, fingerprint, subject, issuer, serial, emails,
+                                                not_before, not_after, is_ca, certificate, private_key, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (tenant_id, kind, fingerprint) DO NOTHING
+                """,
+                (
+                    certificate.id,
+                    certificate.tenant_id,
+                    certificate.kind,
+                    info.fingerprint,
+                    info.subject,
+                    info.issuer,
+                    info.serial,
+                    list(info.emails),
+                    info.not_before,
+                    info.not_after,
+                    info.is_ca,
+                    info.pem,
+                    certificate.private_key,
+                    certificate.created_at,
+                ),
+            )
+            return cursor.rowcount == 1
+
+    async def delete(self, tenant_id: str, certificate_id: str) -> None:
+        await self.run('DELETE FROM smime_certificates WHERE tenant_id = %s AND id = %s', (tenant_id, certificate_id))

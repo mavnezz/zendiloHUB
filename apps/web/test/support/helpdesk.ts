@@ -76,6 +76,7 @@ export function message(overrides: Partial<TicketMessage> = {}): TicketMessage {
     to_addresses: [],
     cc_addresses: [],
     attachments: [],
+    security: null,
     created_at: '2026-11-13T12:00:00Z',
     ...overrides,
   }
