@@ -30,8 +30,18 @@ export function useSession() {
       state.loaded = true
     },
 
-    async login(email: string, password: string): Promise<void> {
-      start((await identityApi.login({ email, password })).user)
+    /** Logs in; with two-factor login it returns the challenge for `completeTwoFactor` instead. */
+    async login(email: string, password: string): Promise<string | null> {
+      const session = await identityApi.login({ email, password })
+      if (session.challenge) {
+        return session.challenge
+      }
+      start(session.user)
+      return null
+    },
+
+    async completeTwoFactor(challenge: string, code: string): Promise<void> {
+      start((await identityApi.loginTwoFactor({ challenge, code: code.trim() })).user)
     },
 
     start,

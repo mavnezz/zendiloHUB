@@ -23,6 +23,23 @@ from .application.commands.register import Register, RegisterHandler
 from .application.commands.request_password_reset import RequestPasswordReset, RequestPasswordResetHandler
 from .application.commands.resend_confirmation import ResendConfirmation, ResendConfirmationHandler
 from .application.commands.reset_password import ResetPassword, ResetPasswordHandler
+from .application.commands.two_factor import (
+    BeginTwoFactorSetup,
+    BeginTwoFactorSetupHandler,
+    CompleteTwoFactorLogin,
+    CompleteTwoFactorLoginHandler,
+    DisableTwoFactor,
+    DisableTwoFactorHandler,
+    EnableTwoFactor,
+    EnableTwoFactorHandler,
+    GetTwoFactorStatus,
+    GetTwoFactorStatusHandler,
+    RegenerateRecoveryCodes,
+    RegenerateRecoveryCodesHandler,
+    ResetTwoFactor,
+    ResetTwoFactorHandler,
+    TwoFactor,
+)
 from .application.commands.update_account import UpdateAccount, UpdateAccountHandler
 from .application.queries.authenticate_session import AuthenticateSession, AuthenticateSessionHandler
 from .application.queries.setup_status import GetSetupStatus, GetSetupStatusHandler
@@ -31,6 +48,7 @@ from .application.services.session_starter import SessionStarter
 from .domain.ports.password_hasher import PasswordHasher
 from .infrastructure.mail_notifier import MailAccountNotifier
 from .infrastructure.postgres_users import (
+    PostgresLoginChallengeRepository,
     PostgresPasswordResetRepository,
     PostgresRegistrationRepository,
     PostgresSessionRepository,
@@ -50,7 +68,7 @@ logger = logging.getLogger(__name__)
 def create_identity_module(context: ModuleContext, *, hasher: PasswordHasher | None = None) -> AppModule:
     """
     Accounts: the setup wizard of a self-hosted instance, sign-up with e-mail confirmation (self-hosted: invited
-    people only), login sessions, password reset, roles, account deletion.
+    people only), login sessions with optional two-factor login (TOTP), password reset, roles, account deletion.
     """
     db, clock, ids, events, limiter = context.db, context.clock, context.ids, context.events, context.rate_limiter
     users = PostgresUserRepository(db)
@@ -60,7 +78,9 @@ def create_identity_module(context: ModuleContext, *, hasher: PasswordHasher | N
     hasher = hasher or Argon2PasswordHasher()
     tokens = Sha256TokenService()
     notifier = MailAccountNotifier(context.mailer)
-    starter = SessionStarter(sessions, tokens, clock)
+    challenges = PostgresLoginChallengeRepository(db)
+    starter = SessionStarter(sessions, challenges, tokens, clock)
+    two_factor = TwoFactor(users, hasher, context.cipher, limiter, clock)
     remover = AccountRemover(users, db, events)
     self_hosted = not context.config.multi_tenant
     setup_tokens = FileSetupTokens(context.config.data_dir)
@@ -95,6 +115,13 @@ def create_identity_module(context: ModuleContext, *, hasher: PasswordHasher | N
         .register(GetSetupStatus, GetSetupStatusHandler(users, self_hosted=self_hosted))
         .register(AuthenticateSession, AuthenticateSessionHandler(users, sessions, tokens, clock))
         .register(GetUser, GetUserHandler(users))
+        .register(GetTwoFactorStatus, GetTwoFactorStatusHandler(two_factor))
+        .register(CompleteTwoFactorLogin, CompleteTwoFactorLoginHandler(two_factor, challenges, tokens, starter))
+        .register(BeginTwoFactorSetup, BeginTwoFactorSetupHandler(two_factor))
+        .register(EnableTwoFactor, EnableTwoFactorHandler(two_factor, sessions))
+        .register(RegenerateRecoveryCodes, RegenerateRecoveryCodesHandler(two_factor))
+        .register(DisableTwoFactor, DisableTwoFactorHandler(two_factor, challenges))
+        .register(ResetTwoFactor, ResetTwoFactorHandler(two_factor, sessions, challenges))
         .register(SearchUsers, SearchUsersHandler(users))
     )
     context.http.use_auth_guard(SessionAuthGuard(bus))

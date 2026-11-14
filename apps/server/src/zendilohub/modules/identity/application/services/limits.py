@@ -23,3 +23,7 @@ async def check_all(limiter: RateLimiter, *checks: tuple[RateLimit, str]) -> Non
     blocked = [status.retry_after for status in statuses if not status.allowed]
     if blocked:
         raise TooManyRequestsError(max(blocked))
+
+
+# Guessing the six digits of a two-factor code: wrong codes per account.
+TWO_FACTOR_FAILURES_PER_USER = RateLimit('two-factor-user', limit=10, window_seconds=15 * 60)

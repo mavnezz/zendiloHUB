@@ -7,6 +7,7 @@ from psycopg import errors
 from zendilohub.core.database.database import Database
 
 from ..domain.exceptions import EmailTakenError
+from ..domain.models.login_challenge import LoginChallenge
 from ..domain.models.password_reset import PasswordReset
 from ..domain.models.registration import Registration
 from ..domain.models.session import Session
@@ -24,7 +25,16 @@ def _user(row: dict[str, Any]) -> User:
         email_verified_at=row['email_verified_at'],
         created_at=row['created_at'],
         updated_at=row['updated_at'],
+        totp_secret=_bytes(row['totp_secret']),
+        totp_pending=_bytes(row['totp_pending']),
+        totp_enabled_at=row['totp_enabled_at'],
+        totp_last_step=int(row['totp_last_step']),
+        recovery_codes=tuple(row['recovery_codes']),
     )
+
+
+def _bytes(value: bytes | memoryview | None) -> bytes | None:
+    return bytes(value) if value is not None else None
 
 
 def _like(text: str) -> str:
@@ -51,18 +61,25 @@ class PostgresUserRepository:
             async with self._db.connection() as connection:
                 await connection.execute(
                     """
-                    INSERT INTO users (id, email, password_hash, role, locale, email_verified_at, created_at, updated_at)
+                    INSERT INTO users (id, email, password_hash, role, locale, email_verified_at, created_at, updated_at,
+                                       totp_secret, totp_pending, totp_enabled_at, totp_last_step, recovery_codes)
                     VALUES (%(id)s, %(email)s, %(password_hash)s, %(role)s, %(locale)s, %(email_verified_at)s,
-                            %(created_at)s, %(updated_at)s)
+                            %(created_at)s, %(updated_at)s, %(totp_secret)s, %(totp_pending)s, %(totp_enabled_at)s,
+                            %(totp_last_step)s, %(recovery_codes)s)
                     ON CONFLICT (id) DO UPDATE SET
                         email = EXCLUDED.email,
                         password_hash = EXCLUDED.password_hash,
                         role = EXCLUDED.role,
                         locale = EXCLUDED.locale,
                         email_verified_at = EXCLUDED.email_verified_at,
-                        updated_at = EXCLUDED.updated_at
+                        updated_at = EXCLUDED.updated_at,
+                        totp_secret = EXCLUDED.totp_secret,
+                        totp_pending = EXCLUDED.totp_pending,
+                        totp_enabled_at = EXCLUDED.totp_enabled_at,
+                        totp_last_step = EXCLUDED.totp_last_step,
+                        recovery_codes = EXCLUDED.recovery_codes
                     """,
-                    vars(user),
+                    {**vars(user), 'recovery_codes': list(user.recovery_codes)},
                 )
         except errors.UniqueViolation as error:
             raise EmailTakenError() from error
@@ -217,3 +234,41 @@ class PostgresPasswordResetRepository:
     async def delete_expired(self, now: datetime) -> None:
         async with self._db.connection() as connection:
             await connection.execute('DELETE FROM password_resets WHERE expires_at <= %s', (now,))
+
+
+class PostgresLoginChallengeRepository:
+    def __init__(self, db: Database) -> None:
+        self._db = db
+
+    async def find(self, challenge_id: str) -> LoginChallenge | None:
+        async with self._db.connection() as connection:
+            row = await (
+                await connection.execute('SELECT * FROM login_challenges WHERE id = %s', (challenge_id,))
+            ).fetchone()
+        if row is None:
+            return None
+        return LoginChallenge(
+            id=row['id'], user_id=str(row['user_id']), expires_at=row['expires_at'], attempts=int(row['attempts'])
+        )
+
+    async def save(self, challenge: LoginChallenge) -> None:
+        async with self._db.connection() as connection:
+            await connection.execute(
+                """
+                INSERT INTO login_challenges (id, user_id, expires_at, attempts) VALUES (%s, %s, %s, %s)
+                ON CONFLICT (id) DO UPDATE SET attempts = EXCLUDED.attempts
+                """,
+                (challenge.id, challenge.user_id, challenge.expires_at, challenge.attempts),
+            )
+
+    async def delete(self, challenge_id: str) -> None:
+        async with self._db.connection() as connection:
+            await connection.execute('DELETE FROM login_challenges WHERE id = %s', (challenge_id,))
+
+    async def delete_for_user(self, user_id: str) -> None:
+        async with self._db.connection() as connection:
+            await connection.execute('DELETE FROM login_challenges WHERE user_id = %s', (user_id,))
+
+    async def delete_expired(self, now: datetime) -> None:
+        async with self._db.connection() as connection:
+            await connection.execute('DELETE FROM login_challenges WHERE expires_at <= %s', (now,))

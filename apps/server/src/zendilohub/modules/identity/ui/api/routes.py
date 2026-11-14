@@ -19,6 +19,15 @@ from ...application.commands.register import Register
 from ...application.commands.request_password_reset import RequestPasswordReset
 from ...application.commands.resend_confirmation import ResendConfirmation
 from ...application.commands.reset_password import ResetPassword
+from ...application.commands.two_factor import (
+    BeginTwoFactorSetup,
+    CompleteTwoFactorLogin,
+    DisableTwoFactor,
+    EnableTwoFactor,
+    GetTwoFactorStatus,
+    RegenerateRecoveryCodes,
+    ResetTwoFactor,
+)
 from ...application.commands.update_account import UpdateAccount
 from ...application.queries.setup_status import GetSetupStatus
 from ...application.queries.users import GetUser, SearchUsers
@@ -28,12 +37,17 @@ from .schemas import (
     CredentialsRequest,
     EmailRequest,
     PasswordRequest,
+    RecoveryCodesResponse,
     RegisterRequest,
     ResetPasswordRequest,
     SessionResponse,
     SetupRequest,
     SetupStatusResponse,
     TokenRequest,
+    TwoFactorCodeRequest,
+    TwoFactorLoginRequest,
+    TwoFactorSetupResponse,
+    TwoFactorStatusResponse,
     UpdateAccountRequest,
     UpdateUserRequest,
     UserPageResponse,
@@ -47,10 +61,13 @@ def _client(request: Request) -> str:
 
 
 def _log_in(request: Request, response: Response, result: LoginResult) -> SessionResponse:
+    if result.session is None:
+        # Two-factor login: no cookie before the code.
+        return SessionResponse(user=None, challenge=result.challenge)
     response.set_cookie(
         SESSION_COOKIE,
-        result.token,
-        expires=result.expires_at,
+        result.session.token,
+        expires=result.session.expires_at,
         path='/',
         httponly=True,
         samesite='lax',
@@ -110,6 +127,13 @@ def auth_routes(bus: CommandBus, config: AppConfig) -> APIRouter:
         note_audit(request, actor_email=body.email.strip().lower()[:254])
         result = await bus.execute(Login(email=body.email, password=body.password, client=_client(request)))
         note_audit(request, actor_id=result.user.id)
+        return _log_in(request, response, result)
+
+    @router.post('/login/two-factor', dependencies=[audited('auth.login_two_factor')])
+    async def login_two_factor(body: TwoFactorLoginRequest, request: Request, response: Response) -> SessionResponse:
+        """The second step of a two-factor login: the challenge from /auth/login and a code."""
+        result = await bus.execute(CompleteTwoFactorLogin(challenge=body.challenge, code=body.code))
+        note_audit(request, actor_id=result.user.id, actor_email=result.user.email)
         return _log_in(request, response, result)
 
     @router.post('/logout', status_code=204, response_class=Response, dependencies=[audited('auth.logout')])
@@ -186,6 +210,40 @@ def account_routes(bus: CommandBus) -> APIRouter:
             )
         )
 
+    @router.get('/two-factor')
+    async def two_factor(principal: CurrentUser) -> TwoFactorStatusResponse:
+        status = await bus.query(GetTwoFactorStatus(principal.user_id))
+        return TwoFactorStatusResponse(enabled=status.enabled, recovery_codes_left=status.recovery_codes_left)
+
+    @router.post('/two-factor/setup', dependencies=[audited('account.two_factor_setup_started')])
+    async def two_factor_setup(body: PasswordRequest, principal: CurrentUser) -> TwoFactorSetupResponse:
+        """A new secret for the authenticator app; two-factor login is on once a code confirms it."""
+        setup = await bus.execute(BeginTwoFactorSetup(user_id=principal.user_id, password=body.password))
+        return TwoFactorSetupResponse(secret=setup.secret, uri=setup.uri)
+
+    @router.post('/two-factor/enable', dependencies=[audited('account.two_factor_enabled')])
+    async def two_factor_enable(body: TwoFactorCodeRequest, principal: CurrentUser) -> RecoveryCodesResponse:
+        """Turns two-factor login on; other sessions are logged out. The recovery codes are shown only now."""
+        codes = await bus.execute(
+            EnableTwoFactor(user_id=principal.user_id, session_id=principal.session_id, code=body.code)
+        )
+        return RecoveryCodesResponse(recovery_codes=list(codes))
+
+    @router.post('/two-factor/recovery-codes', dependencies=[audited('account.recovery_codes_renewed')])
+    async def recovery_codes(body: PasswordRequest, principal: CurrentUser) -> RecoveryCodesResponse:
+        """New recovery codes; the old ones stop working."""
+        codes = await bus.execute(RegenerateRecoveryCodes(user_id=principal.user_id, password=body.password))
+        return RecoveryCodesResponse(recovery_codes=list(codes))
+
+    @router.post(
+        '/two-factor/disable',
+        status_code=204,
+        response_class=Response,
+        dependencies=[audited('account.two_factor_disabled')],
+    )
+    async def two_factor_disable(body: PasswordRequest, principal: CurrentUser) -> None:
+        await bus.execute(DisableTwoFactor(user_id=principal.user_id, password=body.password))
+
     @router.post('/delete', status_code=204, response_class=Response, dependencies=[audited('account.deleted')])
     async def delete(body: PasswordRequest, request: Request, principal: CurrentUser, response: Response) -> None:
         """Deletes the account and all its data."""
@@ -215,6 +273,16 @@ def admin_user_routes(bus: CommandBus) -> APIRouter:
     @router.patch('/{user_id}', dependencies=[audited('admin.user_role_changed', target=path_param('user_id'))])
     async def update(user_id: Id, body: UpdateUserRequest, admin: CurrentAdmin) -> UserResponse:
         return UserResponse.of(await bus.execute(ChangeRole(actor_id=admin.user_id, user_id=user_id, role=body.role)))
+
+    @router.delete(
+        '/{user_id}/two-factor',
+        status_code=204,
+        response_class=Response,
+        dependencies=[audited('admin.user_two_factor_reset', target=path_param('user_id'))],
+    )
+    async def reset_two_factor(user_id: Id, admin: CurrentAdmin) -> None:
+        """Turns off the two-factor login of someone who lost the phone and the recovery codes."""
+        await bus.execute(ResetTwoFactor(actor_id=admin.user_id, user_id=user_id))
 
     @router.delete(
         '/{user_id}',

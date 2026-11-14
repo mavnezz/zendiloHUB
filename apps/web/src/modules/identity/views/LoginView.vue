@@ -13,6 +13,7 @@ import { Input } from '@/core/ui/input'
 import { Label } from '@/core/ui/label'
 import { identityApi } from '../api'
 import AuthCard from '../components/AuthCard.vue'
+import TwoFactorStep from '../components/TwoFactorStep.vue'
 import { useSession } from '../session'
 
 const session = useSession()
@@ -27,6 +28,8 @@ const error = ref<string | null>(null)
 const notVerified = ref(false)
 const resent = ref(false)
 const busy = ref(false)
+/** Set after the password when the account has two-factor login. */
+const challenge = ref<string | null>(null)
 
 async function submit(): Promise<void> {
   busy.value = true
@@ -34,14 +37,25 @@ async function submit(): Promise<void> {
   notVerified.value = false
   resent.value = false
   try {
-    await session.login(email.value, password.value)
-    await router.replace(safeRedirect(route.query.redirect))
+    challenge.value = await session.login(email.value, password.value)
+    if (!challenge.value) {
+      await done()
+    }
   } catch (caught) {
     notVerified.value = caught instanceof ApiRequestError && caught.code === 'email_not_verified'
     error.value = notVerified.value ? null : errorText(caught)
   } finally {
     busy.value = false
   }
+}
+
+async function done(): Promise<void> {
+  await router.replace(safeRedirect(route.query.redirect))
+}
+
+function back(): void {
+  challenge.value = null
+  password.value = ''
 }
 
 async function resend(): Promise<void> {
@@ -55,7 +69,10 @@ async function resend(): Promise<void> {
 </script>
 
 <template>
-  <AuthCard :title="$t('login.title')" :description="$t('login.description')">
+  <AuthCard v-if="challenge" :title="$t('login.codeTitle')" :description="email">
+    <TwoFactorStep :challenge="challenge" @done="done" @back="back" />
+  </AuthCard>
+  <AuthCard v-else :title="$t('login.title')" :description="$t('login.description')">
     <form class="grid gap-4" @submit.prevent="submit">
       <ErrorAlert v-if="error" :title="$t('login.failed')" :message="error" />
       <NoticeAlert v-if="notVerified" :title="$t('errors.email_not_verified')" :message="$t('login.notVerified')">

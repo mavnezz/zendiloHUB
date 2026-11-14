@@ -27,7 +27,7 @@ async def test_signing_up_sends_a_link_that_creates_the_account_and_logs_in(app:
     assert mail.subject == 'Bestätige dein zendiloHUB-Konto'
     assert app.mailer.last_link('ada@example.org').startswith('http://zendilohub.test/verify-email?token=')
     # Nothing exists before the confirmation.
-    assert (await app.client.get('/api/v1/auth/session')).json() == {'user': None}
+    assert (await app.client.get('/api/v1/auth/session')).json() == {'user': None, 'challenge': None}
 
     response = await app.client.post(CONFIRM, json={'token': app.mailer.last_token('ada@example.org')})
     assert response.status_code == 200

@@ -58,6 +58,21 @@ function askDelete(user: User): void {
   deleteOpen.value = true
 }
 
+const resetting = ref<User | null>(null)
+const resetOpen = ref(false)
+
+function askReset(user: User): void {
+  resetting.value = user
+  resetOpen.value = true
+}
+
+async function resetTwoFactor(): Promise<void> {
+  const user = resetting.value as User
+  await identityApi.resetTwoFactor(user.id)
+  notify.success(t('admin.twoFactorReset', { email: user.email }))
+  await reload()
+}
+
 async function deleteUser(): Promise<void> {
   const user = deleting.value as User
   await identityApi.deleteUser(user.id)
@@ -102,6 +117,9 @@ async function deleteUser(): Promise<void> {
               <Badge :variant="user.role === 'admin' ? 'default' : 'secondary'">{{
                 $t(`admin.roles.${user.role}`)
               }}</Badge>
+              <Badge v-if="user.two_factor" variant="outline" class="ml-1" data-test="two-factor-badge">{{
+                $t('admin.twoFactor')
+              }}</Badge>
             </TableCell>
             <TableCell>{{ formatDate(user.created_at) }}</TableCell>
             <TableCell v-if="$slots.extra"><slot name="extra" :user="user" /></TableCell>
@@ -109,6 +127,15 @@ async function deleteUser(): Promise<void> {
               <template v-if="user.id !== session.user.value?.id">
                 <Button variant="ghost" size="sm" data-test="toggle-role" @click="toggleRole(user)">
                   {{ user.role === 'admin' ? $t('admin.makeUser') : $t('admin.makeAdmin') }}
+                </Button>
+                <Button
+                  v-if="user.two_factor"
+                  variant="ghost"
+                  size="sm"
+                  data-test="reset-two-factor"
+                  @click="askReset(user)"
+                >
+                  {{ $t('admin.resetTwoFactor') }}
                 </Button>
                 <Button
                   variant="ghost"
@@ -148,6 +175,13 @@ async function deleteUser(): Promise<void> {
       :description="$t('admin.deleteText')"
       :confirm-label="$t('common.delete')"
       :action="deleteUser"
+    />
+    <ConfirmDialog
+      v-model:open="resetOpen"
+      :title="$t('admin.resetTwoFactorTitle', { email: resetting?.email ?? '' })"
+      :description="$t('admin.resetTwoFactorText')"
+      :confirm-label="$t('admin.resetTwoFactor')"
+      :action="resetTwoFactor"
     />
   </div>
 </template>

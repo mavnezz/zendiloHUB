@@ -62,6 +62,100 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/v1/account/two-factor': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Two Factor */
+    get: operations['two_factor_api_v1_account_two_factor_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/account/two-factor/disable': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Two Factor Disable */
+    post: operations['two_factor_disable_api_v1_account_two_factor_disable_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/account/two-factor/enable': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Two Factor Enable
+     * @description Turns two-factor login on; other sessions are logged out. The recovery codes are shown only now.
+     */
+    post: operations['two_factor_enable_api_v1_account_two_factor_enable_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/account/two-factor/recovery-codes': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Recovery Codes
+     * @description New recovery codes; the old ones stop working.
+     */
+    post: operations['recovery_codes_api_v1_account_two_factor_recovery_codes_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/account/two-factor/setup': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Two Factor Setup
+     * @description A new secret for the authenticator app; two-factor login is on once a code confirms it.
+     */
+    post: operations['two_factor_setup_api_v1_account_two_factor_setup_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/v1/admin/audit-log': {
     parameters: {
       query?: never
@@ -157,6 +251,26 @@ export interface paths {
     patch: operations['update_api_v1_admin_users__user_id__patch']
     trace?: never
   }
+  '/api/v1/admin/users/{user_id}/two-factor': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /**
+     * Reset Two Factor
+     * @description Turns off the two-factor login of someone who lost the phone and the recovery codes.
+     */
+    delete: operations['reset_two_factor_api_v1_admin_users__user_id__two_factor_delete']
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/v1/auth/confirm': {
     parameters: {
       query?: never
@@ -208,6 +322,26 @@ export interface paths {
     put?: never
     /** Login */
     post: operations['login_api_v1_auth_login_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/auth/login/two-factor': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Login Two Factor
+     * @description The second step of a two-factor login: the challenge from /auth/login and a code.
+     */
+    post: operations['login_two_factor_api_v1_auth_login_two_factor_post']
     delete?: never
     options?: never
     head?: never
@@ -3514,6 +3648,11 @@ export interface components {
       /** Ids */
       ids?: string[] | null
     }
+    /** RecoveryCodesResponse */
+    RecoveryCodesResponse: {
+      /** Recovery Codes */
+      recovery_codes: string[]
+    }
     /** RegisterRequest */
     RegisterRequest: {
       /** Email */
@@ -3786,6 +3925,8 @@ export interface components {
     }
     /** SessionResponse */
     SessionResponse: {
+      /** Challenge */
+      challenge?: string | null
       user: components['schemas']['UserResponse'] | null
     }
     /** @enum {string} */
@@ -4096,6 +4237,32 @@ export interface components {
     }
     /** @enum {string} */
     TriggerEvent: 'created' | 'customer_replied' | 'updated'
+    /** TwoFactorCodeRequest */
+    TwoFactorCodeRequest: {
+      /** Code */
+      code: string
+    }
+    /** TwoFactorLoginRequest */
+    TwoFactorLoginRequest: {
+      /** Challenge */
+      challenge: string
+      /** Code */
+      code: string
+    }
+    /** TwoFactorSetupResponse */
+    TwoFactorSetupResponse: {
+      /** Secret */
+      secret: string
+      /** Uri */
+      uri: string
+    }
+    /** TwoFactorStatusResponse */
+    TwoFactorStatusResponse: {
+      /** Enabled */
+      enabled: boolean
+      /** Recovery Codes Left */
+      recovery_codes_left: number
+    }
     /** UpdateAccountRequest */
     UpdateAccountRequest: {
       locale: components['schemas']['LocaleValue']
@@ -4132,6 +4299,8 @@ export interface components {
       id: string
       locale: components['schemas']['LocaleValue']
       role: components['schemas']['zendilohub__modules__identity__ui__api__schemas__RoleValue']
+      /** Two Factor */
+      two_factor: boolean
     }
     /** ValidationError */
     ValidationError: {
@@ -4359,6 +4528,156 @@ export interface operations {
       }
     }
   }
+  two_factor_api_v1_account_two_factor_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['TwoFactorStatusResponse']
+        }
+      }
+    }
+  }
+  two_factor_disable_api_v1_account_two_factor_disable_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PasswordRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  two_factor_enable_api_v1_account_two_factor_enable_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['TwoFactorCodeRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['RecoveryCodesResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  recovery_codes_api_v1_account_two_factor_recovery_codes_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PasswordRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['RecoveryCodesResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  two_factor_setup_api_v1_account_two_factor_setup_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PasswordRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['TwoFactorSetupResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
   platform_log_api_v1_admin_audit_log_get: {
     parameters: {
       query?: {
@@ -4558,6 +4877,35 @@ export interface operations {
       }
     }
   }
+  reset_two_factor_api_v1_admin_users__user_id__two_factor_delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        user_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
   confirm_api_v1_auth_confirm_post: {
     parameters: {
       query?: never
@@ -4632,6 +4980,39 @@ export interface operations {
     requestBody: {
       content: {
         'application/json': components['schemas']['CredentialsRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['SessionResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  login_two_factor_api_v1_auth_login_two_factor_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['TwoFactorLoginRequest']
       }
     }
     responses: {

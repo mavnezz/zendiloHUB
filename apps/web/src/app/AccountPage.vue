@@ -3,6 +3,7 @@ import PageHeader from '@/core/components/PageHeader.vue'
 import DeleteAccountCard from '@/modules/identity/components/DeleteAccountCard.vue'
 import PasswordCard from '@/modules/identity/components/PasswordCard.vue'
 import ProfileCard from '@/modules/identity/components/ProfileCard.vue'
+import TwoFactorCard from '@/modules/identity/components/TwoFactorCard.vue'
 </script>
 
 <template>
@@ -11,6 +12,7 @@ import ProfileCard from '@/modules/identity/components/ProfileCard.vue'
     <div class="grid gap-6">
       <ProfileCard />
       <PasswordCard />
+      <TwoFactorCard />
       <DeleteAccountCard />
     </div>
   </div>

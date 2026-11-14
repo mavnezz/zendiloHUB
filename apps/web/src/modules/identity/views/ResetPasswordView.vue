@@ -10,6 +10,7 @@ import { Input } from '@/core/ui/input'
 import { Label } from '@/core/ui/label'
 import { identityApi, PASSWORD_MIN_LENGTH } from '../api'
 import AuthCard from '../components/AuthCard.vue'
+import TwoFactorStep from '../components/TwoFactorStep.vue'
 import { useSession } from '../session'
 
 const { t } = useI18n()
@@ -20,24 +21,37 @@ const token = computed(() => (typeof route.query.token === 'string' ? route.quer
 const password = ref('')
 const error = ref<string | null>(token.value ? null : t('verify.missing'))
 const busy = ref(false)
+/** The password is set; with two-factor login the code is still missing. */
+const challenge = ref<string | null>(null)
 
 async function submit(): Promise<void> {
   busy.value = true
   error.value = null
   try {
-    session.start((await identityApi.resetPassword({ token: token.value, password: password.value })).user)
-    notify.success(t('reset.done'))
-    await router.replace({ name: 'account' })
+    const result = await identityApi.resetPassword({ token: token.value, password: password.value })
+    if (result.challenge) {
+      challenge.value = result.challenge
+      return
+    }
+    session.start(result.user)
+    await done()
   } catch (caught) {
     error.value = errorText(caught)
   } finally {
     busy.value = false
   }
 }
+async function done(): Promise<void> {
+  notify.success(t('reset.done'))
+  await router.replace({ name: 'account' })
+}
 </script>
 
 <template>
-  <AuthCard :title="$t('reset.title')" :description="$t('reset.description')">
+  <AuthCard v-if="challenge" :title="$t('login.codeTitle')">
+    <TwoFactorStep :challenge="challenge" @done="done" @back="router.replace({ name: 'login' })" />
+  </AuthCard>
+  <AuthCard v-else :title="$t('reset.title')" :description="$t('reset.description')">
     <form class="grid gap-4" @submit.prevent="submit">
       <ErrorAlert v-if="error" :message="error" />
       <div class="grid gap-2">

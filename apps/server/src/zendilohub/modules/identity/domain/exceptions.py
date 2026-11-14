@@ -82,3 +82,30 @@ class SignUpClosedError(ForbiddenError):
 
     def __init__(self) -> None:
         super().__init__('sign_up_closed', 'Only invited people can create an account here')
+
+
+class InvalidTwoFactorCodeError(ValidationError):
+    def __init__(self) -> None:
+        super().__init__('invalid_two_factor_code', 'The code is wrong or was used already')
+
+
+class InvalidChallengeError(ValidationError):
+    """The second step of a login came too late or with an unknown token: log in again."""
+
+    def __init__(self) -> None:
+        super().__init__('invalid_challenge', 'The login has expired; please log in again')
+
+
+class TwoFactorOnError(ConflictError):
+    def __init__(self) -> None:
+        super().__init__('two_factor_on', 'Two-factor login is on already')
+
+
+class TwoFactorOffError(ConflictError):
+    def __init__(self) -> None:
+        super().__init__('two_factor_off', 'Two-factor login is off')
+
+
+class TwoFactorNotStartedError(ConflictError):
+    def __init__(self) -> None:
+        super().__init__('two_factor_not_started', 'Start the setup of two-factor login first')

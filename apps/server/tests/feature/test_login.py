@@ -17,7 +17,7 @@ async def test_logs_in_and_out(app: AppUnderTest) -> None:
     response = await app.client.post('/api/v1/auth/logout')
     assert response.status_code == 204
     assert 'zendilohub_session=""' in response.headers['set-cookie']
-    assert (await app.client.get(SESSION)).json() == {'user': None}
+    assert (await app.client.get(SESSION)).json() == {'user': None, 'challenge': None}
     assert (await app.client.get('/api/v1/account')).status_code == 401
     # Logging out without a session is fine, too.
     assert (await app.new_client().post('/api/v1/auth/logout')).status_code == 204
@@ -30,7 +30,7 @@ async def test_a_logged_out_token_stays_invalid(app: AppUnderTest) -> None:
 
     stolen = app.new_client()
     stolen.cookies['zendilohub_session'] = token
-    assert (await stolen.get(SESSION)).json() == {'user': None}
+    assert (await stolen.get(SESSION)).json() == {'user': None, 'challenge': None}
 
 
 async def test_rejects_wrong_credentials_the_same_way(app: AppUnderTest) -> None:
@@ -72,7 +72,7 @@ async def test_a_successful_login_forgives_earlier_failures(app: AppUnderTest) -
 async def test_sessions_expire_after_30_days(app: AppUnderTest) -> None:
     client = await logged_in(app, 'ada@example.org')
     app.clock.advance(days=30)
-    assert (await client.get(SESSION)).json() == {'user': None}
+    assert (await client.get(SESSION)).json() == {'user': None, 'challenge': None}
     assert (await client.get('/api/v1/account')).status_code == 401
 
 

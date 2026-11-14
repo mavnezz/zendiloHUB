@@ -72,20 +72,55 @@ class UpdateUserRequest(Request):
     role: RoleValue
 
 
+class TwoFactorLoginRequest(Request):
+    challenge: str = Field(max_length=256)
+    code: str = Field(max_length=32)
+    """Six digits of the authenticator app, or a recovery code."""
+
+
+class TwoFactorCodeRequest(Request):
+    code: str = Field(max_length=32)
+
+
+class TwoFactorStatusResponse(BaseModel):
+    enabled: bool
+    recovery_codes_left: int
+
+
+class TwoFactorSetupResponse(BaseModel):
+    secret: str
+    uri: str
+
+
+class RecoveryCodesResponse(BaseModel):
+    recovery_codes: list[str]
+    """Shown once: only their hashes are stored."""
+
+
 class UserResponse(BaseModel):
     id: str
     email: str
     role: RoleValue
     locale: LocaleValue
+    two_factor: bool
     created_at: datetime
 
     @classmethod
     def of(cls, user: User) -> UserResponse:
-        return cls(id=user.id, email=user.email, role=user.role, locale=user.locale, created_at=user.created_at)
+        return cls(
+            id=user.id,
+            email=user.email,
+            role=user.role,
+            locale=user.locale,
+            two_factor=user.two_factor,
+            created_at=user.created_at,
+        )
 
 
 class SessionResponse(BaseModel):
     user: UserResponse | None
+    challenge: str | None = None
+    """Set instead of `user` when the account has two-factor login: send the code to /auth/login/two-factor."""
 
 
 class UserPageResponse(BaseModel):
