@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from typing import Literal, get_args
 
 from zendilohub.core.domain.automation import AutomationChanges, TicketCriteria, TicketFacts
+from zendilohub.core.domain.email_address import normalized_email
 
 from ..exceptions import InvalidRuleError
 
@@ -17,6 +18,8 @@ STATES = ('new', 'open', 'pending_reminder', 'pending_close', 'closed')
 PRIORITIES = ('low', 'normal', 'high', 'urgent')
 RULES_MAX = 100
 TEXT_MAX = 10_000
+NOTIFY_EMAILS_MAX = 10
+NOTIFY_TEXT_MAX = 2000
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -120,6 +123,14 @@ class Actions:
     remove_tags: tuple[str, ...] = ()
     note: str = ''
     reply: str = ''
+    notify_emails: tuple[str, ...] = ()
+    """Triggers: an alert by e-mail to these addresses (e.g. an on-call inbox), with `notify_text` on top."""
+    notify_text: str = ''
+
+    def normalized(self) -> Actions:
+        """The alert addresses trimmed, in lower case and once each (invalid ones stay, so `check` finds them)."""
+        emails = tuple(dict.fromkeys(normalized_email(each) or each for each in self.notify_emails))
+        return replace(self, notify_emails=emails, notify_text=self.notify_text.strip())
 
     def check(self, kind: RuleKind) -> None:
         if self.state is not None and self.state not in STATES:
@@ -137,6 +148,17 @@ class Actions:
             raise InvalidRuleError('actions.note')
         if any(len(tag) > 50 for tag in (*self.add_tags, *self.remove_tags)):
             raise InvalidRuleError('actions.tags')
+        if self.notify_emails and kind != 'trigger':
+            # A scheduled job runs on the same tickets every few minutes: its alerts would never stop.
+            raise InvalidRuleError('actions.notify_emails')
+        if len(self.notify_emails) > NOTIFY_EMAILS_MAX or any(
+            normalized_email(each) != each for each in self.notify_emails
+        ):
+            raise InvalidRuleError('actions.notify_emails')
+        if len(self.notify_text) > NOTIFY_TEXT_MAX:
+            raise InvalidRuleError('actions.notify_text')
+        if self.notify_text and not self.notify_emails:
+            raise InvalidRuleError('actions.notify_emails')
         if self == Actions():
             raise InvalidRuleError('actions')
 
@@ -180,6 +202,7 @@ class Rule:
         self.name = ' '.join(self.name.split())
         if not 1 <= len(self.name) <= 80:
             raise InvalidRuleError('name')
+        self.actions = self.actions.normalized()
         self.actions.check(self.kind)
         if self.kind == 'trigger':
             if self.event not in TRIGGER_EVENTS:

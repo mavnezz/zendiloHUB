@@ -28,6 +28,10 @@ class RuleActionsModel(Strict):
     note: str = Field(default='', max_length=10_000)
     reply: str = Field(default='', max_length=10_000)
     """Triggers and jobs: a message to the customer (sent by e-mail when the queue has an account)."""
+    notify_emails: list[str] = Field(default_factory=list, max_length=10)
+    """Triggers: an alert by e-mail to these addresses, e.g. an on-call inbox (500 per hour at most)."""
+    notify_text: str = Field(default='', max_length=2000)
+    """Put on top of the alert."""
 
 
 class RuleConditionModel(Strict):

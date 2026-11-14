@@ -4,7 +4,7 @@ from typing import Any, cast
 
 from zendilohub.core.database.database import Database
 
-from ..domain.models.notification import Notification, NotificationKind, Settings
+from ..domain.models.notification import FollowedQueue, FollowMode, Notification, NotificationKind, Settings
 
 KEEP = 500
 """Notifications kept per member; older ones go."""
@@ -95,13 +95,41 @@ class PostgresNotificationRepository:
             vars(settings),
         )
 
+    async def followed(self, tenant_id: str, user_id: str) -> Sequence[FollowedQueue]:
+        rows = await self._run(
+            'SELECT queue_id, mode FROM followed_queues WHERE tenant_id = %s AND user_id = %s ORDER BY queue_id',
+            (tenant_id, user_id),
+        )
+        return [FollowedQueue(queue_id=str(row['queue_id']), mode=cast(FollowMode, row['mode'])) for row in rows]
+
+    async def follow(self, tenant_id: str, user_id: str, queues: Sequence[FollowedQueue]) -> None:
+        async with self._db.connection() as connection, connection.transaction():
+            await connection.execute(
+                'DELETE FROM followed_queues WHERE tenant_id = %s AND user_id = %s', (tenant_id, user_id)
+            )
+            for each in queues:
+                await connection.execute(
+                    'INSERT INTO followed_queues (tenant_id, user_id, queue_id, mode) VALUES (%s, %s, %s, %s)',
+                    (tenant_id, user_id, each.queue_id, each.mode),
+                )
+
+    async def followers(self, tenant_id: str, queue_id: str, modes: Sequence[FollowMode]) -> Sequence[str]:
+        rows = await self._run(
+            'SELECT user_id FROM followed_queues WHERE tenant_id = %s AND queue_id = %s AND mode = ANY(%s)',
+            (tenant_id, queue_id, list(modes)),
+        )
+        return [str(row['user_id']) for row in rows]
+
+    async def forget_queue(self, tenant_id: str, queue_id: str) -> None:
+        await self._run('DELETE FROM followed_queues WHERE tenant_id = %s AND queue_id = %s', (tenant_id, queue_id))
+
     async def forget(self, tenant_id: str | None, user_id: str) -> None:
-        for table in ('notifications', 'notification_settings'):
+        for table in ('notifications', 'notification_settings', 'followed_queues'):
             await self._run(
                 f'DELETE FROM {table} WHERE user_id = %s AND (%s::uuid IS NULL OR tenant_id = %s::uuid)',
                 (user_id, tenant_id, tenant_id),
             )
 
     async def forget_tenant(self, tenant_id: str) -> None:
-        for table in ('notifications', 'notification_settings'):
+        for table in ('notifications', 'notification_settings', 'followed_queues'):
             await self._run(f'DELETE FROM {table} WHERE tenant_id = %s', (tenant_id,))

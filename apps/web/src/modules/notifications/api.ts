@@ -3,6 +3,8 @@ import type { Schemas } from '@/core/api/types'
 
 export type Notification = Schemas['NotificationResponse']
 export type NotificationInbox = Schemas['InboxResponse']
+export type FollowedQueue = Schemas['FollowedQueueModel']
+export type FollowMode = NonNullable<FollowedQueue['mode']>
 
 const base = (tenantId: string) => `/tenants/${tenantId}`
 
@@ -14,4 +16,7 @@ export const notificationsApi = {
   settings: (tenantId: string) => http.get<Schemas['SettingsBody']>(`${base(tenantId)}/me/notification-settings`),
   saveSettings: (tenantId: string, email: boolean) =>
     http.put<Schemas['SettingsBody']>(`${base(tenantId)}/me/notification-settings`, { email }),
+  followed: (tenantId: string) => http.get<Schemas['FollowedQueuesBody']>(`${base(tenantId)}/notifications/queues`),
+  follow: (tenantId: string, queues: FollowedQueue[]) =>
+    http.put<Schemas['FollowedQueuesBody']>(`${base(tenantId)}/notifications/queues`, { queues }),
 }

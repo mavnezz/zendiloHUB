@@ -68,6 +68,8 @@ const actions = ref({
   remove_tags: '',
   note: '',
   reply: '',
+  notify_emails: '',
+  notify_text: '',
 })
 const error = ref<string | null>(null)
 const busy = ref(false)
@@ -108,6 +110,8 @@ watch(open, (opened) => {
     remove_tags: (a?.remove_tags ?? []).join(', '),
     note: a?.note ?? '',
     reply: a?.reply ?? '',
+    notify_emails: (a?.notify_emails ?? []).join(', '),
+    notify_text: a?.notify_text ?? '',
   }
   error.value = null
 })
@@ -159,6 +163,8 @@ function body(): RuleRequest {
       remove_tags: list(a.remove_tags),
       note: a.note,
       reply: props.kind === 'macro' ? '' : a.reply,
+      notify_emails: props.kind === 'trigger' ? list(a.notify_emails.replaceAll(/[\s;]+/g, ',')) : [],
+      notify_text: props.kind === 'trigger' ? a.notify_text : '',
     },
   }
   if (props.kind === 'trigger') {
@@ -360,6 +366,23 @@ async function submit(): Promise<void> {
             <Label for="action-reply" class="text-xs">{{ $t('automation.reply') }}</Label>
             <Textarea id="action-reply" v-model="actions.reply" rows="3" />
           </div>
+          <template v-if="kind === 'trigger'">
+            <div class="grid gap-1">
+              <Label for="action-notify-emails" class="text-xs">{{ $t('automation.notifyEmails') }}</Label>
+              <Input
+                id="action-notify-emails"
+                v-model="actions.notify_emails"
+                type="text"
+                :placeholder="$t('automation.notifyEmailsPlaceholder')"
+                data-test="notify-emails"
+              />
+              <p class="text-xs text-muted-foreground">{{ $t('automation.notifyEmailsHint') }}</p>
+            </div>
+            <div v-if="actions.notify_emails.trim()" class="grid gap-1">
+              <Label for="action-notify-text" class="text-xs">{{ $t('automation.notifyText') }}</Label>
+              <Textarea id="action-notify-text" v-model="actions.notify_text" rows="2" data-test="notify-text" />
+            </div>
+          </template>
         </fieldset>
         <DialogFooter>
           <Button type="submit" :disabled="busy || !name.trim()" data-test="save-rule">{{ $t('common.save') }}</Button>

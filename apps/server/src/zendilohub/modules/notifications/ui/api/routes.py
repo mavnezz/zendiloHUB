@@ -9,8 +9,22 @@ from zendilohub.core.http.access import CurrentPerson
 from zendilohub.core.http.audit import Unaudited
 from zendilohub.core.http.ids import Id
 
-from ...application.commands.notify import GetSettings, ListNotifications, MarkRead, SaveSettings
-from ...domain.models.notification import Notification, NotificationKind, Settings
+from ...application.commands.notify import (
+    FollowQueues,
+    GetFollowedQueues,
+    GetSettings,
+    ListNotifications,
+    MarkRead,
+    SaveSettings,
+)
+from ...domain.models.notification import (
+    FOLLOWED_MAX,
+    FollowedQueue,
+    FollowMode,
+    Notification,
+    NotificationKind,
+    Settings,
+)
 
 
 class NotificationResponse(BaseModel):
@@ -56,6 +70,24 @@ class SettingsBody(BaseModel):
     """Also by e-mail."""
 
 
+class FollowedQueueModel(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+
+    queue_id: Id
+    mode: FollowMode = 'new'
+    """`new`: new tickets and tickets moved into the queue; `all`: also every customer reply."""
+
+
+class FollowedQueuesBody(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+
+    queues: list[FollowedQueueModel] = Field(max_length=FOLLOWED_MAX)
+
+
+def _followed(queues: list[FollowedQueue] | tuple[FollowedQueue, ...]) -> FollowedQueuesBody:
+    return FollowedQueuesBody(queues=[FollowedQueueModel(queue_id=each.queue_id, mode=each.mode) for each in queues])
+
+
 def notification_routes(bus: CommandBus) -> APIRouter:
     router = APIRouter(prefix='/tenants/{tenant_id}', tags=['notifications'])
 
@@ -88,5 +120,22 @@ def notification_routes(bus: CommandBus) -> APIRouter:
             SaveSettings(Settings(tenant_id=member.tenant_id, user_id=member.user_id, email=body.email))
         )
         return SettingsBody(email=saved.email)
+
+    @router.get('/notifications/queues')
+    async def followed_queues(member: CurrentPerson) -> FollowedQueuesBody:
+        """The queues the caller follows: they hear about new tickets there (in the app, and by e-mail if set)."""
+        return _followed(list(await bus.query(GetFollowedQueues(tenant_id=member.tenant_id, user_id=member.user_id))))
+
+    @router.put('/notifications/queues', dependencies=[Unaudited])
+    async def follow_queues(body: FollowedQueuesBody, member: CurrentPerson) -> FollowedQueuesBody:
+        """Replaces the followed queues; only queues whose tickets the caller may see."""
+        saved = await bus.execute(
+            FollowQueues(
+                tenant_id=member.tenant_id,
+                user_id=member.user_id,
+                queues=[FollowedQueue(queue_id=each.queue_id, mode=each.mode) for each in body.queues],
+            )
+        )
+        return _followed(list(saved))
 
     return router

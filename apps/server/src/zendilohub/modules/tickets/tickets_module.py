@@ -9,6 +9,8 @@ from .application.commands.assist import Assist, AssistantStatus, AssistantStatu
 from .application.commands.automation import (
     ApplyAutomation,
     ApplyAutomationHandler,
+    ExcerptOf,
+    ExcerptOfHandler,
     FactsOf,
     FactsOfHandler,
     FindTickets,
@@ -199,6 +201,7 @@ def create_tickets_module(context: ModuleContext, writer: TicketWriter | None = 
         .register(FactsOf, FactsOfHandler(desk, watchers, customers))
         .register(FindTickets, FindTicketsHandler(desk))
         .register(ApplyAutomation, ApplyAutomationHandler(desk, messages, db))
+        .register(ExcerptOf, ExcerptOfHandler(messages))
     )
 
     async def member_removed(event: MemberRemoved) -> None:

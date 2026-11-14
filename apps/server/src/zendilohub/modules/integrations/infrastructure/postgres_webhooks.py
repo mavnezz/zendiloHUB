@@ -3,7 +3,7 @@ from typing import Any, cast
 
 from zendilohub.core.database.database import Database
 
-from ..domain.models.webhook import Delivery, Webhook, WebhookEvent
+from ..domain.models.webhook import Delivery, Webhook, WebhookEvent, WebhookFormat
 
 KEEP = 50
 
@@ -16,6 +16,8 @@ def _webhook(row: dict[str, Any]) -> Webhook:
         url=row['url'],
         events=tuple(cast(list[WebhookEvent], row['events'])),
         active=row['active'],
+        format=cast(WebhookFormat, row['format']),
+        queue_ids=tuple(str(each) for each in row['queue_ids']),
         created_at=row['created_at'],
         last_delivery_at=row['last_delivery_at'],
         last_status=row['last_status'],
@@ -43,16 +45,17 @@ class PostgresWebhookRepository:
     async def save(self, webhook: Webhook) -> None:
         await self._run(
             """
-            INSERT INTO webhooks (id, tenant_id, name, url, events, active, created_at, last_delivery_at, last_status,
-                                  last_error)
-            VALUES (%(id)s, %(tenant_id)s, %(name)s, %(url)s, %(events)s, %(active)s, %(created_at)s,
-                    %(last_delivery_at)s, %(last_status)s, %(last_error)s)
+            INSERT INTO webhooks (id, tenant_id, name, url, events, active, format, queue_ids, created_at,
+                                  last_delivery_at, last_status, last_error)
+            VALUES (%(id)s, %(tenant_id)s, %(name)s, %(url)s, %(events)s, %(active)s, %(format)s,
+                    %(queue_ids)s::uuid[], %(created_at)s, %(last_delivery_at)s, %(last_status)s, %(last_error)s)
             ON CONFLICT (id) DO UPDATE SET
                 name = EXCLUDED.name, url = EXCLUDED.url, events = EXCLUDED.events, active = EXCLUDED.active,
+                format = EXCLUDED.format, queue_ids = EXCLUDED.queue_ids,
                 last_delivery_at = EXCLUDED.last_delivery_at, last_status = EXCLUDED.last_status,
                 last_error = EXCLUDED.last_error
             """,
-            vars(webhook) | {'events': list(webhook.events)},
+            vars(webhook) | {'events': list(webhook.events), 'queue_ids': list(webhook.queue_ids)},
         )
 
     async def secret(self, webhook_id: str) -> bytes | None:
@@ -106,3 +109,14 @@ class PostgresWebhookRepository:
 
     async def forget_tenant(self, tenant_id: str) -> None:
         await self._run('DELETE FROM webhooks WHERE tenant_id = %s', (tenant_id,))
+
+    async def forget_queue(self, tenant_id: str, queue_id: str) -> None:
+        # A webhook only for this queue would now hear about all queues: it is switched off instead.
+        await self._run(
+            """
+            UPDATE webhooks SET queue_ids = array_remove(queue_ids, %(queue)s::uuid),
+                                active = active AND cardinality(array_remove(queue_ids, %(queue)s::uuid)) > 0
+            WHERE tenant_id = %(tenant)s AND %(queue)s::uuid = ANY(queue_ids)
+            """,
+            {'queue': queue_id, 'tenant': tenant_id},
+        )

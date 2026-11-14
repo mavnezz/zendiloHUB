@@ -16,3 +16,9 @@ class ContractTickets:
 
     async def apply(self, tenant_id: str, ticket_id: str, changes: AutomationChanges, *, by: str) -> bool:
         return await self._contracts.ticket_automation.get().apply(tenant_id, ticket_id, changes, by=by)
+
+    async def excerpt(self, tenant_id: str, ticket_id: str) -> str:
+        return await self._contracts.ticket_automation.get().excerpt(tenant_id, ticket_id)
+
+    async def queue_name(self, tenant_id: str, queue_id: str) -> str | None:
+        return await self._contracts.queue_names.get().name_of(tenant_id, queue_id)

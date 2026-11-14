@@ -5,6 +5,9 @@ export type Webhook = Schemas['WebhookResponse']
 export type WebhookRequest = Schemas['WebhookRequest']
 export type WebhookEvent = WebhookRequest['events'][number]
 export type WebhookDelivery = Schemas['WebhookDeliveryResponse']
+export type WebhookFormat = NonNullable<WebhookRequest['format']>
+
+export const WEBHOOK_FORMATS: readonly WebhookFormat[] = ['json', 'slack', 'teams']
 
 export const WEBHOOK_EVENTS: readonly WebhookEvent[] = [
   'ticket.created',

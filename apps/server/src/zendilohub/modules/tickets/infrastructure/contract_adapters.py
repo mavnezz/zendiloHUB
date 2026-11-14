@@ -7,7 +7,7 @@ from zendilohub.core.domain.inbox import InboundEmail, OutgoingEmail, ReceivedTi
 from zendilohub.core.domain.portal import PortalThread, PortalTicket
 from zendilohub.core.domain.queue_rights import QueueRight
 
-from ..application.commands.automation import ApplyAutomation, FactsOf, FindTickets
+from ..application.commands.automation import ApplyAutomation, ExcerptOf, FactsOf, FindTickets
 from ..application.commands.email import MarkSent, OutgoingOf, ReceiveEmail, ThreadEmail
 from ..application.commands.portal import (
     PortalOpen,
@@ -132,6 +132,9 @@ class BusTicketAutomation:
         return await self._bus.execute(
             ApplyAutomation(tenant_id=tenant_id, ticket_id=ticket_id, changes=changes, by=by)
         )
+
+    async def excerpt(self, tenant_id: str, ticket_id: str, *, limit: int = 500) -> str:
+        return await self._bus.query(ExcerptOf(tenant_id=tenant_id, ticket_id=ticket_id, limit=limit))
 
 
 class BusTicketPortal:

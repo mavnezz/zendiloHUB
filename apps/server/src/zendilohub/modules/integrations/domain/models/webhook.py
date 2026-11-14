@@ -9,6 +9,11 @@ from zendilohub.core.domain.app_domain_error import NotFoundError, ValidationErr
 
 type WebhookEvent = Literal['ticket.created', 'ticket.changed', 'message.added', 'sla.breached']
 WEBHOOK_EVENTS: tuple[WebhookEvent, ...] = get_args(WebhookEvent.__value__)
+type WebhookFormat = Literal['json', 'slack', 'teams']
+"""`json`: the signed event as it is; `slack`: a message for a Slack incoming webhook; `teams`: an Adaptive Card
+for a Microsoft Teams workflow ("When a Teams webhook request is received")."""
+WEBHOOK_FORMATS: tuple[WebhookFormat, ...] = get_args(WebhookFormat.__value__)
+QUEUES_MAX = 200
 WEBHOOKS_MAX = 20
 SIGNATURE_HEADER = 'X-Zendilohub-Signature'
 
@@ -34,6 +39,9 @@ class Webhook:
     events: tuple[WebhookEvent, ...]
     active: bool
     created_at: datetime
+    format: WebhookFormat = 'json'
+    queue_ids: tuple[str, ...] = ()
+    """Only tickets in these queues; empty: all queues."""
     last_delivery_at: datetime | None = None
     last_status: int | None = None
     last_error: str | None = None
@@ -48,6 +56,17 @@ class Webhook:
         if not self.events or any(event not in WEBHOOK_EVENTS for event in self.events):
             raise InvalidWebhookError('events')
         self.events = tuple(event for event in WEBHOOK_EVENTS if event in self.events)
+        if self.format not in WEBHOOK_FORMATS:
+            raise InvalidWebhookError('format')
+        if len(self.queue_ids) > QUEUES_MAX:
+            raise InvalidWebhookError('queue_ids')
+        self.queue_ids = tuple(dict.fromkeys(self.queue_ids))
+
+    def wants(self, event: WebhookEvent, queue_id: str | None) -> bool:
+        """Whether an event of a ticket in this queue (None: no ticket) goes here."""
+        if not self.active or event not in self.events:
+            return False
+        return not self.queue_ids or queue_id is None or queue_id in self.queue_ids
 
 
 @dataclass(frozen=True, kw_only=True)

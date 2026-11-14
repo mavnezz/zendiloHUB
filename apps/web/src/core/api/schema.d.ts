@@ -1403,6 +1403,30 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/v1/tenants/{tenant_id}/notifications/queues': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Followed Queues
+     * @description The queues the caller follows: they hear about new tickets there (in the app, and by e-mail if set).
+     */
+    get: operations['followed_queues_api_v1_tenants__tenant_id__notifications_queues_get']
+    /**
+     * Follow Queues
+     * @description Replaces the followed queues; only queues whose tickets the caller may see.
+     */
+    put: operations['follow_queues_api_v1_tenants__tenant_id__notifications_queues_put']
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/v1/tenants/{tenant_id}/notifications/read': {
     parameters: {
       query?: never
@@ -3103,6 +3127,20 @@ export interface components {
     }
     /** @enum {string} */
     FirstMessage: 'customer' | 'reply' | 'note'
+    /** FollowedQueueModel */
+    FollowedQueueModel: {
+      /** @default new */
+      mode: components['schemas']['FollowMode']
+      /** Queue Id */
+      queue_id: string
+    }
+    /** FollowedQueuesBody */
+    FollowedQueuesBody: {
+      /** Queues */
+      queues: components['schemas']['FollowedQueueModel'][]
+    }
+    /** @enum {string} */
+    FollowMode: 'new' | 'all'
     /** GrantResponse */
     GrantResponse: {
       /** Group Id */
@@ -3325,7 +3363,7 @@ export interface components {
       to_addresses: string[]
     }
     /** @enum {string} */
-    NotificationKind: 'assigned' | 'mentioned' | 'message' | 'sla_breached'
+    NotificationKind: 'assigned' | 'mentioned' | 'message' | 'sla_breached' | 'created' | 'moved'
     /** NotificationResponse */
     NotificationResponse: {
       /** Actor */
@@ -3793,6 +3831,13 @@ export interface components {
        * @default
        */
       note: string
+      /** Notify Emails */
+      notify_emails?: string[]
+      /**
+       * Notify Text
+       * @default
+       */
+      notify_text: string
       /** Owner Id */
       owner_id?: string | null
       /**
@@ -4353,6 +4398,8 @@ export interface components {
     }
     /** @enum {string} */
     WebhookEvent: 'ticket.created' | 'ticket.changed' | 'message.added' | 'sla.breached'
+    /** @enum {string} */
+    WebhookFormat: 'json' | 'slack' | 'teams'
     /** WebhookRequest */
     WebhookRequest: {
       /**
@@ -4362,6 +4409,8 @@ export interface components {
       active: boolean
       /** Events */
       events: components['schemas']['WebhookEvent'][]
+      /** @default json */
+      format: components['schemas']['WebhookFormat']
       /** Name */
       name: string
       /**
@@ -4369,6 +4418,8 @@ export interface components {
        * @default false
        */
       new_secret: boolean
+      /** Queue Ids */
+      queue_ids?: string[]
       /** Url */
       url: string
     }
@@ -4383,6 +4434,7 @@ export interface components {
       created_at: string
       /** Events */
       events: components['schemas']['WebhookEvent'][]
+      format: components['schemas']['WebhookFormat']
       /** Id */
       id: string
       /** Last Delivery At */
@@ -4393,6 +4445,8 @@ export interface components {
       last_status: number | null
       /** Name */
       name: string
+      /** Queue Ids */
+      queue_ids: string[]
       /** Secret */
       secret?: string | null
       /** Url */
@@ -7692,6 +7746,72 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['InboxResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  followed_queues_api_v1_tenants__tenant_id__notifications_queues_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['FollowedQueuesBody']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  follow_queues_api_v1_tenants__tenant_id__notifications_queues_put: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['FollowedQueuesBody']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['FollowedQueuesBody']
         }
       }
       /** @description Validation Error */

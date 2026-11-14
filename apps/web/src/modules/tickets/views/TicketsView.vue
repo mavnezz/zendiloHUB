@@ -16,6 +16,7 @@ import { Button } from '@/core/ui/button'
 import { Card, CardContent } from '@/core/ui/card'
 import { Input } from '@/core/ui/input'
 import { useSession } from '@/modules/identity/session'
+import FollowQueueButton from '@/modules/notifications/components/FollowQueueButton.vue'
 import { serviceApi } from '@/modules/service/api'
 import { useTenants } from '@/modules/tenancy/tenants'
 import {
@@ -228,6 +229,12 @@ async function applyBulk(): Promise<void> {
             />
           </form>
           <NativeSelect v-model="queueFilter" :options="queueOptions" class="w-44" :aria-label="$t('tickets.queue')" />
+          <FollowQueueButton
+            v-if="queueFilter"
+            :key="queueFilter"
+            :queue-id="queueFilter"
+            :queue-name="directory.queueName(queueFilter)"
+          />
           <NativeSelect
             v-model="priorityFilter"
             :options="priorityOptions"

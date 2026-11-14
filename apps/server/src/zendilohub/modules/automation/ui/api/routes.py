@@ -24,7 +24,8 @@ def _fields(kind: RuleKind, body: RuleRequest) -> RuleFields:
         name=body.name,
         active=body.active,
         actions=Actions(
-            **actions.model_dump(exclude={'add_tags', 'remove_tags'}),
+            **actions.model_dump(exclude={'add_tags', 'remove_tags', 'notify_emails'}),
+            notify_emails=tuple(each for each in actions.notify_emails if each.strip()),
             add_tags=tuple(tag.strip().lower() for tag in actions.add_tags if tag.strip()),
             remove_tags=tuple(tag.strip().lower() for tag in actions.remove_tags if tag.strip()),
         ),

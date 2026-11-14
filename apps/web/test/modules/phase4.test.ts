@@ -38,6 +38,8 @@ function rule(overrides: Partial<Rule> = {}): Rule {
       queue_id: null,
       owner_id: null,
       owner_me: true,
+      notify_emails: [],
+      notify_text: '',
       unassign: false,
       add_tags: ['solved'],
       remove_tags: ['open'],
@@ -110,6 +112,8 @@ describe('RulesView', () => {
         remove_tags: [],
         note: 'Asked the customer',
         reply: '',
+        notify_emails: [],
+        notify_text: '',
       },
     })
     expect(toasts.success()).toContain('"Wait" saved.')

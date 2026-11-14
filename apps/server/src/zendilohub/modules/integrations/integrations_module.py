@@ -4,6 +4,7 @@ from zendilohub.core.bus.command_bus import CommandBus
 from zendilohub.core.database.migration import sql_migrations
 from zendilohub.core.events.integration_events import (
     MessageAdded,
+    QueueDeleted,
     SlaBreached,
     TenantDeleted,
     TicketChanged,
@@ -19,6 +20,8 @@ from .application.commands.webhooks import (
     DeleteWebhookHandler,
     Deliver,
     DeliverHandler,
+    ForgetQueue,
+    ForgetQueueHandler,
     ForgetTenant,
     ForgetTenantHandler,
     ListDeliveries,
@@ -37,17 +40,26 @@ MIGRATIONS = Path(__file__).parent / 'infrastructure' / 'migrations'
 
 def create_integrations_module(context: ModuleContext) -> AppModule:
     """
-    Outgoing webhooks: other systems (e.g. zendilo.ai, a chat, a CRM) hear about new tickets, changes, messages and
-    missed service levels, signed and retried.
+    Outgoing webhooks: other systems (e.g. zendilo.ai, a CRM) hear about new tickets, changes, messages and missed
+    service levels, signed and retried; Slack and Microsoft Teams get them as chat messages, optionally only of some
+    queues.
     """
     webhooks = PostgresWebhookRepository(context.db)
+    tickets = ContractTickets(context.contracts)
     bus = (
         CommandBus()
-        .register(SaveWebhook, SaveWebhookHandler(webhooks, context.cipher, context.ids, context.clock))
+        .register(SaveWebhook, SaveWebhookHandler(webhooks, tickets, context.cipher, context.ids, context.clock))
         .register(DeleteWebhook, DeleteWebhookHandler(webhooks))
         .register(
             Announce,
-            AnnounceHandler(webhooks, ContractTickets(context.contracts), context.jobs, context.ids, context.clock),
+            AnnounceHandler(
+                webhooks,
+                tickets,
+                context.jobs,
+                context.ids,
+                context.clock,
+                link_base=context.config.public_url or '',
+            ),
         )
         .register(
             Deliver,
@@ -56,6 +68,7 @@ def create_integrations_module(context: ModuleContext) -> AppModule:
         .register(ListWebhooks, ListWebhooksHandler(webhooks))
         .register(ListDeliveries, ListDeliveriesHandler(webhooks))
         .register(ForgetTenant, ForgetTenantHandler(webhooks))
+        .register(ForgetQueue, ForgetQueueHandler(webhooks))
     )
 
     async def created(event: TicketCreated) -> None:
@@ -95,7 +108,12 @@ def create_integrations_module(context: ModuleContext) -> AppModule:
     context.events.subscribe(TicketChanged, changed)
     context.events.subscribe(MessageAdded, message_added)
     context.events.subscribe(SlaBreached, breached)
+
+    async def queue_deleted(event: QueueDeleted) -> None:
+        await bus.execute(ForgetQueue(event.tenant_id, event.queue_id))
+
     context.events.subscribe(TenantDeleted, tenant_deleted)
+    context.events.subscribe(QueueDeleted, queue_deleted)
 
     async def deliver(tenant_id: str, webhook_id: str, body: str, attempt: str = '1') -> None:
         await bus.execute(Deliver(tenant_id, webhook_id, body, int(attempt)))
