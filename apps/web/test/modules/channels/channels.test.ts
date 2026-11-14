@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { EmailAccount, MailFilter, QueueChannel, TextTemplate } from '@/modules/channels/api'
 import EmailAccountsView from '@/modules/channels/views/EmailAccountsView.vue'
 import FailedEmailsView from '@/modules/channels/views/FailedEmailsView.vue'
@@ -6,12 +6,15 @@ import MailFiltersView from '@/modules/channels/views/MailFiltersView.vue'
 import MySignatureView from '@/modules/channels/views/MySignatureView.vue'
 import QueueEmailView from '@/modules/channels/views/QueueEmailView.vue'
 import TextTemplatesView from '@/modules/channels/views/TextTemplatesView.vue'
+import { leaveTo } from '@/modules/channels/leave'
 import { useTenants } from '@/modules/tenancy/tenants'
 import { FakeApi } from '../../support/fake-api'
 import { tenant, TENANT_ID } from '../../support/fixtures'
 import { queue } from '../../support/helpdesk'
 import { $, $$, click, exists, flushPromises, mountView, text, type } from '../../support/mount'
 import { spyToasts } from '../../support/toasts'
+
+vi.mock('@/modules/channels/leave', () => ({ leaveTo: vi.fn() }))
 
 const BASE = `/tenants/${TENANT_ID}`
 const PLACEHOLDERS = ['agent.name', 'customer.name', 'ticket.number']
@@ -47,6 +50,8 @@ function account(overrides: Partial<EmailAccount> = {}): EmailAccount {
     last_fetch_at: '2026-11-13T12:00:00Z',
     last_error: null,
     failing_since: null,
+    provider: null,
+    needs_reconnect: false,
     created_at: '2026-11-13T12:00:00Z',
     ...overrides,
   }
@@ -180,6 +185,99 @@ describe('EmailAccountsView', () => {
     new FakeApi().json('GET', `${BASE}/queues`, []).error('GET', `${BASE}/email-accounts`, 403, 'permission_denied')
     await mountView(EmailAccountsView, { path: `/t/${TENANT_ID}/email-accounts` })
     expect(text()).toContain('Your role does not allow this.')
+  })
+})
+
+describe('EmailAccountsView with OAuth', () => {
+  const gmail = (overrides: Partial<EmailAccount> = {}) =>
+    account({
+      id: 'g1',
+      address: 'help@gmail.example',
+      provider: 'google',
+      imap: { host: 'imap.gmail.com', port: 993, security: 'ssl', username: 'help@gmail.example', has_password: false },
+      smtp: {
+        host: 'smtp.gmail.com',
+        port: 587,
+        security: 'starttls',
+        username: 'help@gmail.example',
+        has_password: false,
+      },
+      ...overrides,
+    })
+
+  it('connects mailboxes at the configured providers', async () => {
+    inTenant()
+    const fake = new FakeApi()
+      .json('GET', `${BASE}/queues`, [queue(), queue({ id: 'q2', name: 'Billing' })])
+      .json('GET', `${BASE}/email-accounts`, [
+        gmail(),
+        gmail({ id: 'g2', address: 'gone@gmail.example', needs_reconnect: true }),
+      ])
+      .json('GET', `${BASE}/email-accounts/oauth-providers`, { providers: ['microsoft'] })
+      .json('POST', `${BASE}/email-accounts/oauth`, { url: 'https://login.microsoftonline.com/authorize?state=s' })
+    await mountView(EmailAccountsView, { path: `/t/${TENANT_ID}/email-accounts` })
+    expect(exists('[data-test=connect-google]')).toBe(false)
+    expect($('[data-test="account-help@gmail.example"] [data-test=provider]').text()).toBe('Connected with Google')
+    expect($('[data-test="account-gone@gmail.example"] [data-test=needs-reconnect]').text()).toBe('reconnect needed')
+    expect($('[data-test="account-help@gmail.example"]').text()).not.toContain('imap.gmail.com')
+
+    await click('[data-test=connect-microsoft]')
+    expect(text()).toContain('Connect Microsoft 365')
+    await type('#connect-name', 'Outlook')
+    await click('[data-test=start-connect]')
+    expect(fake.last('POST', `${BASE}/email-accounts/oauth`)?.body).toEqual({
+      provider: 'microsoft',
+      name: 'Outlook',
+      display_name: '',
+      queue_id: 'q1',
+    })
+    expect(leaveTo).toHaveBeenLastCalledWith('https://login.microsoftonline.com/authorize?state=s')
+
+    await click('[data-test="reconnect-gone@gmail.example"]')
+    expect(fake.last('POST', `${BASE}/email-accounts/oauth`)?.body).toEqual({
+      provider: 'google',
+      account_id: 'g2',
+      name: '',
+      display_name: '',
+    })
+
+    // Editing keeps to what the provider does not fix.
+    await click('[data-test="edit-help@gmail.example"]')
+    expect($('[data-test=oauth-note]').text()).toContain('Connected with Google as help@gmail.example')
+    expect(exists('#account-address')).toBe(false)
+    expect(exists('#imap-host')).toBe(false)
+  })
+
+  it('reports how the provider sent the browser back', async () => {
+    const toasts = spyToasts()
+    inTenant()
+    new FakeApi()
+      .json('GET', `${BASE}/queues`, [queue()])
+      .json('GET', `${BASE}/email-accounts`, [gmail()])
+      .json('GET', `${BASE}/email-accounts/oauth-providers`, { providers: ['google'] })
+      .json(
+        'POST',
+        `${BASE}/email-accounts/oauth`,
+        { error: 'oauth_unavailable', message: 'no', params: { provider: 'google' } },
+        422,
+      )
+    const { router } = await mountView(EmailAccountsView, { path: `/t/${TENANT_ID}/email-accounts?connected=g1` })
+    expect(toasts.success()).toContain('The mailbox is connected.')
+    await flushPromises()
+    expect(router.currentRoute.value.query).toEqual({})
+
+    await mountView(EmailAccountsView, { path: `/t/${TENANT_ID}/email-accounts?oauth_error=expired` })
+    await mountView(EmailAccountsView, { path: `/t/${TENANT_ID}/email-accounts?oauth_error=invalid_grant` })
+    expect(toasts.error()).toEqual([
+      'The mailbox could not be connected (the sign-in took too long or was used already).',
+      'The mailbox could not be connected (invalid_grant).',
+    ])
+
+    await click('[data-test="reconnect-help@gmail.example"]')
+    expect(toasts.error()).toContain('Connecting with google is not set up on this instance.')
+    await click('[data-test=connect-google]')
+    await click('[data-test=start-connect]')
+    expect(text()).toContain('Connecting with google is not set up on this instance.')
   })
 })
 

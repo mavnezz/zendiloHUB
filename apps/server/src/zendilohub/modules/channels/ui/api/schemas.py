@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from zendilohub.core.http.ids import Id
 
 from ...application.queries.channels import AccountView
-from ...domain.models.account import Security
+from ...domain.models.account import Provider, Security
 from ...domain.models.mail_filter import FilterField, MailFilter, Operator
 from ...domain.models.records import Delivery, DeliveryStatus, FailedEmail
 from ...domain.models.templates import PLACEHOLDERS, PersonalSettings, QueueChannel, TemplateKind, TextTemplate
@@ -60,6 +60,10 @@ class AccountResponse(BaseModel):
     last_fetch_at: datetime | None
     last_error: str | None
     failing_since: datetime | None
+    provider: Provider | None
+    """Connected with OAuth at this provider (it fixes address and servers); None: logs in with passwords."""
+    needs_reconnect: bool
+    """The provider ended the connection: connect the mailbox again."""
     created_at: datetime
 
     @classmethod
@@ -78,8 +82,30 @@ class AccountResponse(BaseModel):
             last_fetch_at=account.last_fetch_at,
             last_error=account.last_error,
             failing_since=account.failing_since,
+            provider=account.provider,
+            needs_reconnect=account.needs_reconnect,
             created_at=account.created_at,
         )
+
+
+class ConnectStartRequest(Request):
+    provider: Provider
+    account_id: Id | None = None
+    """Connect this account (again); leave out for a new account in `queue_id`."""
+    queue_id: Id | None = None
+    name: str = Field(default='', max_length=80)
+    """Of a new account; its address when left empty."""
+    display_name: str = Field(default='', max_length=80)
+
+
+class ConnectStartResponse(BaseModel):
+    url: str
+    """The provider's sign-in page; it sends the browser back to the app afterwards."""
+
+
+class MailProvidersResponse(BaseModel):
+    providers: list[Provider]
+    """Where mailboxes can be connected with OAuth (the instance has app credentials for them)."""
 
 
 class ProbeResponse(BaseModel):

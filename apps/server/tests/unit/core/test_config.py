@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from zendilohub.core.config import PRIVATE_NETWORKS, InitialAdmin, load_config
+from zendilohub.core.config import PRIVATE_NETWORKS, InitialAdmin, OAuthApp, load_config
 
 
 def test_has_sensible_defaults() -> None:
@@ -103,3 +103,28 @@ def test_the_ai_assistant_needs_a_key() -> None:
     config = load_config({'ZENDILOHUB_ANTHROPIC_API_KEY': ' sk-ant-test ', 'ZENDILOHUB_AI_MODEL': 'claude-sonnet-5-5'})
     assert (config.anthropic_api_key, config.ai_model) == ('sk-ant-test', 'claude-sonnet-5-5')
     assert 'sk-ant-test' not in repr(config)
+
+
+def test_reads_the_mail_providers_apps() -> None:
+    config = load_config({})
+    assert (config.google_oauth, config.microsoft_oauth, config.microsoft_tenant) == (None, None, 'common')
+    config = load_config(
+        {
+            'ZENDILOHUB_GOOGLE_CLIENT_ID': ' g-id ',
+            'ZENDILOHUB_GOOGLE_CLIENT_SECRET': 'g-secret',
+            'ZENDILOHUB_MICROSOFT_CLIENT_ID': 'm-id',
+            'ZENDILOHUB_MICROSOFT_CLIENT_SECRET': 'm-secret',
+            'ZENDILOHUB_MICROSOFT_TENANT': 'contoso.onmicrosoft.com',
+        }
+    )
+    assert config.google_oauth == OAuthApp(client_id='g-id', client_secret='g-secret')
+    assert (config.microsoft_oauth and config.microsoft_oauth.client_id, config.microsoft_tenant) == (
+        'm-id',
+        'contoso.onmicrosoft.com',
+    )
+    assert 'g-secret' not in repr(config)
+    assert 'm-secret' not in repr(config)
+    with pytest.raises(ValueError, match='ZENDILOHUB_GOOGLE_CLIENT_SECRET'):
+        load_config({'ZENDILOHUB_GOOGLE_CLIENT_ID': 'g-id'})
+    with pytest.raises(ValueError, match='ZENDILOHUB_MICROSOFT_TENANT'):
+        load_config({'ZENDILOHUB_MICROSOFT_TENANT': 'a/b'})

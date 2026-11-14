@@ -35,6 +35,30 @@ class Server:
         return replace(self, host=host, username=username)
 
 
+type Provider = Literal['google', 'microsoft']
+PROVIDERS: tuple[Provider, ...] = get_args(Provider.__value__)
+
+
+@dataclass(frozen=True)
+class ProviderServers:
+    imap_host: str
+    imap_port: int
+    smtp_host: str
+    smtp_port: int
+
+    def imap(self, address: str) -> Server:
+        return Server(host=self.imap_host, port=self.imap_port, security='ssl', username=address)
+
+    def smtp(self, address: str) -> Server:
+        return Server(host=self.smtp_host, port=self.smtp_port, security='starttls', username=address)
+
+
+SERVERS: dict[Provider, ProviderServers] = {
+    'google': ProviderServers('imap.gmail.com', 993, 'smtp.gmail.com', 587),
+    'microsoft': ProviderServers('outlook.office365.com', 993, 'smtp.office365.com', 587),
+}
+
+
 @dataclass(kw_only=True)
 class EmailAccount:
     """
@@ -59,6 +83,10 @@ class EmailAccount:
     last_fetch_at: datetime | None = None
     last_error: str | None = None
     failing_since: datetime | None = None
+    provider: Provider | None = None
+    """Connected with OAuth at this provider; None: logs in with passwords."""
+    needs_reconnect: bool = False
+    """The provider no longer accepts the connection (revoked, password changed): connect it again."""
 
     @classmethod
     def create(cls, *, id: str, tenant_id: str, settings: AccountSettings, now: datetime) -> EmailAccount:
@@ -79,7 +107,66 @@ class EmailAccount:
         account.change(settings, now)
         return account
 
+    @classmethod
+    def connected(
+        cls,
+        *,
+        id: str,
+        tenant_id: str,
+        provider: Provider,
+        address: str,
+        name: str,
+        display_name: str,
+        queue_id: str,
+        now: datetime,
+    ) -> EmailAccount:
+        """A mailbox an administrator connected with OAuth: the provider's servers, logging in as the mailbox."""
+        servers = SERVERS[provider]
+        account = cls(
+            id=id,
+            tenant_id=tenant_id,
+            name='',
+            address='',
+            display_name='',
+            queue_id=queue_id,
+            imap=servers.imap(address),
+            smtp=servers.smtp(address),
+            folder='INBOX',
+            active=True,
+            created_at=now,
+            updated_at=now,
+            provider=provider,
+        )
+        settings = AccountSettings(
+            name=name or address,
+            address=address,
+            display_name=display_name,
+            queue_id=queue_id,
+            imap=account.imap,
+            smtp=account.smtp,
+        )
+        account.change(settings, now)
+        return account
+
+    def reconnected(self, provider: Provider, address: str, now: datetime) -> None:
+        """Connected (again) with OAuth, maybe after it used passwords: the provider's servers from now on."""
+        servers = SERVERS[provider]
+        if address != self.address or provider != self.provider:
+            self.uid_validity = None
+        self.provider, self.address = provider, address
+        self.imap, self.smtp = servers.imap(address), servers.smtp(address)
+        self.needs_reconnect, self.last_error, self.failing_since = False, None, None
+        self.updated_at = now
+
+    def disconnected(self, error: str, now: datetime) -> None:
+        """The provider refused to renew the access: nothing works until an administrator connects it again."""
+        self.needs_reconnect = True
+        self.failed(error, now)
+
     def change(self, settings: AccountSettings, now: datetime) -> None:
+        if self.provider is not None:
+            # The provider fixes the mailbox and its servers; only the rest can change.
+            settings = replace(settings, address=self.address or settings.address, imap=self.imap, smtp=self.smtp)
         name, display_name, folder = (
             ' '.join(settings.name.split()),
             ' '.join(settings.display_name.split()),

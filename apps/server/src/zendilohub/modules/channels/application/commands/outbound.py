@@ -98,7 +98,7 @@ class SendReplyHandler:
         try:
             await self._outbox.send(
                 account,
-                await self._vault.password(account, 'smtp'),
+                await self._vault.credential(account, 'smtp'),
                 OutgoingMail(
                     sender=account.sender,
                     to=(reply.customer_email,),

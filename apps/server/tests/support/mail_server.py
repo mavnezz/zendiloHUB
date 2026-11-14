@@ -3,7 +3,7 @@ from email.message import EmailMessage
 from email.utils import formatdate
 
 from zendilohub.modules.channels.domain.models.account import EmailAccount
-from zendilohub.modules.channels.domain.ports.services import Fetched, MailboxError, OutgoingMail
+from zendilohub.modules.channels.domain.ports.services import Credential, Fetched, MailboxError, OutgoingMail
 
 
 @dataclass
@@ -23,32 +23,40 @@ class FakeMailServer:
         self.passwords: dict[str, str] = {}
         self.broken: dict[str, str] = {}
         """Address → the error its servers raise."""
+        self.tokens: dict[str, str] = {}
+        """Address → the OAuth access token its servers accept."""
+        self.logins: list[tuple[str, Credential]] = []
 
     def deliver(self, address: str, raw: bytes) -> None:
         box = self.boxes.setdefault(address, Mailbox())
         box.messages.append((box.next_uid, raw))
         box.next_uid += 1
 
-    def _check(self, account: EmailAccount, password: str) -> None:
+    def _check(self, account: EmailAccount, credential: Credential) -> None:
+        self.logins.append((account.address, credential))
         if account.address in self.broken:
             raise MailboxError(self.broken[account.address])
+        if credential.oauth:
+            if self.tokens.get(account.address) not in (None, credential.secret):
+                raise MailboxError('The server said: AUTHENTICATE failed.')
+            return
         expected = self.passwords.get(account.address)
-        if expected is not None and password != expected:
+        if expected is not None and credential.secret != expected:
             raise MailboxError('The server said: [AUTHENTICATIONFAILED] Invalid credentials')
 
     async def fetch(
-        self, account: EmailAccount, password: str, *, after_uid: int, uid_validity: int | None, limit: int
+        self, account: EmailAccount, credential: Credential, *, after_uid: int, uid_validity: int | None, limit: int
     ) -> Fetched:
-        self._check(account, password)
+        self._check(account, credential)
         box = self.boxes.setdefault(account.address, Mailbox())
         start = after_uid if uid_validity == box.uid_validity else 0
         return Fetched(box.uid_validity, [each for each in box.messages if each[0] > start][:limit])
 
-    async def probe(self, account: EmailAccount, password: str) -> None:
-        self._check(account, password)
+    async def probe(self, account: EmailAccount, credential: Credential) -> None:
+        self._check(account, credential)
 
-    async def send(self, account: EmailAccount, password: str, mail: OutgoingMail) -> None:
-        self._check(account, password)
+    async def send(self, account: EmailAccount, credential: Credential, mail: OutgoingMail) -> None:
+        self._check(account, credential)
         self.sent.append((account.address, mail))
 
 

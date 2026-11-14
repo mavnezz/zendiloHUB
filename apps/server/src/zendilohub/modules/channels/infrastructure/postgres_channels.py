@@ -1,14 +1,17 @@
 from collections.abc import Sequence
+from datetime import datetime
 from typing import Any, cast
 
 from psycopg.types.json import Jsonb
 
 from zendilohub.core.database.database import Database
 
-from ..domain.models.account import EmailAccount, Security, Server, ServerKind
+from ..domain.models.account import EmailAccount, Provider, Security, Server, ServerKind
 from ..domain.models.mail_filter import Condition, FilterActions, FilterField, MailFilter, Operator
+from ..domain.models.oauth import ConnectRequest
 from ..domain.models.records import Delivery, DeliveryStatus, FailedEmail
 from ..domain.models.templates import PersonalSettings, QueueChannel, TemplateKind, TextTemplate
+from ..domain.ports.repositories import OAuthTokens
 
 
 def _id(value: object) -> str | None:
@@ -40,6 +43,8 @@ def _account(row: dict[str, Any]) -> EmailAccount:
         last_fetch_at=row['last_fetch_at'],
         last_error=row['last_error'],
         failing_since=row['failing_since'],
+        provider=cast(Provider | None, row['provider']),
+        needs_reconnect=row['needs_reconnect'],
     )
 
 
@@ -146,10 +151,10 @@ class PostgresAccountRepository(_Sql):
             """
             INSERT INTO email_accounts (id, tenant_id, name, address, display_name, queue_id, imap, smtp, folder, active,
                                         last_uid, uid_validity, last_fetch_at, last_error, failing_since, created_at,
-                                        updated_at)
+                                        updated_at, provider, needs_reconnect)
             VALUES (%(id)s, %(tenant_id)s, %(name)s, %(address)s, %(display_name)s, %(queue_id)s, %(imap)s, %(smtp)s,
                     %(folder)s, %(active)s, %(last_uid)s, %(uid_validity)s, %(last_fetch_at)s, %(last_error)s,
-                    %(failing_since)s, %(created_at)s, %(updated_at)s)
+                    %(failing_since)s, %(created_at)s, %(updated_at)s, %(provider)s, %(needs_reconnect)s)
             ON CONFLICT (id) DO UPDATE SET
                 name = EXCLUDED.name,
                 address = EXCLUDED.address,
@@ -164,7 +169,9 @@ class PostgresAccountRepository(_Sql):
                 last_fetch_at = EXCLUDED.last_fetch_at,
                 last_error = EXCLUDED.last_error,
                 failing_since = EXCLUDED.failing_since,
-                updated_at = EXCLUDED.updated_at
+                updated_at = EXCLUDED.updated_at,
+                provider = EXCLUDED.provider,
+                needs_reconnect = EXCLUDED.needs_reconnect
             """,
             values,
         )
@@ -175,6 +182,31 @@ class PostgresAccountRepository(_Sql):
 
     async def set_password(self, account_id: str, kind: ServerKind, sealed: bytes) -> None:
         await self.run(f'UPDATE email_accounts SET {kind}_password = %s WHERE id = %s', (sealed, account_id))
+
+    async def oauth_tokens(self, account_id: str) -> OAuthTokens:
+        row = await self.one(
+            'SELECT oauth_refresh, oauth_access, oauth_access_expires_at FROM email_accounts WHERE id = %s',
+            (account_id,),
+        )
+        if row is None:
+            return OAuthTokens(None, None, None)
+        return OAuthTokens(
+            bytes(row['oauth_refresh']) if row['oauth_refresh'] is not None else None,
+            bytes(row['oauth_access']) if row['oauth_access'] is not None else None,
+            row['oauth_access_expires_at'],
+        )
+
+    async def set_oauth_tokens(self, account_id: str, tokens: OAuthTokens) -> None:
+        # Passwords go: a mailbox connected with OAuth logs in with its tokens only.
+        await self.run(
+            """
+            UPDATE email_accounts
+            SET oauth_refresh = %s, oauth_access = %s, oauth_access_expires_at = %s,
+                imap_password = NULL, smtp_password = NULL
+            WHERE id = %s
+            """,
+            (tokens.refresh, tokens.access, tokens.access_expires_at, account_id),
+        )
 
     async def delete(self, tenant_id: str, account_id: str) -> None:
         await self.run('DELETE FROM email_accounts WHERE tenant_id = %s AND id = %s', (tenant_id, account_id))
@@ -187,6 +219,7 @@ class PostgresAccountRepository(_Sql):
             'personal_settings',
             'queue_channels',
             'channel_templates',
+            'email_connect_requests',
             'email_accounts',
         ):
             await self.run(f'DELETE FROM {table} WHERE tenant_id = %s', (tenant_id,))
@@ -419,3 +452,37 @@ class PostgresDeliveryRepository(_Sql):
             attempts=int(row['attempts']),
             updated_at=row['updated_at'],
         )
+
+
+class PostgresConnectRequestRepository(_Sql):
+    async def add(self, request: ConnectRequest) -> None:
+        await self.run(
+            """
+            INSERT INTO email_connect_requests (id, tenant_id, user_id, provider, verifier, account_id, queue_id, name,
+                                                display_name, created_at, expires_at)
+            VALUES (%(id)s, %(tenant_id)s, %(user_id)s, %(provider)s, %(verifier)s, %(account_id)s, %(queue_id)s,
+                    %(name)s, %(display_name)s, %(created_at)s, %(expires_at)s)
+            """,
+            vars(request),
+        )
+
+    async def take(self, request_id: str) -> ConnectRequest | None:
+        row = await self.one('DELETE FROM email_connect_requests WHERE id = %s RETURNING *', (request_id,))
+        if row is None:
+            return None
+        return ConnectRequest(
+            id=row['id'],
+            tenant_id=str(row['tenant_id']),
+            user_id=str(row['user_id']),
+            provider=cast(Provider, row['provider']),
+            verifier=row['verifier'],
+            account_id=_id(row['account_id']),
+            queue_id=_id(row['queue_id']),
+            name=row['name'],
+            display_name=row['display_name'],
+            created_at=row['created_at'],
+            expires_at=row['expires_at'],
+        )
+
+    async def delete_expired(self, now: datetime) -> None:
+        await self.run('DELETE FROM email_connect_requests WHERE expires_at <= %s', (now,))

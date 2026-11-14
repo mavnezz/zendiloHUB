@@ -34,6 +34,14 @@ class InitialAdmin:
 
 
 @dataclass(frozen=True, kw_only=True)
+class OAuthApp:
+    """An app registered at a mail provider (Google, Microsoft), for connecting mailboxes with OAuth."""
+
+    client_id: str
+    client_secret: str = field(repr=False)
+
+
+@dataclass(frozen=True, kw_only=True)
 class AppConfig:
     """
     Infrastructure settings, all from `ZENDILOHUB_*` environment variables with sensible
@@ -72,6 +80,12 @@ class AppConfig:
     anthropic_api_key: str | None = field(default=None, repr=False)
     """Turns on the AI assistant (ticket summaries, draft replies) with Claude; None: it is off."""
     ai_model: str = 'claude-opus-5-5'
+    google_oauth: OAuthApp | None = None
+    """Connect Gmail / Google Workspace mailboxes with OAuth; None: not offered."""
+    microsoft_oauth: OAuthApp | None = None
+    """Connect Microsoft 365 / Outlook mailboxes with OAuth; None: not offered."""
+    microsoft_tenant: str = 'common'
+    """The Microsoft Entra tenant the app signs in with: `common`, `organizations` or a tenant id."""
 
 
 def load_config(env: Mapping[str, str]) -> AppConfig:
@@ -106,7 +120,27 @@ def load_config(env: Mapping[str, str]) -> AppConfig:
         initial_admin=_initial_admin(env),
         anthropic_api_key=(env.get('ZENDILOHUB_ANTHROPIC_API_KEY') or '').strip() or None,
         ai_model=(env.get('ZENDILOHUB_AI_MODEL') or '').strip() or 'claude-opus-5-5',
+        google_oauth=_oauth_app(env, 'GOOGLE'),
+        microsoft_oauth=_oauth_app(env, 'MICROSOFT'),
+        microsoft_tenant=_microsoft_tenant(env.get('ZENDILOHUB_MICROSOFT_TENANT')),
     )
+
+
+def _oauth_app(env: Mapping[str, str], provider: str) -> OAuthApp | None:
+    client_id = (env.get(f'ZENDILOHUB_{provider}_CLIENT_ID') or '').strip()
+    client_secret = (env.get(f'ZENDILOHUB_{provider}_CLIENT_SECRET') or '').strip()
+    if bool(client_id) != bool(client_secret):
+        raise ValueError(
+            f'Set both ZENDILOHUB_{provider}_CLIENT_ID and ZENDILOHUB_{provider}_CLIENT_SECRET, or neither'
+        )
+    return OAuthApp(client_id=client_id, client_secret=client_secret) if client_id else None
+
+
+def _microsoft_tenant(raw: str | None) -> str:
+    tenant = (raw or '').strip() or 'common'
+    if not all(char.isalnum() or char in '-.' for char in tenant):
+        raise ValueError(f'ZENDILOHUB_MICROSOFT_TENANT must be common, organizations or a tenant id, got "{tenant}"')
+    return tenant
 
 
 def _timezone(name: str) -> ZoneInfo:

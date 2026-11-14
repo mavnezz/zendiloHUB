@@ -70,7 +70,7 @@ class FetchAccountHandler:
         try:
             fetched = await self._mailbox.fetch(
                 account,
-                await self._vault.password(account, 'imap'),
+                await self._vault.credential(account, 'imap'),
                 after_uid=account.last_uid if account.uid_validity else 0,
                 uid_validity=account.uid_validity,
                 limit=FETCH_LIMIT,
@@ -211,7 +211,7 @@ class AutoReplier:
         try:
             await self._outbox.send(
                 account,
-                await self._vault.password(account, 'smtp'),
+                await self._vault.credential(account, 'smtp'),
                 OutgoingMail(
                     sender=account.sender,
                     to=(mail.from_address,),
