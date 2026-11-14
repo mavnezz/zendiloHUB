@@ -5,13 +5,16 @@ AI assistants such as Claude work with tickets through the built-in MCP server.
 
 > **Status:** all phases of the [plan](docs/PLAN.md) are built:
 >
-> - **Team**: organizations, roles (also custom ones), groups, queues with a rights matrix, audit log, API keys.
+> - **Team**: organizations, roles (also custom ones), groups, queues with a rights matrix, audit log, API keys,
+>   two-factor login with authenticator apps.
 > - **Tickets**: views, search, states with reminders, priorities, tags, watchers and `@` mentions, merge, split,
->   links, time tracking, custom fields, checklists, bulk actions, collision detection, similar tickets.
-> - **E-mail**: several IMAP/SMTP accounts per queue, threading, loop protection, signatures and salutations,
->   automatic replies, mail filters, failed e-mails.
-> - **Teamwork**: macros, triggers, scheduled jobs, text modules (`::`), SLAs with business hours, notifications.
-> - **Reports and integrations**: key figures per day, queue, owner and channel; signed webhooks.
+>   links, time tracking, custom fields, checklists, bulk actions, collision detection, similar tickets, attachments.
+> - **E-mail**: several IMAP/SMTP accounts per queue (password or OAuth2 for Google and Microsoft 365), threading,
+>   loop protection, signatures and salutations, automatic replies, mail filters, failed e-mails, attachments.
+> - **Teamwork**: macros, triggers, scheduled jobs, text modules (`::`), SLAs with business hours, notifications
+>   (also for followed queues), alert e-mails from triggers.
+> - **Reports and integrations**: key figures per day, queue, owner and channel; signed webhooks,
+>   also as Slack or Microsoft Teams messages per queue.
 > - **Self-service**: knowledge base with a public help center (`/help/<organization>`) and a customer portal
 >   (`/portal/<organization>`, sign-in by e-mail link).
 > - **AI**: an MCP server (`/mcp`) for Claude and other assistants with each member's rights; optional ticket
@@ -40,13 +43,16 @@ All settings are in [`.env.example`](.env.example).
 
 ## Operations
 
-- **Data** lives in Docker volumes: `postgres-data` (the database) and `zendilohub-data` (the secret key, later
+- **Data** lives in Docker volumes: `postgres-data` (the database) and `zendilohub-data` (the secret key and
   attachments). Back up both; without the secret key stored secrets cannot be decrypted.
 - **Updates**: `docker compose pull` (or `--build`) and `docker compose up -d`; migrations run on start.
 - **Memory**: every container has a limit (`ZENDILOHUB_MEMORY_LIMIT`, `POSTGRES_MEMORY_LIMIT`, `REDIS_MEMORY_LIMIT`).
   The whole stack runs on a host with 2 GB of RAM.
 - **Workers**: `docker compose up -d --scale worker=3`.
 - **API**: keys under **API keys**; the reference is at `/api/reference`.
+- **Google and Microsoft 365 mailboxes** (optional): register an app at the provider with the redirect URI
+  `<ZENDILOHUB_PUBLIC_URL>/api/v1/email-oauth/callback` and set `ZENDILOHUB_GOOGLE_CLIENT_ID`/`_SECRET` or
+  `ZENDILOHUB_MICROSOFT_CLIENT_ID`/`_SECRET`; then **E-mail accounts → Connect**.
 - **AI assistant** (optional): set `ZENDILOHUB_ANTHROPIC_API_KEY`; the model is `ZENDILOHUB_AI_MODEL`
   (default `claude-opus-5-5`).
 

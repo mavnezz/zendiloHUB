@@ -1,6 +1,6 @@
 # zendiloHUB – Projektplan
 
-Stand: 2026-11-13 · Status: Grundentscheidungen getroffen (Abschnitt 10), einige Punkte noch offen
+Stand: 2026-11-14 · Status: Grundentscheidungen getroffen (Abschnitt 10), einige Punkte noch offen
 
 zendiloHUB ist das Ticket-System der zendilo-Familie (neben zendiloOS und zendilo.ai). Es ist der Ort, an dem
 **Menschen** Anfragen bearbeiten, und es wird in erster Linie von ihnen bedient: Die Oberfläche steht im Mittelpunkt.
@@ -452,7 +452,7 @@ Bedingung) leiten in Queues, setzen Priorität und Tags oder verwerfen. HTML-Mai
 lassen sich formatiert anzeigen. Fehlgeschlagene Mails landen in einer Liste zum erneuten Verarbeiten. Antworten gehen
 im Hintergrund raus, mit Status je Nachricht (gesendet, wird gesendet, nicht gesendet mit Grund) und Wiederholungen
 nach 1, 5, 15 und 60 Minuten. Die echten IMAP- und SMTP-Adapter sind gegen GreenMail getestet.
-Offen für später: OAuth2 (XOAUTH2) für Microsoft 365 und Google, Anhänge, mehrere Absenderadressen je Queue.
+Offen für später: mehrere Absenderadressen je Queue (OAuth2 und Anhänge kamen in Phase 8).
 
 **Phase 4 (2026-11-13, fertig):** Module `automation` (Makros für einen Klick im Ticket mit den Rechten des
 Anwenders; Trigger bei „Ticket angelegt“, „Kunde hat geantwortet“, „Ticket geändert“ mit Bedingungen auf Betreff,
@@ -500,6 +500,23 @@ aber nie zitiert; höchstens 30 Anfragen pro Stunde je Person und 300 je Organis
 Knöpfe verborgen. Bei einer Ablehnung durch die Sicherheitsfilter wiederholt die API die Anfrage serverseitig auf
 dem empfohlenen Ersatzmodell (`fallbacks: "default"`). Offen: automatische Vorsortierung (Queue und Priorität per KI)
 als Trigger-Aktion.
+
+**Phase 8 (2026-11-14, fertig):** Zwei-Faktor-Anmeldung mit Authenticator-App (TOTP nach RFC 6238, Geheimnis
+verschlüsselt, Codes nur einmal gültig, zehn Wiederherstellungscodes als Hash). Nach dem Passwort (auch nach einem
+Passwort-Reset) kommt eine Anmeldestufe: gilt 5 Minuten, höchstens 5 Fehlversuche, dazu 10 je Konto in 15 Minuten.
+Admins setzen die zweite Stufe zurück, wenn jemand sein Gerät verliert. Dateianhänge: Hochladen im Editor (Knopf und
+Drag & Drop, höchstens 20 je Nachricht, Größe `ZENDILOHUB_MAX_UPLOAD_MB`), Dateien im Volume unter
+`/data/attachments`; Download nur mit Leserecht, Bilder inline, alles andere als Download mit `nosniff` und
+Sandbox-CSP; Anhänge eingehender Mails (auch eingebettete Bilder) werden gespeichert, Antworten tragen ihre Dateien;
+im Kundenportal sehen Kunden Dateien öffentlicher Nachrichten und können selbst welche anhängen; nicht verwendete
+Uploads werden nach 24 Stunden gelöscht. OAuth2 (XOAUTH2) für E-Mail-Konten bei Google und Microsoft 365
+(`ZENDILOHUB_GOOGLE_CLIENT_ID/_SECRET`, `ZENDILOHUB_MICROSOFT_CLIENT_ID/_SECRET`, `ZENDILOHUB_MICROSOFT_TENANT`;
+Weiterleitungsadresse `/api/v1/email-oauth/callback`): Verbinden mit einem Klick, PKCE, Tokens verschlüsselt,
+automatische Erneuerung; widerruft der Anbieter den Zugang, zeigt das Konto „Neu verbinden“. Benachrichtigungen je
+Queue: Mitglieder folgen sichtbaren Queues (neue Tickets, hineinverschobene Tickets, auf Wunsch auch
+Kundenantworten), in der App und per E-Mail. Trigger senden Alarm-E-Mails an feste Adressen (höchstens 10 je Regel,
+500 je Stunde und Organisation). Webhooks gibt es im Format JSON, Slack (Incoming Webhook) oder Microsoft Teams
+(Adaptive Card für Teams-Workflows), jeweils für alle oder ausgewählte Queues.
 
 ---
 
