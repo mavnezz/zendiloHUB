@@ -9,8 +9,10 @@ AI assistants such as Claude work with tickets through the built-in MCP server.
 >   two-factor login with authenticator apps.
 > - **Tickets**: views, search, states with reminders, priorities, tags, watchers and `@` mentions, merge, split,
 >   links, time tracking, custom fields, checklists, bulk actions, collision detection, similar tickets, attachments.
-> - **E-mail**: several IMAP/SMTP accounts per queue (password or OAuth2 for Google and Microsoft 365), threading,
->   loop protection, signatures and salutations, automatic replies, mail filters, failed e-mails, attachments.
+> - **E-mail**: mailboxes (IMAP/SMTP, password or OAuth2 for Google and Microsoft 365) with their own rules and a
+>   default queue, a sending mailbox per queue, threading, loop protection, signatures and salutations, automatic
+>   replies, mail filters with a test, failed e-mails, attachments, S/MIME (sign, encrypt, verify, decrypt),
+>   configurable ticket numbers.
 > - **Teamwork**: macros, triggers, scheduled jobs, text modules (`::`), SLAs with business hours, notifications
 >   (also for followed queues), alert e-mails from triggers.
 > - **Reports and integrations**: key figures per day, queue, owner and channel; signed webhooks,

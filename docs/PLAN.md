@@ -518,6 +518,20 @@ Kundenantworten), in der App und per E-Mail. Trigger senden Alarm-E-Mails an fes
 500 je Stunde und Organisation). Webhooks gibt es im Format JSON, Slack (Incoming Webhook) oder Microsoft Teams
 (Adaptive Card für Teams-Workflows), jeweils für alle oder ausgewählte Queues.
 
+**Phase 9 (2026-11-14, fertig):** E-Mail-Wege je Postfach: Ein Postfach (E-Mail-Konto) hat optionale, geordnete
+Regeln und eine Standard-Queue; eingehende Mails laufen erst durch die Filter für alle Postfächer, dann durch die
+Regeln ihres Postfachs, sonst in dessen Standard-Queue. Neue Bedingungen „Zugestellt an“ (To, Cc, Delivered-To,
+X-Original-To, Envelope-To) und „ist nicht“; ein Filtertest zeigt für eine eingefügte Mail den Weg bis zur Queue.
+Postfächer ohne SMTP gelten als „nur Eingang“. Hat eine Queue kein Absender-Konto, gehen Antworten über das Postfach,
+über das das Ticket hereinkam. S/MIME: eigene Zertifikate (PKCS #12 oder PEM, Schlüssel verschlüsselt),
+Zertifikate von Kontakten (aus gültig signierten Mails automatisch gesammelt) und vertrauenswürdige Stellen; je
+Queue signieren und verschlüsseln (nie, wenn möglich, immer; fehlt ein Schlüssel oder Zertifikat, geht nichts
+unverschlüsselt raus); eingehende Mails werden entschlüsselt und ihre Signatur geprüft (gültig, ungültig, nicht
+vertrauenswürdig, abgelaufen), das Ergebnis steht an der Nachricht. Ticketnummern je Organisation einstellbar:
+fortlaufend ab einer Startnummer oder nach Datum mit Tageszähler (in der Zeitzone der Organisation), auf Wunsch mit
+Prüfziffer (Luhn), und eine eigene Kennung im Betreff (z. B. `[Ticket#1234]`); Antworten mit der alten Kennung `[#…]`
+finden ihr Ticket weiter.
+
 ---
 
 ## 11. Übernahme aus OTOBO und Zammad (2026-11-13)
@@ -559,7 +573,7 @@ kein Code übernommen (OTOBO steht unter GPL-3.0, Zammad unter AGPL-3.0).
 | KI-Zusammenfassung und Antwortentwurf                                              | Zammad (AI)     | 7     |
 
 **Bewusst nicht:** Prozessmanagement und ACL-Editor (OTOBO; zu schwer für kleine Teams), CMDB/ITSM, SOAP-Schnittstellen,
-Chat und soziale Kanäle (Zammad), Telefonie (macht zendilo.ai). PGP/S/MIME bleibt für später offen.
+Chat und soziale Kanäle (Zammad), Telefonie (macht zendilo.ai). PGP bleibt für später offen (S/MIME seit Phase 9).
 
 ---
 
