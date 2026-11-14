@@ -10,7 +10,7 @@ from zendilohub.core.http.audit import Unaudited, audited, note_audit
 from zendilohub.core.http.ids import Id
 
 from ...application.commands.webhooks import Announce, DeleteWebhook, ListDeliveries, ListWebhooks, SaveWebhook
-from ...domain.models.webhook import Delivery, Webhook, WebhookEvent
+from ...domain.models.webhook import Delivery, Webhook, WebhookEvent, WebhookFormat
 
 Admin = Annotated[Member, member_with('integrations.manage', people_only=True)]
 
@@ -23,6 +23,10 @@ class WebhookRequest(BaseModel):
     """Public internet only (https recommended)."""
     events: list[WebhookEvent] = Field(min_length=1)
     active: bool = True
+    format: WebhookFormat = 'json'
+    """`json`: the signed event; `slack`: a Slack incoming webhook; `teams`: a Microsoft Teams workflow."""
+    queue_ids: list[Id] = Field(default_factory=list, max_length=200)
+    """Only tickets in these queues; empty: all queues."""
     new_secret: bool = False
     """Changes only: make a new secret (the old one stops working at once)."""
 
@@ -33,6 +37,8 @@ class WebhookResponse(BaseModel):
     url: str
     events: list[WebhookEvent]
     active: bool
+    format: WebhookFormat
+    queue_ids: list[str]
     created_at: datetime
     last_delivery_at: datetime | None
     last_status: int | None
@@ -48,6 +54,8 @@ class WebhookResponse(BaseModel):
             url=webhook.url,
             events=list(webhook.events),
             active=webhook.active,
+            format=webhook.format,
+            queue_ids=list(webhook.queue_ids),
             created_at=webhook.created_at,
             last_delivery_at=webhook.last_delivery_at,
             last_status=webhook.last_status,
@@ -93,6 +101,8 @@ def integration_routes(bus: CommandBus) -> APIRouter:
                 url=body.url,
                 events=tuple(body.events),
                 active=body.active,
+                format=body.format,
+                queue_ids=tuple(body.queue_ids),
             )
         )
         note_audit(request, target=created.webhook.name)
@@ -107,6 +117,8 @@ def integration_routes(bus: CommandBus) -> APIRouter:
                 url=body.url,
                 events=tuple(body.events),
                 active=body.active,
+                format=body.format,
+                queue_ids=tuple(body.queue_ids),
                 webhook_id=webhook_id,
                 new_secret=body.new_secret,
             )

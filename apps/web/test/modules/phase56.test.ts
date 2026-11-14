@@ -127,6 +127,8 @@ describe('WebhooksView', () => {
     url: 'https://crm.example/hook',
     events: ['ticket.created'],
     active: true,
+    format: 'json',
+    queue_ids: [],
     created_at: '2026-11-13T12:00:00Z',
     last_delivery_at: null,
     last_status: null,
@@ -172,6 +174,8 @@ describe('WebhooksView', () => {
       events: ['ticket.created', 'message.added'],
       active: true,
       new_secret: false,
+      format: 'json',
+      queue_ids: [],
     })
     expect($('[data-test=secret]').text()).toContain('whsec_abc')
     await click('[data-test=copy-secret]')

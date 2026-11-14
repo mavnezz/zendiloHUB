@@ -2,11 +2,20 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from zendilohub.core.bus.message import Command, Query
+from zendilohub.core.domain.app_domain_error import ValidationError
 from zendilohub.core.domain.clock import Clock
 from zendilohub.core.domain.id_generator import IdGenerator
 from zendilohub.core.domain.mailer import Mailer, MailMessage
 
-from ...domain.models.notification import Notification, NotificationKind, Settings
+from ...domain.models.notification import (
+    FOLLOW_MODES,
+    FOLLOWED_MAX,
+    FollowedQueue,
+    FollowMode,
+    Notification,
+    NotificationKind,
+    Settings,
+)
 from ...domain.ports.repositories import Directory, NotificationRepository
 
 SUBJECTS: dict[NotificationKind, str] = {
@@ -14,6 +23,8 @@ SUBJECTS: dict[NotificationKind, str] = {
     'mentioned': 'you were mentioned',
     'message': 'new message',
     'sla_breached': 'service level missed',
+    'created': 'new ticket',
+    'moved': 'moved to a queue you follow',
 }
 
 
@@ -178,3 +189,82 @@ class ForgetHandler:
             await self._notifications.forget_tenant(command.tenant_id)
         else:
             await self._notifications.forget(command.tenant_id, command.user_id)
+
+
+class InvalidFollowedQueuesError(ValidationError):
+    def __init__(self) -> None:
+        super().__init__('invalid_followed_queues', 'You can only follow queues whose tickets you may see')
+
+
+@dataclass(frozen=True, kw_only=True)
+class GetFollowedQueues(Query[Sequence[FollowedQueue]]):
+    tenant_id: str
+    user_id: str
+
+
+class GetFollowedQueuesHandler:
+    def __init__(self, notifications: NotificationRepository) -> None:
+        self._notifications = notifications
+
+    async def handle(self, query: GetFollowedQueues) -> Sequence[FollowedQueue]:
+        return await self._notifications.followed(query.tenant_id, query.user_id)
+
+
+@dataclass(frozen=True, kw_only=True)
+class FollowQueues(Command[Sequence[FollowedQueue]]):
+    """Replaces the queues the member follows; only queues whose tickets they may see."""
+
+    tenant_id: str
+    user_id: str
+    queues: Sequence[FollowedQueue]
+
+
+class FollowQueuesHandler:
+    def __init__(self, notifications: NotificationRepository, directory: Directory) -> None:
+        self._notifications = notifications
+        self._directory = directory
+
+    async def handle(self, command: FollowQueues) -> Sequence[FollowedQueue]:
+        queues = list({each.queue_id: each for each in command.queues}.values())
+        if len(queues) > FOLLOWED_MAX or any(each.mode not in FOLLOW_MODES for each in queues):
+            raise InvalidFollowedQueuesError()
+        for each in queues:
+            if not await self._directory.viewers(command.tenant_id, each.queue_id, [command.user_id]):
+                raise InvalidFollowedQueuesError()
+        await self._notifications.follow(command.tenant_id, command.user_id, queues)
+        return await self._notifications.followed(command.tenant_id, command.user_id)
+
+
+@dataclass(frozen=True, kw_only=True)
+class FollowersOf(Query[list[str]]):
+    """Who follows the queue in one of these modes and may still see its tickets."""
+
+    tenant_id: str
+    queue_id: str
+    modes: tuple[FollowMode, ...] = FOLLOW_MODES
+
+
+class FollowersOfHandler:
+    def __init__(self, notifications: NotificationRepository, directory: Directory) -> None:
+        self._notifications = notifications
+        self._directory = directory
+
+    async def handle(self, query: FollowersOf) -> list[str]:
+        followers = list(await self._notifications.followers(query.tenant_id, query.queue_id, query.modes))
+        # Rights change; a follower who lost the queue hears nothing more of it.
+        viewers = await self._directory.viewers(query.tenant_id, query.queue_id, followers)
+        return [each for each in followers if each in viewers]
+
+
+@dataclass(frozen=True)
+class ForgetQueue(Command[None]):
+    tenant_id: str
+    queue_id: str
+
+
+class ForgetQueueHandler:
+    def __init__(self, notifications: NotificationRepository) -> None:
+        self._notifications = notifications
+
+    async def handle(self, command: ForgetQueue) -> None:
+        await self._notifications.forget_queue(command.tenant_id, command.queue_id)

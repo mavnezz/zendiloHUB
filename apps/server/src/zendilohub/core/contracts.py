@@ -140,6 +140,10 @@ class TicketAutomation(Protocol):
         """Changes the ticket as `by` (a rule's name), whatever anyone's rights; False if nothing changed."""
         ...
 
+    async def excerpt(self, tenant_id: str, ticket_id: str, *, limit: int = 500) -> str:
+        """The beginning of the ticket's newest message to or from the customer (for alerts); empty if none."""
+        ...
+
 
 class TicketPortal(Protocol):
     """Provided by tickets, used by the portal: customers see and answer their own tickets."""

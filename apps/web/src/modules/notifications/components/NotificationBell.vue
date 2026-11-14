@@ -1,5 +1,15 @@
 <script setup lang="ts">
-import { AtSign, Bell, Inbox, MessageSquare, TimerOff, UserCheck } from '@lucide/vue'
+import {
+  ArrowRightLeft,
+  AtSign,
+  Bell,
+  FilePlus,
+  Inbox,
+  ListChecks,
+  MessageSquare,
+  TimerOff,
+  UserCheck,
+} from '@lucide/vue'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { formatDateTime } from '@/core/format'
@@ -9,16 +19,25 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/core/u
 import { Switch } from '@/core/ui/switch'
 import { useTenants } from '@/modules/tenancy/tenants'
 import { notificationsApi, type Notification } from '../api'
+import FollowedQueuesDialog from './FollowedQueuesDialog.vue'
 
 /** The bell in the header: what happened in the caller's tickets, checked every half minute. */
 const POLL_MS = 30_000
-const ICONS = { assigned: UserCheck, mentioned: AtSign, message: MessageSquare, sla_breached: TimerOff } as const
+const ICONS = {
+  assigned: UserCheck,
+  mentioned: AtSign,
+  message: MessageSquare,
+  sla_breached: TimerOff,
+  created: FilePlus,
+  moved: ArrowRightLeft,
+} as const
 
 const tenants = useTenants()
 const tenantId = computed(() => tenants.current.value?.id)
 const items = ref<Notification[]>([])
 const unread = ref(0)
 const email = ref(false)
+const followOpen = ref(false)
 let timer: ReturnType<typeof setInterval> | undefined
 
 async function load(): Promise<void> {
@@ -121,6 +140,15 @@ defineExpose({ load })
         <Switch :model-value="email" data-test="email-notifications" @update:model-value="setEmail" />
         {{ $t('notifications.email') }}
       </label>
+      <button
+        type="button"
+        class="flex w-full items-center gap-3 border-t px-3 py-2 text-left text-xs hover:bg-muted"
+        data-test="followed-queues"
+        @click="followOpen = true"
+      >
+        <ListChecks class="size-4 text-muted-foreground" /> {{ $t('notifications.followed.manage') }}
+      </button>
     </DropdownMenuContent>
   </DropdownMenu>
+  <FollowedQueuesDialog v-model:open="followOpen" />
 </template>

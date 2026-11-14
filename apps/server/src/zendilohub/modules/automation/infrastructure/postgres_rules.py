@@ -33,6 +33,7 @@ def _rule(row: dict[str, Any]) -> Rule:
                 **actions,
                 'add_tags': tuple(actions.get('add_tags', ())),
                 'remove_tags': tuple(actions.get('remove_tags', ())),
+                'notify_emails': tuple(actions.get('notify_emails', ())),
             }
         ),
         event=cast(TriggerEvent | None, row['event']),

@@ -763,7 +763,7 @@ export const de: MessageSchema = {
   },
   webhooks: {
     title: 'Webhooks',
-    description: 'Andere Systeme, die von Tickets erfahren: jedes Ereignis geht als signierter JSON-POST raus',
+    description: 'Andere Systeme und Chats, die von Tickets erfahren: signiertes JSON, Slack oder Microsoft Teams',
     create: 'Neuer Webhook',
     edit: 'Webhook bearbeiten',
     dialogText:
@@ -786,7 +786,19 @@ export const de: MessageSchema = {
     deleteTitle: '„{name}“ löschen?',
     deleteText: 'Das System erfährt nichts mehr von Tickets.',
     empty: 'Noch keine Webhooks',
-    emptyHint: 'Z. B. dein CRM oder einen Chat über neue Tickets informieren.',
+    emptyHint: 'Z. B. dein CRM, Slack oder Microsoft Teams über neue Tickets informieren.',
+    format: 'Format',
+    formats: { json: 'JSON (signiert)', slack: 'Slack', teams: 'Microsoft Teams' },
+    formatHints: {
+      json: 'Das Ereignis als JSON, mit einem Geheimnis signiert: für eigene Systeme.',
+      slack:
+        'In Slack: die App „Incoming Webhooks“ einem Kanal hinzufügen und ihre URL einfügen (https://hooks.slack.com/…).',
+      teams:
+        'In Teams: im Kanal den Workflow „Webhook-Benachrichtigungen an einen Kanal senden“ hinzufügen und seine URL einfügen.',
+    },
+    queues: 'Queues',
+    queuesHint: 'Nur Tickets in diesen Queues; keine gewählt: alle Queues.',
+    allQueues: 'alle Queues',
     events: {
       ticket_created: 'ein Ticket wurde eröffnet',
       ticket_changed: 'ein Ticket wurde geändert',
@@ -902,6 +914,12 @@ export const de: MessageSchema = {
     pendingPassed: 'Nur wenn das Wartedatum vorbei ist',
     withNote: 'mit Notiz',
     withReply: 'mit Nachricht an den Kunden',
+    withAlert: 'Alarm an {to}',
+    notifyEmails: 'Alarm per E-Mail an',
+    notifyEmailsPlaceholder: "z. B. bereitschaft{'@'}example.org",
+    notifyEmailsHint:
+      'Bis zu 10 Adressen, durch Kommas getrennt. Jede bekommt das Ticket mit Link (höchstens 500 Alarme pro Stunde).',
+    notifyText: 'Text über dem Alarm',
     lastRun: 'zuletzt {date}',
     saved: '„{name}“ gespeichert.',
     deleted: '„{name}“ gelöscht.',
@@ -1050,6 +1068,21 @@ export const de: MessageSchema = {
       mentioned: '{actor} hat dich erwähnt',
       message: 'Neue Nachricht von {actor}',
       sla_breached: 'Service-Level verpasst',
+      created: 'Neues Ticket von {actor}',
+      moved: '{actor} hat es in eine Queue verschoben, der du folgst',
+    },
+    followed: {
+      title: 'Queues, denen du folgst',
+      description:
+        'Erfahre von neuen Tickets in diesen Queues, in der App und per E-Mail, wenn du das eingeschaltet hast, auch wenn sie nicht dir gehören.',
+      manage: 'Queues, denen du folgst …',
+      none: 'Du siehst noch keine Queue.',
+      follow: 'Folgen',
+      following: 'Folge ich',
+      hint: 'Von neuen Tickets in dieser Queue erfahren',
+      on: 'Du erfährst jetzt von neuen Tickets in {queue}.',
+      off: 'Du folgst {queue} nicht mehr.',
+      modes: { off: 'Aus', new: 'Neue Tickets', all: 'Neue Tickets und Kundenantworten' },
     },
   },
   channels: {
@@ -1398,6 +1431,7 @@ export const de: MessageSchema = {
     assistant_off: 'Der KI-Assistent ist auf diesem Server nicht eingerichtet.',
     assistant_busy: 'Der KI-Assistent wurde zu oft gefragt. Bitte später noch einmal versuchen.',
     assistant_failed: 'Der KI-Assistent konnte nicht antworten ({reason}).',
+    invalid_followed_queues: 'Du kannst nur Queues folgen, deren Tickets du sehen darfst.',
     invalid_webhook: 'Bitte prüfe den Webhook ({field}).',
     webhook_not_found: 'Den Webhook gibt es nicht.',
     invalid_period: 'Bitte prüfe den Zeitraum ({field}).',

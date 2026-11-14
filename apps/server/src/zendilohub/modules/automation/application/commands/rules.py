@@ -10,6 +10,7 @@ from zendilohub.core.domain.transaction import TransactionManager
 from ...domain.exceptions import InvalidRuleError, RuleNotFoundError
 from ...domain.models.rules import RULES_MAX, Actions, Rule, RuleCondition, RuleKind, Schedule, TriggerEvent
 from ...domain.ports.repositories import RuleRepository, Tickets
+from ..services.alerts import AlertMailer
 
 logger = logging.getLogger(__name__)
 
@@ -113,10 +114,13 @@ class RunTriggers(Command[int]):
 
 
 class RunTriggersHandler:
-    def __init__(self, rules: RuleRepository, tickets: Tickets, transactions: TransactionManager) -> None:
+    def __init__(
+        self, rules: RuleRepository, tickets: Tickets, transactions: TransactionManager, alerts: AlertMailer
+    ) -> None:
         self._rules = rules
         self._tickets = tickets
         self._transactions = transactions
+        self._alerts = alerts
 
     async def handle(self, command: RunTriggers) -> int:
         triggers = [each for each in await self._rules.of_tenant(command.tenant_id, 'trigger') if each.active]
@@ -133,10 +137,18 @@ class RunTriggersHandler:
                     changed = await self._tickets.apply(
                         command.tenant_id, facts.id, trigger.actions.changes(), by=f'Trigger: {trigger.name}'
                     )
-                acted += int(changed)
+                alerted = await self._alert(trigger, command.tenant_id, facts.id)
+                acted += int(changed or alerted > 0)
             except Exception:
                 logger.exception('A trigger failed', extra={'trigger': trigger.id})
         return acted
+
+    async def _alert(self, rule: Rule, tenant_id: str, ticket_id: str) -> int:
+        if not rule.actions.notify_emails:
+            return 0
+        # As the ticket is now: the rule may just have moved it or raised its priority.
+        facts = await self._tickets.facts(tenant_id, ticket_id)
+        return await self._alerts.send(rule, facts) if facts else 0
 
 
 @dataclass(frozen=True)
@@ -145,7 +157,13 @@ class RunSchedules(Command[int]):
 
 
 class RunSchedulesHandler:
-    def __init__(self, rules: RuleRepository, tickets: Tickets, transactions: TransactionManager, clock: Clock) -> None:
+    def __init__(
+        self,
+        rules: RuleRepository,
+        tickets: Tickets,
+        transactions: TransactionManager,
+        clock: Clock,
+    ) -> None:
         self._rules = rules
         self._tickets = tickets
         self._transactions = transactions

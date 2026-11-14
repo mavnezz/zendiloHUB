@@ -54,6 +54,29 @@ class FactsOfHandler:
 
 
 @dataclass(frozen=True, kw_only=True)
+class ExcerptOf(Query[str]):
+    """The beginning of the newest public message of a ticket."""
+
+    tenant_id: str
+    ticket_id: str
+    limit: int = 500
+
+
+class ExcerptOfHandler:
+    def __init__(self, messages: MessageRepository) -> None:
+        self._messages = messages
+
+    async def handle(self, query: ExcerptOf) -> str:
+        public = [
+            each for each in await self._messages.of_ticket(query.tenant_id, query.ticket_id) if each.kind == 'public'
+        ]
+        if not public:
+            return ''
+        text = public[-1].body.strip()
+        return text if len(text) <= query.limit else text[: query.limit - 1].rstrip() + '…'
+
+
+@dataclass(frozen=True, kw_only=True)
 class FindTickets(Query[list[str]]):
     tenant_id: str
     criteria: TicketCriteria

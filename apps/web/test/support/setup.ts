@@ -3,6 +3,7 @@ import { http } from '@/core/api/http'
 import { setLocale } from '@/core/i18n/i18n'
 import { useInstance } from '@/core/instance'
 import { useSession } from '@/modules/identity/session'
+import { resetFollowedQueues } from '@/modules/notifications/followed'
 import { resetRoles } from '@/modules/tenancy/roles'
 import { resetAssistant } from '@/modules/tickets/assistant'
 import { resetDirectory } from '@/modules/tickets/directory'
@@ -33,4 +34,5 @@ afterEach(() => {
   resetRoles()
   resetDirectory()
   resetAssistant()
+  resetFollowedQueues()
 })

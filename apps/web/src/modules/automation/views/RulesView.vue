@@ -78,6 +78,9 @@ function describe(rule: Rule): string {
   if (a.reply) {
     parts.push(t('automation.withReply'))
   }
+  if (a.notify_emails?.length) {
+    parts.push(t('automation.withAlert', { to: a.notify_emails.join(', ') }))
+  }
   return parts.join(' · ')
 }
 

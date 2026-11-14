@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 import ConfirmDialog from '@/core/components/ConfirmDialog.vue'
 import EmptyState from '@/core/components/EmptyState.vue'
 import ErrorAlert from '@/core/components/ErrorAlert.vue'
+import NativeSelect from '@/core/components/NativeSelect.vue'
 import PageHeader from '@/core/components/PageHeader.vue'
 import { useAsyncData } from '@/core/composables/use-async-data'
 import { formatDateTime } from '@/core/format'
@@ -18,18 +19,48 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/core/ui/input'
 import { Label } from '@/core/ui/label'
 import { Switch } from '@/core/ui/switch'
+import { accessApi } from '@/modules/access/api'
 import { useTenants } from '@/modules/tenancy/tenants'
-import { integrationsApi, WEBHOOK_EVENTS, type Webhook, type WebhookDelivery, type WebhookEvent } from '../api'
+import {
+  integrationsApi,
+  WEBHOOK_EVENTS,
+  WEBHOOK_FORMATS,
+  type Webhook,
+  type WebhookDelivery,
+  type WebhookEvent,
+  type WebhookRequest,
+} from '../api'
 
-/** Other systems that hear about tickets: each event is POSTed as JSON, signed with the webhook's secret. */
+/**
+ * Other systems that hear about tickets: each event is POSTed as JSON, signed with the webhook's secret, or as a
+ * message to Slack or Microsoft Teams; optionally only for some queues.
+ */
 const { t } = useI18n()
 const tenants = useTenants()
 const tenantId = computed(() => tenants.current.value!.id)
 const webhooks = useAsyncData(() => integrationsApi.list(tenantId.value))
+const queues = useAsyncData(() => accessApi.queues(tenantId.value))
+const formatOptions = computed(() => WEBHOOK_FORMATS.map((value) => ({ value, label: t(`webhooks.formats.${value}`) })))
+const queueNames = computed(() => new Map((queues.data.value ?? []).map((queue) => [queue.id, queue.name])))
+
+function scope(webhook: Webhook): string {
+  if (!webhook.queue_ids.length) {
+    return t('webhooks.allQueues')
+  }
+  return webhook.queue_ids.map((id) => queueNames.value.get(id) ?? '?').join(', ')
+}
 
 const editing = ref<Webhook | null>(null)
 const dialogOpen = ref(false)
-const form = ref({ name: '', url: '', events: [] as WebhookEvent[], active: true, new_secret: false })
+const form = ref<WebhookRequest & { queue_ids: string[] }>({
+  name: '',
+  url: '',
+  events: [],
+  active: true,
+  new_secret: false,
+  format: 'json',
+  queue_ids: [],
+})
 const error = ref<string | null>(null)
 const secret = ref<string | null>(null)
 const deliveries = ref<WebhookDelivery[] | null>(null)
@@ -45,6 +76,8 @@ function openDialog(webhook: Webhook | null): void {
     events: [...(webhook?.events ?? ['ticket.created'])],
     active: webhook?.active ?? true,
     new_secret: false,
+    format: webhook?.format ?? 'json',
+    queue_ids: [...(webhook?.queue_ids ?? [])],
   }
   error.value = null
   dialogOpen.value = true
@@ -54,6 +87,10 @@ function toggle(event: WebhookEvent, on: boolean): void {
   form.value.events = on ? [...form.value.events, event] : form.value.events.filter((each) => each !== event)
 }
 
+function toggleQueue(id: string, on: boolean): void {
+  form.value.queue_ids = on ? [...form.value.queue_ids, id] : form.value.queue_ids.filter((each) => each !== id)
+}
+
 async function save(): Promise<void> {
   error.value = null
   try {
@@ -61,7 +98,8 @@ async function save(): Promise<void> {
       ? await integrationsApi.update(tenantId.value, editing.value.id, form.value)
       : await integrationsApi.create(tenantId.value, form.value)
     dialogOpen.value = false
-    secret.value = saved.secret ?? null
+    // Chats do not check signatures: the secret only matters for JSON receivers.
+    secret.value = saved.format === 'json' ? (saved.secret ?? null) : null
     notify.success(t('webhooks.saved', { name: saved.name }))
     await webhooks.reload()
   } catch (caught) {
@@ -126,10 +164,15 @@ async function remove(): Promise<void> {
           <div class="min-w-0 flex-1">
             <p class="flex items-center gap-2 font-medium">
               {{ webhook.name }}
+              <Badge v-if="webhook.format !== 'json'" variant="secondary" :data-test="`format-${webhook.name}`">{{
+                $t(`webhooks.formats.${webhook.format}`)
+              }}</Badge>
               <Badge v-if="!webhook.active" variant="outline">{{ $t('automation.inactive') }}</Badge>
               <Badge v-if="webhook.last_error" variant="destructive">{{ webhook.last_error }}</Badge>
             </p>
-            <p class="truncate text-xs text-muted-foreground">{{ webhook.url }} · {{ webhook.events.join(', ') }}</p>
+            <p class="truncate text-xs text-muted-foreground">
+              {{ webhook.url }} · {{ webhook.events.join(', ') }} · {{ scope(webhook) }}
+            </p>
           </div>
           <Button variant="ghost" size="sm" :data-test="`test-${webhook.name}`" @click="test(webhook)"
             ><Send class="size-4" /> {{ $t('webhooks.test') }}</Button
@@ -203,6 +246,13 @@ async function remove(): Promise<void> {
             <Input id="webhook-name" v-model="form.name" maxlength="80" required autofocus />
           </div>
           <div class="grid gap-2">
+            <Label for="webhook-format">{{ $t('webhooks.format') }}</Label>
+            <NativeSelect id="webhook-format" v-model="form.format" :options="formatOptions" data-test="format" />
+            <p class="text-xs text-muted-foreground" data-test="format-hint">
+              {{ $t(`webhooks.formatHints.${form.format}`) }}
+            </p>
+          </div>
+          <div class="grid gap-2">
             <Label for="webhook-url">URL</Label>
             <Input id="webhook-url" v-model="form.url" type="url" maxlength="2000" required />
           </div>
@@ -220,10 +270,26 @@ async function remove(): Promise<void> {
               <code class="text-xs">{{ event }}</code> {{ $t(`webhooks.events.${event.replace('.', '_')}`) }}
             </label>
           </div>
+          <fieldset v-if="queues.data.value?.length" class="grid gap-2 text-sm">
+            <legend class="mb-1 text-sm font-medium">{{ $t('webhooks.queues') }}</legend>
+            <p class="text-xs text-muted-foreground">{{ $t('webhooks.queuesHint') }}</p>
+            <label
+              v-for="queue in queues.data.value"
+              :key="queue.id"
+              class="flex items-center gap-2"
+              :data-test="`queue-${queue.name}`"
+            >
+              <Checkbox
+                :model-value="form.queue_ids.includes(queue.id)"
+                @update:model-value="(on) => toggleQueue(queue.id, on === true)"
+              />
+              {{ queue.name }}
+            </label>
+          </fieldset>
           <label class="flex items-center gap-3 text-sm"
             ><Switch v-model="form.active" /> {{ $t('automation.active') }}</label
           >
-          <label v-if="editing" class="flex items-center gap-3 text-sm"
+          <label v-if="editing && form.format === 'json'" class="flex items-center gap-3 text-sm"
             ><Switch v-model="form.new_secret" data-test="new-secret" /> {{ $t('webhooks.newSecret') }}</label
           >
           <DialogFooter>

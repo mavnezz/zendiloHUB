@@ -19,6 +19,7 @@ from .application.commands.rules import (
     SaveRule,
     SaveRuleHandler,
 )
+from .application.services.alerts import AlertMailer
 from .infrastructure.contract_adapters import ContractTickets
 from .infrastructure.postgres_rules import PostgresRuleRepository
 from .ui.api.routes import automation_routes
@@ -30,18 +31,19 @@ SCHEDULES_EVERY_SECONDS = 5 * 60
 def create_automation_module(context: ModuleContext) -> AppModule:
     """
     Macros, triggers (when a ticket is created, the customer replies or someone changes it) and scheduled jobs
-    (every five minutes). Rules change tickets through the tickets module's `TicketAutomation` contract; what they
+    (every five minutes); triggers may also send an alert by e-mail (e.g. to an on-call inbox). Rules change tickets through the tickets module's `TicketAutomation` contract; what they
     change does not start triggers again.
     """
     db = context.db
     rules = PostgresRuleRepository(db)
     tickets = ContractTickets(context.contracts)
+    alerts = AlertMailer(context.mailer, tickets, context.rate_limiter, context.config.public_url or '')
     bus = (
         CommandBus()
         .register(SaveRule, SaveRuleHandler(rules, context.ids, context.clock))
         .register(DeleteRule, DeleteRuleHandler(rules))
         .register(ListRules, ListRulesHandler(rules))
-        .register(RunTriggers, RunTriggersHandler(rules, tickets, db))
+        .register(RunTriggers, RunTriggersHandler(rules, tickets, db, alerts))
         .register(RunSchedules, RunSchedulesHandler(rules, tickets, db, context.clock))
         .register(ForgetTenant, ForgetTenantHandler(rules))
     )

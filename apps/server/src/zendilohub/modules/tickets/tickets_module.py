@@ -19,6 +19,8 @@ from .application.commands.attachments import (
 from .application.commands.automation import (
     ApplyAutomation,
     ApplyAutomationHandler,
+    ExcerptOf,
+    ExcerptOfHandler,
     FactsOf,
     FactsOfHandler,
     FindTickets,
@@ -227,6 +229,7 @@ def create_tickets_module(context: ModuleContext, writer: TicketWriter | None = 
         .register(GetAttachment, GetAttachmentHandler(desk, files))
         .register(CleanAttachments, CleanAttachmentsHandler(files))
         .register(PortalAttachment, PortalAttachmentHandler(desk, messages, files))
+        .register(ExcerptOf, ExcerptOfHandler(messages))
     )
 
     async def member_removed(event: MemberRemoved) -> None:
