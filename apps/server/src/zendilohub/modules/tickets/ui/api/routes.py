@@ -9,6 +9,7 @@ from zendilohub.core.http.access import CurrentMember, CurrentPerson, Member, me
 from zendilohub.core.http.audit import Unaudited, audited, note_audit
 from zendilohub.core.http.ids import Id
 
+from ...application.commands.assist import Assist, AssistantStatus
 from ...application.commands.fields import (
     AddChecklistItem,
     BeHere,
@@ -50,6 +51,9 @@ from ...domain.models.actor import Actor
 from ...domain.models.ticket import Priority, TicketState
 from ...domain.models.views import TicketSort, TicketView
 from .schemas import (
+    AssistantResponse,
+    AssistRequest,
+    AssistResponse,
     BulkRequest,
     BulkResponse,
     ChecklistChangeRequest,
@@ -235,6 +239,19 @@ def ticket_routes(bus: CommandBus, contracts: Contracts) -> APIRouter:
         found = await bus.query(SimilarTickets(tenant_id=member.tenant_id, actor=actor_of(member), ticket_id=ticket_id))
         cards_found = await cards(member.tenant_id, [each.ticket.customer_id for each in found.items])
         return TicketPageResponse.of(list(found.items), found.total, cards_found)
+
+    @router.get('/assistant')
+    async def assistant(member: CurrentMember) -> AssistantResponse:
+        """Whether the AI assistant is set up on this server (`ZENDILOHUB_ANTHROPIC_API_KEY`)."""
+        return AssistantResponse(enabled=await bus.query(AssistantStatus()))
+
+    @router.post('/tickets/{ticket_id}/assist', dependencies=[Unaudited])
+    async def assist(ticket_id: Id, body: AssistRequest, member: CurrentMember) -> AssistResponse:
+        """A summary of the ticket or a draft reply by the AI assistant; nothing is saved or sent."""
+        text = await bus.query(
+            Assist(tenant_id=member.tenant_id, actor=actor_of(member), ticket_id=ticket_id, task=body.task)
+        )
+        return AssistResponse(text=text)
 
     @router.get('/tickets/{ticket_id}/messages')
     async def messages(ticket_id: Id, member: CurrentMember) -> list[MessageResponse]:

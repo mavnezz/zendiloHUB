@@ -5,6 +5,7 @@ from zendilohub.core.database.migration import sql_migrations
 from zendilohub.core.events.integration_events import MemberRemoved, TenantDeleted, UserDeleted
 from zendilohub.core.module import AppModule, ModuleContext
 
+from .application.commands.assist import Assist, AssistantStatus, AssistantStatusHandler, AssistHandler
 from .application.commands.automation import (
     ApplyAutomation,
     ApplyAutomationHandler,
@@ -105,6 +106,8 @@ from .application.queries.tickets import (
     TicketUsageQuery,
 )
 from .application.services.desk import Desk, TimeKeeper
+from .domain.ports.services import TicketWriter
+from .infrastructure.claude_writer import ClaudeWriter, NoWriter
 from .infrastructure.contract_adapters import (
     BusTicketAutomation,
     BusTicketInbox,
@@ -130,7 +133,7 @@ MIGRATIONS = Path(__file__).parent / 'infrastructure' / 'migrations'
 CLOSE_DUE_EVERY_SECONDS = 60
 
 
-def create_tickets_module(context: ModuleContext) -> AppModule:
+def create_tickets_module(context: ModuleContext, writer: TicketWriter | None = None) -> AppModule:
     """
     Tickets and their messages, history, tags, watchers, links and time. Who may do what with a ticket comes from the
     access module's rights in its queue (`QueueAccess` contract); customers come from the `Contacts` contract.
@@ -149,6 +152,7 @@ def create_tickets_module(context: ModuleContext) -> AppModule:
     fields = PostgresFieldRepository(db)
     checklist = PostgresChecklistRepository(db)
     update = UpdateTicketHandler(desk, customers, db, fields)
+    assistant = writer or _writer(context)
     bus = (
         CommandBus()
         .register(CreateTicket, CreateTicketHandler(desk, messages, customers, db, time))
@@ -174,6 +178,8 @@ def create_tickets_module(context: ModuleContext) -> AppModule:
         .register(TicketTime, TicketTimeHandler(desk, times))
         .register(Assignees, AssigneesHandler(desk))
         .register(SimilarTickets, SimilarTicketsHandler(desk))
+        .register(AssistantStatus, AssistantStatusHandler(assistant))
+        .register(Assist, AssistHandler(desk, messages, customers, assistant, context.rate_limiter))
         .register(PortalTickets, PortalTicketsHandler(desk))
         .register(PortalThreadQuery, PortalThreadHandler(desk, messages))
         .register(PortalReply, PortalReplyHandler(desk, messages, db))
@@ -216,3 +222,12 @@ def create_tickets_module(context: ModuleContext) -> AppModule:
     return AppModule(
         name='tickets', migrations=sql_migrations(MIGRATIONS), routers=[ticket_routes(bus, context.contracts)]
     )
+
+
+def _writer(context: ModuleContext) -> TicketWriter:
+    key = context.config.anthropic_api_key
+    if key is None:
+        return NoWriter()
+    import anthropic
+
+    return ClaudeWriter(anthropic.AsyncAnthropic(api_key=key, timeout=90.0, max_retries=2), context.config.ai_model)

@@ -69,6 +69,9 @@ class AppConfig:
     mail: MailConfig
     initial_admin: InitialAdmin | None
     """None: the first administrator comes from the setup wizard or `zendilohub make-admin`."""
+    anthropic_api_key: str | None = field(default=None, repr=False)
+    """Turns on the AI assistant (ticket summaries, draft replies) with Claude; None: it is off."""
+    ai_model: str = 'claude-opus-5-5'
 
 
 def load_config(env: Mapping[str, str]) -> AppConfig:
@@ -101,6 +104,8 @@ def load_config(env: Mapping[str, str]) -> AppConfig:
         multi_tenant=_boolean('ZENDILOHUB_MULTI_TENANT', env.get('ZENDILOHUB_MULTI_TENANT'), False),
         mail=mail,
         initial_admin=_initial_admin(env),
+        anthropic_api_key=(env.get('ZENDILOHUB_ANTHROPIC_API_KEY') or '').strip() or None,
+        ai_model=(env.get('ZENDILOHUB_AI_MODEL') or '').strip() or 'claude-opus-5-5',
     )
 
 

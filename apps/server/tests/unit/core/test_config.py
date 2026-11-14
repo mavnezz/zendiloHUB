@@ -96,3 +96,10 @@ def test_reads_the_initial_administrator() -> None:
 def test_wants_both_parts_of_the_initial_administrator(env: dict[str, str]) -> None:
     with pytest.raises(ValueError, match='set both or neither'):
         load_config(env)
+
+
+def test_the_ai_assistant_needs_a_key() -> None:
+    assert (load_config({}).anthropic_api_key, load_config({}).ai_model) == (None, 'claude-opus-5-5')
+    config = load_config({'ZENDILOHUB_ANTHROPIC_API_KEY': ' sk-ant-test ', 'ZENDILOHUB_AI_MODEL': 'claude-sonnet-5-5'})
+    assert (config.anthropic_api_key, config.ai_model) == ('sk-ant-test', 'claude-sonnet-5-5')
+    assert 'sk-ant-test' not in repr(config)

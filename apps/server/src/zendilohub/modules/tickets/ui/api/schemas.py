@@ -10,6 +10,7 @@ from zendilohub.core.http.ids import Id
 
 from ...application.commands.tickets import BulkResult, FirstMessage
 from ...application.queries.tickets import TicketDetail, TicketWithRights
+from ...domain.models.assist import AssistTask
 from ...domain.models.custom_field import ChecklistItem, CustomField, FieldKind
 from ...domain.models.history import HistoryAction, HistoryEntry
 from ...domain.models.link import LinkKind
@@ -378,3 +379,15 @@ class PresenceRequest(Request):
 class ViewerResponse(BaseModel):
     user_id: str
     writing: bool
+
+
+class AssistRequest(Request):
+    task: AssistTask
+
+
+class AssistResponse(BaseModel):
+    text: str
+
+
+class AssistantResponse(BaseModel):
+    enabled: bool

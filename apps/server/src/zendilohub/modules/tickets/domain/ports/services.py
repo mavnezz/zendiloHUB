@@ -4,6 +4,7 @@ from typing import Protocol
 from zendilohub.core.domain.queue_rights import QueueRight
 
 from ..models.actor import Actor
+from ..models.assist import AssistInput
 
 
 class QueueRights(Protocol):
@@ -41,4 +42,15 @@ class Presence(Protocol):
 
     async def here(self, tenant_id: str, ticket_id: str, user_id: str, *, writing: bool) -> list[tuple[str, bool]]:
         """Marks the user as looking at the ticket (for half a minute); returns the others there, writing or not."""
+        ...
+
+
+class TicketWriter(Protocol):
+    """A language model that summarizes tickets and drafts replies (optional: off without an API key)."""
+
+    @property
+    def enabled(self) -> bool: ...
+
+    async def write(self, request: AssistInput) -> str:
+        """The text; raises AssistantFailedError when the model does not answer usefully."""
         ...

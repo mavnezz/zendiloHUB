@@ -1,4 +1,12 @@
-from zendilohub.core.domain.app_domain_error import ConflictError, ForbiddenError, NotFoundError, ValidationError
+from zendilohub.core.domain.app_domain_error import (
+    ConflictError,
+    ForbiddenError,
+    NotFoundError,
+    RateLimitedError,
+    UnavailableError,
+    UpstreamError,
+    ValidationError,
+)
 from zendilohub.core.domain.queue_rights import QueueRight
 
 
@@ -69,3 +77,20 @@ class FieldKeyTakenError(ConflictError):
 class ChecklistItemNotFoundError(NotFoundError):
     def __init__(self) -> None:
         super().__init__('checklist_item_not_found', 'The checklist item does not exist')
+
+
+class AssistantOffError(UnavailableError):
+    def __init__(self) -> None:
+        super().__init__('assistant_off', 'The AI assistant is not set up on this server')
+
+
+class AssistantBusyError(RateLimitedError):
+    def __init__(self, retry_after: int) -> None:
+        super().__init__(
+            'assistant_busy', 'The AI assistant was asked too often; try again later', {'retry_after': retry_after}
+        )
+
+
+class AssistantFailedError(UpstreamError):
+    def __init__(self, reason: str) -> None:
+        super().__init__('assistant_failed', 'The AI assistant could not answer', {'reason': reason})
