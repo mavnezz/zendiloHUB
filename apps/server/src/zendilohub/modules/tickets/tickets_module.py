@@ -61,6 +61,14 @@ from .application.commands.forget import (
     ForgetTenantHandler,
 )
 from .application.commands.messages import AddMessage, AddMessageHandler
+from .application.commands.numbering import (
+    GetNumbering,
+    GetNumberingHandler,
+    SaveNumbering,
+    SaveNumberingHandler,
+    SubjectPrefix,
+    SubjectPrefixHandler,
+)
 from .application.commands.portal import (
     PortalAttachment,
     PortalAttachmentHandler,
@@ -129,6 +137,7 @@ from .infrastructure.contract_adapters import (
     BusTicketPortal,
     BusTicketUsage,
     ContractCustomers,
+    ContractOrganizationTime,
     ContractQueueRights,
 )
 from .infrastructure.file_store import DiskFileStore
@@ -139,11 +148,13 @@ from .infrastructure.postgres_tickets import (
     PostgresHistoryRepository,
     PostgresLinkRepository,
     PostgresMessageRepository,
+    PostgresNumberingRepository,
     PostgresTicketRepository,
     PostgresTimeRepository,
     PostgresWatcherRepository,
 )
 from .infrastructure.redis_presence import RedisPresence
+from .ui.api.numbering import numbering_routes
 from .ui.api.routes import ticket_routes
 
 MIGRATIONS = Path(__file__).parent / 'infrastructure' / 'migrations'
@@ -165,7 +176,16 @@ def create_tickets_module(context: ModuleContext, writer: TicketWriter | None = 
     times = PostgresTimeRepository(db)
     rights = ContractQueueRights(context.contracts)
     customers = ContractCustomers(context.contracts)
-    desk = Desk(tickets, history, rights, context.events, context.ids, context.clock)
+    desk = Desk(
+        tickets,
+        history,
+        rights,
+        context.events,
+        context.ids,
+        context.clock,
+        PostgresNumberingRepository(db),
+        ContractOrganizationTime(context.contracts),
+    )
     time = TimeKeeper(desk, times)
     fields = PostgresFieldRepository(db)
     checklist = PostgresChecklistRepository(db)
@@ -230,6 +250,9 @@ def create_tickets_module(context: ModuleContext, writer: TicketWriter | None = 
         .register(CleanAttachments, CleanAttachmentsHandler(files))
         .register(PortalAttachment, PortalAttachmentHandler(desk, messages, files))
         .register(ExcerptOf, ExcerptOfHandler(messages))
+        .register(GetNumbering, GetNumberingHandler(desk))
+        .register(SaveNumbering, SaveNumberingHandler(desk))
+        .register(SubjectPrefix, SubjectPrefixHandler(desk))
     )
 
     async def member_removed(event: MemberRemoved) -> None:
@@ -254,7 +277,10 @@ def create_tickets_module(context: ModuleContext, writer: TicketWriter | None = 
     return AppModule(
         name='tickets',
         migrations=sql_migrations(MIGRATIONS),
-        routers=[ticket_routes(bus, context.contracts, max_upload_bytes=context.config.max_upload_bytes)],
+        routers=[
+            ticket_routes(bus, context.contracts, max_upload_bytes=context.config.max_upload_bytes),
+            numbering_routes(bus),
+        ],
     )
 
 

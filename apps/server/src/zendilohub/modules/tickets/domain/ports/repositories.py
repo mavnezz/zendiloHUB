@@ -1,6 +1,6 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from typing import Protocol
 
 from zendilohub.core.domain.automation import TicketCriteria
@@ -10,6 +10,7 @@ from ..models.custom_field import ChecklistItem, CustomField
 from ..models.history import HistoryEntry
 from ..models.link import Link, LinkKind
 from ..models.message import Message
+from ..models.numbering import Counter, Numbering
 from ..models.ticket import Ticket
 from ..models.time_entry import TimeEntry
 from ..models.views import TicketFilter, TicketView
@@ -22,8 +23,12 @@ class TicketPage:
 
 
 class TicketRepository(Protocol):
-    async def next_number(self, tenant_id: str) -> int:
-        """The organization's next ticket number (1001, 1002, …), never handed out twice."""
+    async def next_number(self, tenant_id: str, numbering: Numbering, today: date) -> int:
+        """The organization's next ticket number by its numbering, never handed out twice."""
+        ...
+
+    async def counter(self, tenant_id: str) -> Counter:
+        """What was handed out last (for the preview of the next number)."""
         ...
 
     async def find(self, tenant_id: str, ticket_id: str) -> Ticket | None: ...
@@ -173,3 +178,11 @@ class AttachmentRepository(Protocol):
     async def known(self, keys: Sequence[tuple[str, str]]) -> set[tuple[str, str]]:
         """Which (tenant, attachment) pairs still exist."""
         ...
+
+
+class NumberingRepository(Protocol):
+    async def find(self, tenant_id: str) -> Numbering:
+        """The organization's numbering; the defaults when it never changed it."""
+        ...
+
+    async def save(self, numbering: Numbering) -> None: ...

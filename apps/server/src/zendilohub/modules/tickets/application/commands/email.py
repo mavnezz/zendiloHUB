@@ -52,7 +52,7 @@ class ReceiveEmailHandler:
                 ticket = Ticket.open(
                     id=desk.ids.new_id(),
                     tenant_id=email.tenant_id,
-                    number=await desk.tickets.next_number(email.tenant_id),
+                    number=await desk.next_number(email.tenant_id),
                     subject=(' '.join(email.subject.split()) or NO_SUBJECT)[:SUBJECT_MAX],
                     queue_id=email.queue_id,
                     channel='email',

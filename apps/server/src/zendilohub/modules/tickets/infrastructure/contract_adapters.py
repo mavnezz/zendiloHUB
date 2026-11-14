@@ -10,6 +10,7 @@ from zendilohub.core.domain.queue_rights import QueueRight
 
 from ..application.commands.automation import ApplyAutomation, ExcerptOf, FactsOf, FindTickets
 from ..application.commands.email import MarkSent, OutgoingOf, ReceiveEmail, ThreadEmail
+from ..application.commands.numbering import SubjectPrefix
 from ..application.commands.portal import (
     PortalAttachment,
     PortalOpen,
@@ -51,6 +52,16 @@ class ContractQueueRights:
 
     async def is_member(self, tenant_id: str, user_id: str) -> bool:
         return await self._contracts.memberships.get().is_member(tenant_id, user_id)
+
+
+class ContractOrganizationTime:
+    """`OrganizationTime` through tenancy's `OrganizationNames` contract."""
+
+    def __init__(self, contracts: Contracts) -> None:
+        self._contracts = contracts
+
+    async def timezone_of(self, tenant_id: str) -> str | None:
+        return await self._contracts.organizations.get().timezone_of(tenant_id)
 
 
 class ContractCustomers:
@@ -116,6 +127,9 @@ class BusTicketInbox:
                 to=to,
             )
         )
+
+    async def subject_prefix(self, tenant_id: str) -> str:
+        return await self._bus.query(SubjectPrefix(tenant_id))
 
 
 class BusTicketAutomation:

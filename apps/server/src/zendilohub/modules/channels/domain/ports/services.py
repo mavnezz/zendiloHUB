@@ -84,6 +84,10 @@ class Tickets(Protocol):
         self, tenant_id: str, message_id: str, *, email_message_id: str, from_address: str, to: tuple[str, ...]
     ) -> None: ...
 
+    async def subject_prefix(self, tenant_id: str) -> str:
+        """What stands before the number in subjects: `#` for `[#1001]`."""
+        ...
+
 
 class Names(Protocol):
     """Names for placeholders: the organization's, a queue's, a member's e-mail address."""

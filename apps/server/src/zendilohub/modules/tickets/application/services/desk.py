@@ -1,4 +1,6 @@
 from collections.abc import Sequence
+from datetime import date
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from zendilohub.core.domain.clock import Clock
 from zendilohub.core.domain.id_generator import IdGenerator
@@ -11,8 +13,8 @@ from ...domain.models.actor import Actor
 from ...domain.models.history import HistoryAction, HistoryEntry
 from ...domain.models.ticket import Ticket
 from ...domain.models.time_entry import TimeEntry
-from ...domain.ports.repositories import HistoryRepository, TicketRepository, TimeRepository
-from ...domain.ports.services import QueueRights
+from ...domain.ports.repositories import HistoryRepository, NumberingRepository, TicketRepository, TimeRepository
+from ...domain.ports.services import OrganizationTime, QueueRights
 
 
 def require(rights: frozenset[QueueRight], right: QueueRight) -> None:
@@ -31,13 +33,29 @@ class Desk:
         events: EventBus,
         ids: IdGenerator,
         clock: Clock,
+        numberings: NumberingRepository,
+        time: OrganizationTime,
     ) -> None:
         self.tickets = tickets
+        self.numberings = numberings
+        self.time = time
         self.history = history
         self.rights = rights
         self.events = events
         self.ids = ids
         self.clock = clock
+
+    async def next_number(self, tenant_id: str) -> int:
+        """The number of a new ticket, by the organization's numbering and on its calendar day."""
+        numbering = await self.numberings.find(tenant_id)
+        return await self.tickets.next_number(tenant_id, numbering, await self.today(tenant_id))
+
+    async def today(self, tenant_id: str) -> date:
+        try:
+            zone = ZoneInfo(await self.time.timezone_of(tenant_id) or 'UTC')
+        except ZoneInfoNotFoundError, ValueError:
+            zone = ZoneInfo('UTC')
+        return self.clock.now().astimezone(zone).date()
 
     async def load(self, tenant_id: str, actor: Actor, ticket_id: str) -> tuple[Ticket, frozenset[QueueRight]]:
         """The ticket with the actor's rights in its queue; unknown to those who may not see it."""

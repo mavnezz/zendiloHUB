@@ -126,6 +126,10 @@ class TicketInbox(Protocol):
         """Keeps the e-mail's id with the message, so the customer's answer finds the ticket."""
         ...
 
+    async def subject_prefix(self, tenant_id: str) -> str:
+        """What stands before the ticket number in e-mail subjects: `#` for `[#1001]`, or e.g. `Ticket#`."""
+        ...
+
 
 class TicketAutomation(Protocol):
     """Provided by tickets, used by automation, service and notifications: tickets as rules see and change them."""
@@ -181,6 +185,10 @@ class OrganizationNames(Protocol):
     """Provided by tenancy: an organization's name (for signatures and auto replies)."""
 
     async def name_of(self, tenant_id: str) -> str | None: ...
+
+    async def timezone_of(self, tenant_id: str) -> str | None:
+        """The organization's time zone, e.g. `Europe/Berlin`."""
+        ...
 
 
 class QueueNames(Protocol):

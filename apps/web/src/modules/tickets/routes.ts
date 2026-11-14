@@ -11,4 +11,10 @@ export const ticketRoutes: RouteRecordRaw[] = [
     component: () => import('./views/TicketFieldsView.vue'),
     meta: { permission: 'queues.manage' },
   },
+  {
+    path: 'ticket-numbers',
+    name: 'ticketNumbers',
+    component: () => import('./views/TicketNumbersView.vue'),
+    meta: { permission: 'tenant.manage' },
+  },
 ]

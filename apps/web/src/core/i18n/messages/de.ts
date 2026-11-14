@@ -60,6 +60,7 @@ export const de: MessageSchema = {
     aiAssistants: 'KI-Assistenten',
     webhooks: 'Webhooks',
     customerPortal: 'Kundenportal',
+    ticketNumbers: 'Ticketnummern',
     mySignature: 'Meine Signatur',
     emailAccounts: 'E-Mail-Konten',
     queueEmail: 'E-Mail je Queue',
@@ -338,6 +339,7 @@ export const de: MessageSchema = {
       article: { created: 'Artikel geschrieben', updated: 'Artikel geändert', deleted: 'Artikel gelöscht' },
       mcp_connection: { created: 'KI-Assistenten verbunden', deleted: 'KI-Assistenten getrennt' },
       portal: { changed: 'Hat das Kundenportal geändert' },
+      ticket_numbers: { changed: 'Hat die Ticketnummern geändert' },
       macro: { created: 'Makro angelegt', updated: 'Makro geändert', deleted: 'Makro gelöscht' },
       trigger: { created: 'Trigger angelegt', updated: 'Trigger geändert', deleted: 'Trigger gelöscht' },
       schedule: {
@@ -846,6 +848,25 @@ export const de: MessageSchema = {
     neverUsed: 'noch nicht genutzt',
     disconnect: 'Trennen',
     disconnected: 'Getrennt: Der Token gilt nicht mehr.',
+  },
+  ticketNumbers: {
+    title: 'Ticketnummern',
+    description: 'Wie neue Tickets nummeriert werden und wie die Nummer im Betreff von E-Mails steht.',
+    format: 'Format',
+    increment: 'Hochzählen',
+    incrementHint: '1001, 1002, 1003, …',
+    date: 'Datum und Zähler',
+    dateHint: 'Der Tag und sein Zähler, z. B. 202611140001; beginnt jeden Tag neu.',
+    start: 'Startnummer',
+    startHint: 'Nummern werden nur größer: Der Start muss über der letzten Nummer liegen.',
+    dateDigits: 'Stellen des Tageszählers',
+    checksum: 'Prüfziffer anhängen',
+    checksumHint: 'Eine vertippte Nummer im Betreff findet dann kein falsches Ticket.',
+    prefix: 'Präfix im Betreff von E-Mails',
+    prefixHint:
+      'Bis zu 16 Buchstaben, Ziffern, #, -, _ oder :. Antworten mit der alten Kennung [#…] werden weiter erkannt.',
+    next: 'Nächstes Ticket',
+    saved: 'Die Ticketnummern sind gespeichert.',
   },
   portal: {
     attach: 'Dateien anhängen (bis zu {count})',
@@ -1428,6 +1449,7 @@ export const de: MessageSchema = {
     portal_login_required: 'Bitte melden Sie sich erneut an.',
     portal_link_invalid: 'Dieser Link ist ungültig oder abgelaufen. Fordern Sie einen neuen an.',
     invalid_portal: 'Bitte prüfen Sie Ihre Anfrage ({field}).',
+    invalid_numbering: 'Bitte prüfe die Ticketnummern ({field}).',
     assistant_off: 'Der KI-Assistent ist auf diesem Server nicht eingerichtet.',
     assistant_busy: 'Der KI-Assistent wurde zu oft gefragt. Bitte später noch einmal versuchen.',
     assistant_failed: 'Der KI-Assistent konnte nicht antworten ({reason}).',
@@ -1536,6 +1558,10 @@ export const de: MessageSchema = {
     role_exceeds_own: 'Diese Rolle darf Dinge, die du selbst nicht darfst.',
   },
   fieldErrors: {
+    invalid_numbering: {
+      start: 'Der Start muss über der letzten Nummer liegen: {minimum} oder mehr.',
+      prefix: 'Das Präfix darf bis zu 16 Buchstaben, Ziffern, #, -, _ oder : haben.',
+    },
     invalid_portal: {
       files: 'Sie können höchstens fünf Dateien auf einmal senden.',
       body: 'Bitte schreiben Sie eine Nachricht oder hängen Sie eine Datei an (höchstens 50.000 Zeichen).',
