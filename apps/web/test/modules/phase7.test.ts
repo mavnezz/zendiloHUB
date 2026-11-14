@@ -32,6 +32,7 @@ const THREAD = {
       from_customer: true,
       author_name: 'Carl',
       body: 'It does not print.',
+      attachments: [],
       created_at: '2026-11-13T12:00:00Z',
     },
     {
@@ -39,9 +40,15 @@ const THREAD = {
       from_customer: false,
       author_name: 'Ada',
       body: 'Please restart it.',
+      attachments: [{ id: 'f1', filename: 'manual.pdf', content_type: 'application/pdf', size: 2048 }],
       created_at: '2026-11-13T13:00:00Z',
     },
   ],
+}
+
+/** The text fields of a form the app sent. */
+function fields(body: unknown): Record<string, unknown> {
+  return Object.fromEntries((body as FormData).entries())
 }
 
 function inTenant(): void {
@@ -110,7 +117,7 @@ describe('PortalHomeView', () => {
     await type('[data-test=portal-subject]', 'Toner')
     await type('[data-test=portal-body]', 'Need toner')
     await click('[data-test=portal-submit]')
-    expect(fake.last('POST', `${PORTAL}/tickets`)!.body).toEqual({ subject: 'Toner', body: 'Need toner' })
+    expect(fields(fake.last('POST', `${PORTAL}/tickets`)!.body)).toEqual({ subject: 'Toner', body: 'Need toner' })
     expect(router.currentRoute.value.name).toBe('portalTicket')
     expect(router.currentRoute.value.params.ticketId).toBe('t3')
   })
@@ -165,7 +172,10 @@ describe('PortalTicketView', () => {
     expect($('[data-test=portal-message-m2]').text()).toContain('Ada')
     await type('[data-test=portal-reply]', 'Still broken')
     await click('[data-test=portal-answer]')
-    expect(fake.last('POST', `${PORTAL}/tickets/t1/messages`)!.body).toEqual({ body: 'Still broken' })
+    expect(fields(fake.last('POST', `${PORTAL}/tickets/t1/messages`)!.body)).toEqual({ body: 'Still broken' })
+    expect($('[data-test=portal-message-m2] a').attributes('href')).toBe(
+      `/api/v1/portal/${TENANT_ID}/tickets/t1/attachments/f1`,
+    )
     expect(exists('[data-test=portal-message-m3]')).toBe(true)
     expect(text()).toContain('Replying opens the ticket again.')
 

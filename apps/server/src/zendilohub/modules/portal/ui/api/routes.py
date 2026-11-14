@@ -1,19 +1,22 @@
 from datetime import datetime
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Request, Response
+from fastapi import APIRouter, File, Form, Request, Response, UploadFile
 from pydantic import BaseModel, ConfigDict, Field
 
 from zendilohub.core.bus.command_bus import CommandBus
 from zendilohub.core.config import AppConfig
-from zendilohub.core.domain.portal import PortalThread, PortalTicket
+from zendilohub.core.domain.files import FileData, FileInfo
+from zendilohub.core.domain.portal import PortalMessage, PortalThread, PortalTicket
 from zendilohub.core.http.access import Member, Public, member_with
 from zendilohub.core.http.audit import Unaudited, audited
+from zendilohub.core.http.files import file_response, read_upload
 from zendilohub.core.http.ids import Id
 
 from ...application.commands.portal import (
     Answer,
     GetSettings,
+    MyFile,
     MyThread,
     MyTickets,
     OpenTicket,
@@ -50,15 +53,6 @@ class PortalTokenRequest(Strict):
     token: str = Field(max_length=200)
 
 
-class PortalTextRequest(Strict):
-    body: str = Field(max_length=50_000)
-
-
-class PortalTicketRequest(Strict):
-    subject: str = Field(max_length=250)
-    body: str = Field(max_length=50_000)
-
-
 class PortalTicketResponse(BaseModel):
     id: str
     number: int
@@ -79,12 +73,35 @@ class PortalTicketResponse(BaseModel):
         )
 
 
+class PortalFileResponse(BaseModel):
+    id: str
+    filename: str
+    content_type: str
+    size: int
+
+    @classmethod
+    def of(cls, file: FileInfo) -> PortalFileResponse:
+        return cls(id=file.id, filename=file.filename, content_type=file.content_type, size=file.size)
+
+
 class PortalMessageResponse(BaseModel):
     id: str
     from_customer: bool
     author_name: str
     body: str
+    attachments: list[PortalFileResponse]
     created_at: datetime
+
+    @classmethod
+    def of(cls, message: PortalMessage) -> PortalMessageResponse:
+        return cls(
+            id=message.id,
+            from_customer=message.from_customer,
+            author_name=message.author_name,
+            body=message.body,
+            attachments=[PortalFileResponse.of(each) for each in message.attachments],
+            created_at=message.created_at,
+        )
 
 
 class PortalThreadResponse(BaseModel):
@@ -95,7 +112,7 @@ class PortalThreadResponse(BaseModel):
     def of(cls, thread: PortalThread) -> PortalThreadResponse:
         return cls(
             ticket=PortalTicketResponse.of(thread.ticket),
-            messages=[PortalMessageResponse(**vars(each)) for each in thread.messages],
+            messages=[PortalMessageResponse.of(each) for each in thread.messages],
         )
 
 
@@ -138,6 +155,9 @@ def portal_routes(bus: CommandBus, config: AppConfig) -> APIRouter:
     async def visitor(request: Request, tenant_id: str) -> Visitor:
         return await bus.query(WhoIs(tenant_id, request.cookies.get(COOKIE, '')))
 
+    async def read(files: list[UploadFile] | None) -> tuple[FileData, ...]:
+        return tuple([await read_upload(each, config.max_upload_bytes) for each in files or []])
+
     @router.post('/login', status_code=202, response_class=Response, dependencies=[Public, Unaudited])
     async def login(tenant_id: Id, body: PortalLinkRequest, request: Request) -> None:
         """Sends a sign-in link if the address belongs to a contact (the answer is the same either way)."""
@@ -178,8 +198,16 @@ def portal_routes(bus: CommandBus, config: AppConfig) -> APIRouter:
         return [PortalTicketResponse.of(each) for each in found]
 
     @router.post('/tickets', status_code=201, dependencies=[Public, Unaudited])
-    async def create(tenant_id: Id, body: PortalTicketRequest, request: Request) -> PortalTicketResponse:
-        ticket = await bus.execute(OpenTicket(await visitor(request, tenant_id), body.subject, body.body))
+    async def create(
+        tenant_id: Id,
+        request: Request,
+        subject: Annotated[str, Form(max_length=250)],
+        body: Annotated[str, Form(max_length=50_000)],
+        files: Annotated[list[UploadFile] | None, File()] = None,
+    ) -> PortalTicketResponse:
+        """A new request (multipart: `subject`, `body` and up to five `files`)."""
+        who = await visitor(request, tenant_id)
+        ticket = await bus.execute(OpenTicket(who, subject, body, await read(files)))
         return PortalTicketResponse.of(ticket)
 
     @router.get('/tickets/{ticket_id}', dependencies=[Public, Unaudited])
@@ -187,9 +215,24 @@ def portal_routes(bus: CommandBus, config: AppConfig) -> APIRouter:
         return PortalThreadResponse.of(await bus.query(MyThread(await visitor(request, tenant_id), ticket_id)))
 
     @router.post('/tickets/{ticket_id}/messages', dependencies=[Public, Unaudited])
-    async def answer(tenant_id: Id, ticket_id: Id, body: PortalTextRequest, request: Request) -> PortalThreadResponse:
-        return PortalThreadResponse.of(
-            await bus.execute(Answer(await visitor(request, tenant_id), ticket_id, body.body))
-        )
+    async def answer(
+        tenant_id: Id,
+        ticket_id: Id,
+        request: Request,
+        body: Annotated[str, Form(max_length=50_000)] = '',
+        files: Annotated[list[UploadFile] | None, File()] = None,
+    ) -> PortalThreadResponse:
+        """A reply (multipart: `body` and up to five `files`)."""
+        who = await visitor(request, tenant_id)
+        return PortalThreadResponse.of(await bus.execute(Answer(who, ticket_id, body, await read(files))))
+
+    @router.get(
+        '/tickets/{ticket_id}/attachments/{attachment_id}',
+        response_class=Response,
+        dependencies=[Public, Unaudited],
+    )
+    async def download(tenant_id: Id, ticket_id: Id, attachment_id: Id, request: Request) -> Response:
+        found = await bus.query(MyFile(await visitor(request, tenant_id), ticket_id, attachment_id))
+        return file_response(found.content, filename=found.filename, content_type=found.content_type)
 
     return router

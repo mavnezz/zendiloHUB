@@ -816,6 +816,7 @@ export const en = {
     disconnected: 'Disconnected: the token no longer works.',
   },
   portal: {
+    attach: 'Attach files (up to {count})',
     title: 'Your requests',
     signIn: 'Sign in',
     signInText:
@@ -1345,12 +1346,20 @@ export const en = {
     privacy: 'Privacy policy',
     terms: 'Terms and conditions',
   },
+  files: {
+    attach: 'Attach files',
+    dropHint: 'Or drop files onto the form',
+    remove: 'Remove {name}',
+  },
   errors: {
     invalid_two_factor_code: 'The code is wrong or was used already.',
     invalid_challenge: 'The login has expired. Please log in again.',
     two_factor_on: 'Two-factor login is on already.',
     two_factor_off: 'Two-factor login is off.',
     two_factor_not_started: 'Start the setup of two-factor login first.',
+    attachment_too_large: 'A file may have at most {max_mb} MB.',
+    attachment_not_found: 'The file does not exist.',
+    request_too_large: 'The request is too large.',
     portal_closed: 'The customer portal is not open.',
     portal_login_required: 'Please sign in again.',
     portal_link_invalid: 'This link is invalid or has expired. Ask for a new one.',
@@ -1462,6 +1471,10 @@ export const en = {
   },
   /** Errors worded for the field they name (`params.field`); others use `errors`. */
   fieldErrors: {
+    invalid_portal: {
+      files: 'You can send at most five files at once.',
+      body: 'Please write a message or attach a file (at most 50,000 characters).',
+    },
     invalid_account: {
       name: 'The name has 1 to 80 characters.',
       address: 'This is not a valid e-mail address.',
@@ -1492,6 +1505,7 @@ export const en = {
       minutes: 'Between 1 and 1440 minutes.',
     },
     invalid_message: {
+      attachments: 'The files are gone or belong to another message; please attach them again (at most 20).',
       body: 'Please write something.',
       mentions: 'Only members of the organization can be mentioned.',
       direction: 'Internal notes come from the team.',

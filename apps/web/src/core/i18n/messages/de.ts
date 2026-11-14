@@ -836,6 +836,7 @@ export const de: MessageSchema = {
     disconnected: 'Getrennt: Der Token gilt nicht mehr.',
   },
   portal: {
+    attach: 'Dateien anhängen (bis zu {count})',
     title: 'Ihre Anfragen',
     signIn: 'Anmelden',
     signInText:
@@ -1376,12 +1377,20 @@ export const de: MessageSchema = {
     privacy: 'Datenschutz',
     terms: 'AGB',
   },
+  files: {
+    attach: 'Dateien anhängen',
+    dropHint: 'Oder Dateien auf das Formular ziehen',
+    remove: '{name} entfernen',
+  },
   errors: {
     invalid_two_factor_code: 'Der Code ist falsch oder wurde schon benutzt.',
     invalid_challenge: 'Die Anmeldung ist abgelaufen. Bitte melde dich erneut an.',
     two_factor_on: 'Die Zwei-Faktor-Anmeldung ist schon an.',
     two_factor_off: 'Die Zwei-Faktor-Anmeldung ist aus.',
     two_factor_not_started: 'Beginne zuerst mit der Einrichtung der Zwei-Faktor-Anmeldung.',
+    attachment_too_large: 'Eine Datei darf höchstens {max_mb} MB groß sein.',
+    attachment_not_found: 'Die Datei gibt es nicht.',
+    request_too_large: 'Die Anfrage ist zu groß.',
     portal_closed: 'Das Kundenportal ist nicht geöffnet.',
     portal_login_required: 'Bitte melden Sie sich erneut an.',
     portal_link_invalid: 'Dieser Link ist ungültig oder abgelaufen. Fordern Sie einen neuen an.',
@@ -1493,6 +1502,10 @@ export const de: MessageSchema = {
     role_exceeds_own: 'Diese Rolle darf Dinge, die du selbst nicht darfst.',
   },
   fieldErrors: {
+    invalid_portal: {
+      files: 'Sie können höchstens fünf Dateien auf einmal senden.',
+      body: 'Bitte schreiben Sie eine Nachricht oder hängen Sie eine Datei an (höchstens 50.000 Zeichen).',
+    },
     invalid_account: {
       name: 'Der Name hat 1 bis 80 Zeichen.',
       address: 'Das ist keine gültige E-Mail-Adresse.',
@@ -1523,6 +1536,8 @@ export const de: MessageSchema = {
       minutes: 'Zwischen 1 und 1440 Minuten.',
     },
     invalid_message: {
+      attachments:
+        'Die Dateien sind weg oder gehören zu einer anderen Nachricht; bitte hänge sie neu an (höchstens 20).',
       body: 'Bitte schreib etwas.',
       mentions: 'Erwähnen lassen sich nur Mitglieder der Organisation.',
       direction: 'Interne Notizen kommen vom Team.',

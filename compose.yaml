@@ -16,7 +16,7 @@ x-zendilohub: &zendilohub
     ZENDILOHUB_DATABASE_URL: postgresql://${POSTGRES_USER:-zendilohub}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-zendilohub}
     ZENDILOHUB_REDIS_URL: redis://redis:6379/0
   volumes:
-    # Local files (the generated secret key, the setup code, later attachments); the app and the workers share them.
+    # Local files (the generated secret key, the setup code, the attachments); the app and the workers share them.
     - ${ZENDILOHUB_DATA_PATH:-zendilohub-data}:/data
   # Every container has a memory limit, so one that runs away cannot take the whole host down.
   mem_limit: ${ZENDILOHUB_MEMORY_LIMIT:-512m}

@@ -12,6 +12,7 @@ from ...domain.models.message import Direction, Message, MessageKind
 from ...domain.models.ticket import TicketState
 from ...domain.ports.repositories import MessageRepository, WatcherRepository
 from ..services.desk import Desk, TimeKeeper, require
+from ..services.files import Files
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -32,6 +33,8 @@ class AddMessage(Command[Message]):
     pending_until: datetime | None = None
     time_minutes: int | None = None
     mentions: Sequence[str] = ()
+    attachment_ids: Sequence[str] = ()
+    """The actor's pending uploads in this ticket."""
 
 
 class AddMessageHandler:
@@ -42,7 +45,9 @@ class AddMessageHandler:
         watchers: WatcherRepository,
         time: TimeKeeper,
         transactions: TransactionManager,
+        files: Files,
     ) -> None:
+        self._files = files
         self._desk = desk
         self._messages = messages
         self._watchers = watchers
@@ -74,6 +79,7 @@ class AddMessageHandler:
                 author_name='' if inbound else actor.name,
                 body=command.body,
                 now=now,
+                with_files=bool(command.attachment_ids),
             )
             if command.kind == 'internal':
                 ticket.noted(now)
@@ -84,6 +90,7 @@ class AddMessageHandler:
             if command.state is not None:
                 ticket.set_state(command.state, now, pending_until=command.pending_until)
             await self._messages.save(message)
+            await self._files.take(message, command.attachment_ids, actor.user_id)
             await desk.save(ticket, actor, [desk.entry(ticket, actor, 'message', new=message.kind)])
             if command.time_minutes:
                 await self._time.record(ticket, actor, command.time_minutes, message.id)

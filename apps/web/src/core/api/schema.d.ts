@@ -600,7 +600,10 @@ export interface paths {
     /** Tickets */
     get: operations['tickets_api_v1_portal__tenant_id__tickets_get']
     put?: never
-    /** Create */
+    /**
+     * Create
+     * @description A new request (multipart: `subject`, `body` and up to five `files`).
+     */
     post: operations['create_api_v1_portal__tenant_id__tickets_post']
     delete?: never
     options?: never
@@ -625,6 +628,23 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/v1/portal/{tenant_id}/tickets/{ticket_id}/attachments/{attachment_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Download */
+    get: operations['download_api_v1_portal__tenant_id__tickets__ticket_id__attachments__attachment_id__get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/v1/portal/{tenant_id}/tickets/{ticket_id}/messages': {
     parameters: {
       query?: never
@@ -634,7 +654,10 @@ export interface paths {
     }
     get?: never
     put?: never
-    /** Answer */
+    /**
+     * Answer
+     * @description A reply (multipart: `body` and up to five `files`).
+     */
     post: operations['answer_api_v1_portal__tenant_id__tickets__ticket_id__messages_post']
     delete?: never
     options?: never
@@ -2021,6 +2044,51 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/v1/tenants/{tenant_id}/tickets/{ticket_id}/attachments': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Upload
+     * @description A file for the message you are writing (`note` or `reply`, multipart field `file`); send its id in
+     *     `attachment_ids` of the message. Uploads no message took are deleted after a day.
+     */
+    post: operations['upload_api_v1_tenants__tenant_id__tickets__ticket_id__attachments_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/tickets/{ticket_id}/attachments/{attachment_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Download
+     * @description The file; images show inline, everything else downloads.
+     */
+    get: operations['download_api_v1_tenants__tenant_id__tickets__ticket_id__attachments__attachment_id__get']
+    put?: never
+    post?: never
+    /**
+     * Discard
+     * @description Takes back an upload no message took yet.
+     */
+    delete: operations['discard_api_v1_tenants__tenant_id__tickets__ticket_id__attachments__attachment_id__delete']
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/v1/tenants/{tenant_id}/tickets/{ticket_id}/checklist': {
     parameters: {
       query?: never
@@ -2667,6 +2735,24 @@ export interface components {
     }
     /** @enum {string} */
     AssistTask: 'summary' | 'reply'
+    /** AttachmentResponse */
+    AttachmentResponse: {
+      /** Content Type */
+      content_type: string
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string
+      /** Filename */
+      filename: string
+      /** Id */
+      id: string
+      /** Inline */
+      inline: boolean
+      /** Size */
+      size: number
+    }
     /** AuditEntryResponse */
     AuditEntryResponse: {
       /** Action */
@@ -2700,6 +2786,30 @@ export interface components {
     }
     /** @enum {string} */
     AuthorKind: 'agent' | 'customer' | 'system'
+    /** Body_answer_api_v1_portal__tenant_id__tickets__ticket_id__messages_post */
+    Body_answer_api_v1_portal__tenant_id__tickets__ticket_id__messages_post: {
+      /**
+       * Body
+       * @default
+       */
+      body: string
+      /** Files */
+      files?: string[] | null
+    }
+    /** Body_create_api_v1_portal__tenant_id__tickets_post */
+    Body_create_api_v1_portal__tenant_id__tickets_post: {
+      /** Body */
+      body: string
+      /** Files */
+      files?: string[] | null
+      /** Subject */
+      subject: string
+    }
+    /** Body_upload_api_v1_tenants__tenant_id__tickets__ticket_id__attachments_post */
+    Body_upload_api_v1_tenants__tenant_id__tickets__ticket_id__attachments_post: {
+      /** File */
+      file: string
+    }
     /** BulkRequest */
     BulkRequest: {
       /** Add Tags */
@@ -3369,6 +3479,8 @@ export interface components {
     MessageKind: 'public' | 'internal'
     /** MessageRequest */
     MessageRequest: {
+      /** Attachment Ids */
+      attachment_ids?: string[]
       /** Body */
       body: string
       /** @default out */
@@ -3384,6 +3496,8 @@ export interface components {
     }
     /** MessageResponse */
     MessageResponse: {
+      /** Attachments */
+      attachments: components['schemas']['AttachmentResponse'][]
       /** Author Id */
       author_id: string | null
       author_kind: components['schemas']['AuthorKind']
@@ -3554,6 +3668,17 @@ export interface components {
       /** Solution Minutes */
       solution_minutes: number | null
     }
+    /** PortalFileResponse */
+    PortalFileResponse: {
+      /** Content Type */
+      content_type: string
+      /** Filename */
+      filename: string
+      /** Id */
+      id: string
+      /** Size */
+      size: number
+    }
     /** PortalLinkRequest */
     PortalLinkRequest: {
       /** Email */
@@ -3561,6 +3686,8 @@ export interface components {
     }
     /** PortalMessageResponse */
     PortalMessageResponse: {
+      /** Attachments */
+      attachments: components['schemas']['PortalFileResponse'][]
       /** Author Name */
       author_name: string
       /** Body */
@@ -3590,23 +3717,11 @@ export interface components {
       /** Queue Id */
       queue_id?: string | null
     }
-    /** PortalTextRequest */
-    PortalTextRequest: {
-      /** Body */
-      body: string
-    }
     /** PortalThreadResponse */
     PortalThreadResponse: {
       /** Messages */
       messages: components['schemas']['PortalMessageResponse'][]
       ticket: components['schemas']['PortalTicketResponse']
-    }
-    /** PortalTicketRequest */
-    PortalTicketRequest: {
-      /** Body */
-      body: string
-      /** Subject */
-      subject: string
     }
     /** PortalTicketResponse */
     PortalTicketResponse: {
@@ -5558,7 +5673,7 @@ export interface operations {
     }
     requestBody: {
       content: {
-        'application/json': components['schemas']['PortalTicketRequest']
+        'multipart/form-data': components['schemas']['Body_create_api_v1_portal__tenant_id__tickets_post']
       }
     }
     responses: {
@@ -5614,6 +5729,37 @@ export interface operations {
       }
     }
   }
+  download_api_v1_portal__tenant_id__tickets__ticket_id__attachments__attachment_id__get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        attachment_id: string
+        tenant_id: string
+        ticket_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
   answer_api_v1_portal__tenant_id__tickets__ticket_id__messages_post: {
     parameters: {
       query?: never
@@ -5624,9 +5770,9 @@ export interface operations {
       }
       cookie?: never
     }
-    requestBody: {
+    requestBody?: {
       content: {
-        'application/json': components['schemas']['PortalTextRequest']
+        'multipart/form-data': components['schemas']['Body_answer_api_v1_portal__tenant_id__tickets__ticket_id__messages_post']
       }
     }
     responses: {
@@ -9462,6 +9608,104 @@ export interface operations {
         content: {
           'application/json': components['schemas']['AssistResponse']
         }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  upload_api_v1_tenants__tenant_id__tickets__ticket_id__attachments_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+        ticket_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'multipart/form-data': components['schemas']['Body_upload_api_v1_tenants__tenant_id__tickets__ticket_id__attachments_post']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['AttachmentResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  download_api_v1_tenants__tenant_id__tickets__ticket_id__attachments__attachment_id__get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        attachment_id: string
+        tenant_id: string
+        ticket_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  discard_api_v1_tenants__tenant_id__tickets__ticket_id__attachments__attachment_id__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        attachment_id: string
+        tenant_id: string
+        ticket_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
       }
       /** @description Validation Error */
       422: {

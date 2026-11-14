@@ -3,6 +3,7 @@ from zendilohub.core.domain.app_domain_error import (
     ForbiddenError,
     NotFoundError,
     RateLimitedError,
+    TooLargeError,
     UnavailableError,
     UpstreamError,
     ValidationError,
@@ -94,3 +95,13 @@ class AssistantBusyError(RateLimitedError):
 class AssistantFailedError(UpstreamError):
     def __init__(self, reason: str) -> None:
         super().__init__('assistant_failed', 'The AI assistant could not answer', {'reason': reason})
+
+
+class AttachmentTooLargeError(TooLargeError):
+    def __init__(self, max_mb: int) -> None:
+        super().__init__('attachment_too_large', f'A file may have at most {max_mb} MB', {'max_mb': max_mb})
+
+
+class AttachmentNotFoundError(NotFoundError):
+    def __init__(self) -> None:
+        super().__init__('attachment_not_found', 'The file does not exist')

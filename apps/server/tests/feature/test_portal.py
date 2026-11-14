@@ -1,24 +1,10 @@
 import re
 
-import httpx
-
 from support.app import AppUnderTest
 from support.helpdesk import posted, queue, ticket
 from support.identity import logged_in
+from support.portal import PORTAL, sign_in
 from support.tenancy import TENANTS, create_tenant
-
-PORTAL = '/api/v1/portal'
-
-
-async def sign_in(app: AppUnderTest, tenant: str, email: str) -> httpx.AsyncClient:
-    customer = app.new_client()
-    assert (await customer.post(f'{PORTAL}/{tenant}/login', json={'email': email})).status_code == 202
-    link = app.mailer.to(email)[-1].text
-    token = re.search(r'token=([\w-]+)', link)
-    assert token is not None
-    verified = await customer.post(f'{PORTAL}/{tenant}/verify', json={'token': token.group(1)})
-    assert verified.status_code == 200, verified.text
-    return customer
 
 
 async def test_customers_see_and_answer_their_tickets(app: AppUnderTest) -> None:
@@ -55,17 +41,17 @@ async def test_customers_see_and_answer_their_tickets(app: AppUnderTest) -> None
     assert (await carl.get(f'{PORTAL}/{tenant}/tickets/{colleague["id"]}')).json()['error'] == 'ticket_not_found'
 
     answered = (
-        await carl.post(f'{PORTAL}/{tenant}/tickets/{mine["id"]}/messages', json={'body': 'Still broken'})
+        await carl.post(f'{PORTAL}/{tenant}/tickets/{mine["id"]}/messages', data={'body': 'Still broken'})
     ).json()
     assert answered['messages'][-1] == {**answered['messages'][-1], 'from_customer': True, 'body': 'Still broken'}
-    opened = await carl.post(f'{PORTAL}/{tenant}/tickets', json={'subject': 'New request', 'body': 'Need toner'})
+    opened = await carl.post(f'{PORTAL}/{tenant}/tickets', data={'subject': 'New request', 'body': 'Need toner'})
     assert opened.status_code == 201
     staff = (await ada.get(f'{base}/tickets/{opened.json()["id"]}')).json()
     assert (staff['queue_id'], staff['channel'], staff['customer']['email']) == (support, 'web', 'carl@acme.example')
-    assert (await carl.post(f'{PORTAL}/{tenant}/tickets', json={'subject': ' ', 'body': 'x'})).json()['error'] == (
+    assert (await carl.post(f'{PORTAL}/{tenant}/tickets', data={'subject': ' ', 'body': 'x'})).json()['error'] == (
         'invalid_portal'
     )
-    assert (await carl.post(f'{PORTAL}/{tenant}/tickets/{colleague["id"]}/messages', json={'body': 'x'})).json()[
+    assert (await carl.post(f'{PORTAL}/{tenant}/tickets/{colleague["id"]}/messages', data={'body': 'x'})).json()[
         'error'
     ] == 'ticket_not_found'
 

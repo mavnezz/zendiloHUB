@@ -8,7 +8,9 @@ from typing import ClassVar
 import pytest
 
 from support.mail_server import email
+from zendilohub.core.domain.files import FileData
 from zendilohub.modules.channels.domain.models.account import AccountSettings, EmailAccount, Server
+from zendilohub.modules.channels.domain.models.email import parse_email
 from zendilohub.modules.channels.domain.ports.services import Credential, MailboxError, OutgoingMail
 from zendilohub.modules.channels.infrastructure.mail_servers import ImapMailbox, Nh3Cleaner, SmtpOutbox, xoauth2
 
@@ -70,6 +72,7 @@ async def test_sends_and_fetches_mail(greenmail: tuple[str, int, int]) -> None:
             in_reply_to='<m1@customer.example>',
             references=('<m1@customer.example>',),
             automatic=True,
+            attachments=(FileData(filename='Plan März.pdf', content_type='application/pdf', content=b'%PDF-1'),),
         ),
     )
     first = await mailbox.fetch(support, Credential('any'), after_uid=0, uid_validity=None, limit=10)
@@ -77,6 +80,12 @@ async def test_sends_and_fetches_mail(greenmail: tuple[str, int, int]) -> None:
     uid, raw = first.messages[0]
     assert b'Auto-Submitted: auto-replied' in raw
     assert b'In-Reply-To: <m1@customer.example>' in raw
+    [attached] = parse_email(raw).files
+    assert (attached.filename, attached.content_type, attached.content) == (
+        'Plan März.pdf',
+        'application/pdf',
+        b'%PDF-1',
+    )
 
     # Seen and older mails are not fetched again; the next one is.
     await outbox.send(

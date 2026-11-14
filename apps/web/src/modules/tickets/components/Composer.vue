@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import { Paperclip } from '@lucide/vue'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import FileChips from '@/core/components/FileChips.vue'
+import type { FileChip } from '@/core/files'
 import NativeSelect from '@/core/components/NativeSelect.vue'
 import SegmentedControl from '@/core/components/SegmentedControl.vue'
 import { notify } from '@/core/notify'
@@ -153,6 +156,48 @@ function mentions(text: string): string[] {
     .map((member) => member.user_id)
 }
 
+/** Files go up as soon as they are picked or dropped; the message takes them when it is sent. */
+const files = ref<FileChip[]>([])
+const picker = ref<HTMLInputElement | null>(null)
+const dragging = ref(false)
+const uploading = computed(() => files.value.some((file) => file.uploading))
+let pendingUploads = 0
+
+async function attach(list: FileList | File[] | null | undefined): Promise<void> {
+  for (const file of Array.from(list ?? [])) {
+    const chip: FileChip = {
+      id: `upload-${++pendingUploads}`,
+      filename: file.name,
+      content_type: file.type,
+      size: file.size,
+      uploading: true,
+    }
+    files.value = [...files.value, chip]
+    try {
+      const uploaded = await ticketsApi.upload(tenants.current.value!.id, props.ticket.id, file)
+      files.value = files.value.map((each) => (each.id === chip.id ? uploaded : each))
+    } catch (caught) {
+      files.value = files.value.filter((each) => each.id !== chip.id)
+      notify.error(caught)
+    }
+  }
+  if (picker.value) {
+    picker.value.value = ''
+  }
+}
+
+function drop(event: DragEvent): void {
+  dragging.value = false
+  void attach(event.dataTransfer?.files)
+}
+
+async function detach(file: FileChip): Promise<void> {
+  files.value = files.value.filter((each) => each.id !== file.id)
+  await ticketsApi.discard(tenants.current.value!.id, props.ticket.id, file.id).catch(() => undefined)
+}
+
+const empty = computed(() => !files.value.length && (!body.value.trim() || body.value === draft.value))
+
 async function send(): Promise<void> {
   busy.value = true
   const request: MessageRequest = {
@@ -160,6 +205,9 @@ async function send(): Promise<void> {
     direction: mode.value === 'customer' ? 'in' : 'out',
     body: body.value,
     mentions: mode.value === 'note' ? mentions(body.value) : [],
+  }
+  if (files.value.length) {
+    request.attachment_ids = files.value.map((file) => file.id)
   }
   if (state.value) {
     request.state = state.value as MessageRequest['state']
@@ -175,6 +223,7 @@ async function send(): Promise<void> {
     state.value = ''
     pendingUntil.value = ''
     minutes.value = ''
+    files.value = []
     emit('sent')
   } catch (caught) {
     notify.error(caught)
@@ -185,7 +234,15 @@ async function send(): Promise<void> {
 </script>
 
 <template>
-  <form v-if="modes.length" class="grid gap-3 rounded-lg border p-4" data-test="composer" @submit.prevent="send">
+  <form
+    v-if="modes.length"
+    :class="['grid gap-3 rounded-lg border p-4', dragging && 'border-primary bg-primary/5']"
+    data-test="composer"
+    @submit.prevent="send"
+    @dragover.prevent="dragging = true"
+    @dragleave.self="dragging = false"
+    @drop.prevent="drop"
+  >
     <SegmentedControl v-model="mode" :options="modes" :label="$t('tickets.composer.label')" />
     <Textarea
       v-model="body"
@@ -194,7 +251,26 @@ async function send(): Promise<void> {
       :class="mode === 'note' ? 'bg-amber-50 dark:bg-amber-950/30' : ''"
       data-test="composer-body"
     />
+    <FileChips :files="files" removable @remove="detach" />
     <div class="flex flex-wrap items-center gap-2">
+      <input
+        ref="picker"
+        type="file"
+        multiple
+        class="hidden"
+        data-test="file-input"
+        @change="attach(($event.target as HTMLInputElement).files)"
+      />
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        class="h-7 gap-1 px-2 text-xs"
+        :title="$t('files.dropHint')"
+        data-test="attach"
+        @click="picker?.click()"
+        ><Paperclip class="size-3.5" />{{ $t('files.attach') }}</Button
+      >
       <Button
         type="button"
         variant="ghost"
@@ -261,7 +337,7 @@ async function send(): Promise<void> {
         <Label for="composer-minutes" class="text-xs">{{ $t('tickets.composer.minutes') }}</Label>
         <Input id="composer-minutes" v-model="minutes" type="number" min="1" max="1440" class="w-24" />
       </div>
-      <Button type="submit" class="ml-auto" :disabled="busy || !body.trim() || body === draft" data-test="send">
+      <Button type="submit" class="ml-auto" :disabled="busy || uploading || empty" data-test="send">
         {{ $t(`tickets.composer.send.${mode}`) }}
       </Button>
     </div>

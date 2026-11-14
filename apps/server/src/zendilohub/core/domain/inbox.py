@@ -2,6 +2,8 @@
 
 from dataclasses import dataclass
 
+from .files import FileData
+
 
 @dataclass(frozen=True, kw_only=True)
 class InboundEmail:
@@ -22,6 +24,8 @@ class InboundEmail:
     cc_addresses: tuple[str, ...]
     priority: str | None = None
     tags: tuple[str, ...] = ()
+    attachments: tuple[FileData, ...] = ()
+    """Within the upload limit; larger parts are left out."""
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -46,3 +50,4 @@ class OutgoingEmail:
     author_id: str | None
     references: tuple[str, ...]
     """The e-mail ids of the ticket's earlier messages, oldest first (the last one is `In-Reply-To`)."""
+    attachments: tuple[FileData, ...] = ()

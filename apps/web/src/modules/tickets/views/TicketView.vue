@@ -338,6 +338,7 @@ async function remove(): Promise<void> {
               :customer="ticket.customer"
               :can-split="rights.includes('create') && !merged"
               :deliveries="deliveries"
+              :file-url="(_message, fileId) => ticketsApi.attachmentUrl(tenantId, ticketId, fileId)"
               @split="split"
               @resend="resend"
             />

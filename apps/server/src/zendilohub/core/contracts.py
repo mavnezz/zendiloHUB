@@ -3,12 +3,13 @@ Synchronous contracts between modules: one module provides an implementation, an
 module's infrastructure adapter calls it. (Asynchronous notifications are integration events.)
 """
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Protocol
 
 from .domain.automation import AutomationChanges, TicketCriteria, TicketFacts
 from .domain.contact_card import ContactCard as ContactCard
+from .domain.files import FileData
 from .domain.inbox import InboundEmail, OutgoingEmail, ReceivedTicket
 from .domain.permissions import Permission
 from .domain.portal import PortalThread, PortalTicket
@@ -152,10 +153,24 @@ class TicketPortal(Protocol):
         ...
 
     async def reply(
-        self, tenant_id: str, contact_id: str, contact_ids: list[str], ticket_id: str, body: str
+        self,
+        tenant_id: str,
+        contact_id: str,
+        contact_ids: list[str],
+        ticket_id: str,
+        body: str,
+        files: Sequence[FileData] = (),
     ) -> bool: ...
 
-    async def open(self, tenant_id: str, contact_id: str, queue_id: str, subject: str, body: str) -> PortalTicket: ...
+    async def open(
+        self, tenant_id: str, contact_id: str, queue_id: str, subject: str, body: str, files: Sequence[FileData] = ()
+    ) -> PortalTicket: ...
+
+    async def attachment(
+        self, tenant_id: str, contact_ids: list[str], ticket_id: str, attachment_id: str
+    ) -> FileData | None:
+        """A file of a public message of one of these contacts' tickets."""
+        ...
 
 
 class OrganizationNames(Protocol):

@@ -11,6 +11,7 @@ from zendilohub.core.http.ids import Id
 from ...application.commands.tickets import BulkResult, FirstMessage
 from ...application.queries.tickets import TicketDetail, TicketWithRights
 from ...domain.models.assist import AssistTask
+from ...domain.models.attachment import PER_MESSAGE, Attachment
 from ...domain.models.custom_field import ChecklistItem, CustomField, FieldKind
 from ...domain.models.history import HistoryAction, HistoryEntry
 from ...domain.models.link import LinkKind
@@ -87,6 +88,8 @@ class MessageRequest(Request):
     time_minutes: int | None = Field(default=None, ge=1, le=MINUTES_MAX)
     mentions: list[Id] = Field(default_factory=list, max_length=20)
     """Members who start watching the ticket."""
+    attachment_ids: list[Id] = Field(default_factory=list, max_length=PER_MESSAGE)
+    """Your uploads to this ticket (`POST …/attachments`) that go with the message; then the text may be empty."""
 
 
 class LinkRequest(Request):
@@ -227,6 +230,28 @@ class TicketDetailResponse(TicketResponse):
         )
 
 
+class AttachmentResponse(BaseModel):
+    id: str
+    filename: str
+    content_type: str
+    size: int
+    """Bytes."""
+    inline: bool
+    """An image the browser shows."""
+    created_at: datetime
+
+    @classmethod
+    def of(cls, attachment: Attachment) -> AttachmentResponse:
+        return cls(
+            id=attachment.id,
+            filename=attachment.filename,
+            content_type=attachment.content_type,
+            size=attachment.size,
+            inline=attachment.inline,
+            created_at=attachment.created_at,
+        )
+
+
 class MessageResponse(BaseModel):
     id: str
     ticket_id: str
@@ -241,6 +266,7 @@ class MessageResponse(BaseModel):
     from_address: str | None
     to_addresses: list[str]
     cc_addresses: list[str]
+    attachments: list[AttachmentResponse]
     created_at: datetime
 
     @classmethod
@@ -259,6 +285,7 @@ class MessageResponse(BaseModel):
             from_address=message.from_address,
             to_addresses=list(message.to_addresses),
             cc_addresses=list(message.cc_addresses),
+            attachments=[AttachmentResponse.of(each) for each in message.attachments],
             created_at=message.created_at,
         )
 

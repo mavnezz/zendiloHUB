@@ -91,6 +91,55 @@ def is_cross_site(headers: Headers) -> bool:
     return urlsplit(origin).netloc != host
 
 
+class BodyLimit:
+    """Refuses request bodies above `max_bytes` (413), whether they announce their length or stream it."""
+
+    def __init__(self, app: ASGIApp, max_bytes: Callable[[], int]) -> None:
+        self._app = app
+        self._max_bytes = max_bytes
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope['type'] != 'http':
+            await self._app(scope, receive, send)
+            return
+        limit = self._max_bytes()
+        length = Headers(scope=scope).get('content-length')
+        if length is not None and length.isdigit() and int(length) > limit:
+            await _too_large(scope, receive, send)
+            return
+        received = 0
+        started = False
+
+        async def counted_receive() -> Message:
+            nonlocal received
+            message = await receive()
+            if message['type'] == 'http.request':
+                received += len(message.get('body', b''))
+                if received > limit:
+                    raise _BodyTooLargeError()
+            return message
+
+        async def remembering_send(message: Message) -> None:
+            nonlocal started
+            started = started or message['type'] == 'http.response.start'
+            await send(message)
+
+        try:
+            await self._app(scope, counted_receive, remembering_send)
+        except _BodyTooLargeError:
+            if not started:
+                await _too_large(scope, receive, send)
+
+
+class _BodyTooLargeError(Exception):
+    pass
+
+
+async def _too_large(scope: Scope, receive: Receive, send: Send) -> None:
+    response = JSONResponse(error_body('request_too_large', 'The request is too large'), status_code=413)
+    await response(scope, receive, send)
+
+
 class RequestLog:
     """Logs every request at debug level."""
 

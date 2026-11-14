@@ -1,6 +1,8 @@
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 from zendilohub.core.bus.message import Command, Query
+from zendilohub.core.domain.files import FileData
 from zendilohub.core.domain.portal import PortalMessage, PortalThread, PortalTicket
 from zendilohub.core.domain.transaction import TransactionManager
 from zendilohub.core.events.integration_events import MessageAdded, TicketCreated
@@ -10,6 +12,7 @@ from ...domain.models.message import Message
 from ...domain.models.ticket import Ticket
 from ...domain.ports.repositories import MessageRepository
 from ..services.desk import Desk
+from ..services.files import Files, info
 
 
 def _portal(ticket: Ticket) -> PortalTicket:
@@ -66,6 +69,7 @@ class PortalThreadHandler:
                     author_name=each.author_name if each.direction == 'in' else each.author_name.split('@')[0],
                     body=each.body,
                     created_at=each.created_at,
+                    attachments=tuple(info(file) for file in each.attachments),
                 )
                 for each in public
             ],
@@ -79,13 +83,15 @@ class PortalReply(Command[bool]):
     contact_ids: tuple[str, ...]
     ticket_id: str
     body: str
+    files: Sequence[FileData] = ()
 
 
 class PortalReplyHandler:
-    def __init__(self, desk: Desk, messages: MessageRepository, transactions: TransactionManager) -> None:
+    def __init__(self, desk: Desk, messages: MessageRepository, transactions: TransactionManager, files: Files) -> None:
         self._desk = desk
         self._messages = messages
         self._transactions = transactions
+        self._files = files
 
     async def handle(self, command: PortalReply) -> bool:
         desk = self._desk
@@ -105,10 +111,12 @@ class PortalReplyHandler:
                 author_name='',
                 body=command.body,
                 now=now,
+                with_files=bool(command.files),
             )
             actor = Actor(user_id='', name='Portal', person=False)
             ticket.received(now)
             await self._messages.save(message)
+            await self._files.add_all(message, command.files)
             await desk.save(ticket, actor, [desk.entry(ticket, actor, 'message', new='public')])
             await desk.events.publish(
                 MessageAdded(
@@ -130,13 +138,15 @@ class PortalOpen(Command[PortalTicket]):
     queue_id: str
     subject: str
     body: str
+    files: Sequence[FileData] = ()
 
 
 class PortalOpenHandler:
-    def __init__(self, desk: Desk, messages: MessageRepository, transactions: TransactionManager) -> None:
+    def __init__(self, desk: Desk, messages: MessageRepository, transactions: TransactionManager, files: Files) -> None:
         self._desk = desk
         self._messages = messages
         self._transactions = transactions
+        self._files = files
 
     async def handle(self, command: PortalOpen) -> PortalTicket:
         desk, now = self._desk, self._desk.clock.now()
@@ -165,11 +175,13 @@ class PortalOpenHandler:
                 author_name='',
                 body=command.body,
                 now=now,
+                with_files=bool(command.files),
             )
             ticket.received(now)
             ticket.changes.clear()
             await desk.tickets.save(ticket)
             await self._messages.save(message)
+            await self._files.add_all(message, command.files)
             await desk.history.add([desk.entry(ticket, actor, 'created', new=str(ticket.number))])
             await desk.events.publish(
                 TicketCreated(
@@ -194,3 +206,32 @@ class PortalOpenHandler:
                 )
             )
         return _portal(ticket)
+
+
+@dataclass(frozen=True, kw_only=True)
+class PortalAttachment(Query[FileData | None]):
+    tenant_id: str
+    contact_ids: tuple[str, ...]
+    ticket_id: str
+    attachment_id: str
+
+
+class PortalAttachmentHandler:
+    """A file of a public message: customers never see the files of internal notes or pending uploads."""
+
+    def __init__(self, desk: Desk, messages: MessageRepository, files: Files) -> None:
+        self._desk = desk
+        self._messages = messages
+        self._files = files
+
+    async def handle(self, query: PortalAttachment) -> FileData | None:
+        ticket = await self._desk.tickets.find(query.tenant_id, query.ticket_id)
+        if ticket is None or ticket.customer_id not in query.contact_ids or ticket.is_merged:
+            return None
+        attachment = await self._files.attachments.find(ticket.tenant_id, query.attachment_id)
+        if attachment is None or attachment.ticket_id != ticket.id or attachment.message_id is None:
+            return None
+        message = await self._messages.find(ticket.tenant_id, attachment.message_id)
+        if message is None or message.kind != 'public':
+            return None
+        return await self._files.content(attachment)

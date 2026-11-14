@@ -12,6 +12,8 @@ from .application.commands.portal import (
     ForgetTenantHandler,
     GetSettings,
     GetSettingsHandler,
+    MyFile,
+    MyFileHandler,
     MyThread,
     MyThreadHandler,
     MyTickets,
@@ -54,8 +56,9 @@ def create_portal_module(context: ModuleContext) -> AppModule:
         .register(SignOut, SignOutHandler(portal))
         .register(MyTickets, MyTicketsHandler(tickets))
         .register(MyThread, MyThreadHandler(tickets))
-        .register(Answer, AnswerHandler(tickets))
-        .register(OpenTicket, OpenTicketHandler(tickets))
+        .register(Answer, AnswerHandler(tickets, context.rate_limiter))
+        .register(OpenTicket, OpenTicketHandler(tickets, context.rate_limiter))
+        .register(MyFile, MyFileHandler(tickets))
         .register(ForgetTenant, ForgetTenantHandler(portal))
     )
 

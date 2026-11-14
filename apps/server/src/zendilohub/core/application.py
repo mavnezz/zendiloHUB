@@ -70,7 +70,12 @@ class Application:
             role=role,
             db=db or Database(config.database_url),
             redis=redis,
-            http=HttpKernel(api_docs=config.api_docs, secret=lambda: secret.value),
+            http=HttpKernel(
+                api_docs=config.api_docs,
+                secret=lambda: secret.value,
+                # Up to five files of the largest size in one request (the portal), plus the form around them.
+                max_body_bytes=config.max_upload_bytes * 5 + 1024 * 1024,
+            ),
             events=EventBus(),
             clock=clock,
             ids=ids or uuid_generator,

@@ -12,6 +12,14 @@ _MESSAGE_ID = re.compile(r'<[^<>\s]+>')
 
 
 @dataclass(frozen=True, kw_only=True)
+class MailFile:
+    filename: str
+    content_type: str
+    content: bytes
+    content_id: str | None
+
+
+@dataclass(frozen=True, kw_only=True)
 class ParsedEmail:
     message_id: str | None
     in_reply_to: str | None
@@ -27,6 +35,8 @@ class ParsedEmail:
     """Lower-case header names (the first value of each), for filters."""
     automatic: bool
     """An auto reply, a bounce or a mass mail: never answered automatically."""
+    files: tuple[MailFile, ...] = ()
+    """Attachments and inline images, in the order of the mail."""
 
     @property
     def thread_ids(self) -> list[str]:
@@ -43,7 +53,7 @@ def parse_email(raw: bytes) -> ParsedEmail:
     mail = message_from_bytes(raw, policy=policy.default)
     assert isinstance(mail, EmailMessage)
     name, address = parseaddr(str(mail.get('From', '')))
-    text, html = _bodies(mail)
+    text, html, bodies = _bodies(mail)
     headers = {key.lower(): str(value) for key, value in reversed(list(mail.items()))}
     return ParsedEmail(
         message_id=_one_id(mail.get('Message-ID')),
@@ -58,6 +68,7 @@ def parse_email(raw: bytes) -> ParsedEmail:
         html=html,
         headers=headers,
         automatic=_automatic(headers, address),
+        files=tuple(_files(mail, bodies)),
     )
 
 
@@ -71,12 +82,52 @@ def _addresses(mail: EmailMessage, header: str) -> tuple[str, ...]:
     return tuple(address.strip().lower() for _, address in getaddresses(values) if '@' in address)
 
 
-def _bodies(mail: EmailMessage) -> tuple[str, str | None]:
+def _bodies(mail: EmailMessage) -> tuple[str, str | None, list[EmailMessage]]:
     plain = mail.get_body(preferencelist=('plain',))
     rich = mail.get_body(preferencelist=('html',))
     text = _content(plain) if isinstance(plain, EmailMessage) else ''
     html = _content(rich) if isinstance(rich, EmailMessage) else None
-    return text.replace('\r\n', '\n').strip(), html
+    bodies = [part for part in (plain, rich) if isinstance(part, EmailMessage)]
+    return text.replace('\r\n', '\n').strip(), html, bodies
+
+
+FILES_MAX = 50
+
+
+def _files(mail: EmailMessage, bodies: list[EmailMessage]) -> list[MailFile]:
+    """Parts with a file name, attachments and inline images; not the text the mail shows."""
+    found: list[MailFile] = []
+    for part in mail.walk():
+        if part.is_multipart() or any(part is body for body in bodies) or not isinstance(part, EmailMessage):
+            continue
+        filename = part.get_filename()
+        content_id = _one_id(part.get('Content-ID'))
+        is_file = (
+            filename is not None
+            or part.get_content_disposition() == 'attachment'
+            or (content_id is not None and part.get_content_maintype() == 'image')
+        )
+        if not is_file:
+            continue
+        payload = part.get_payload(decode=True)
+        if not isinstance(payload, bytes):
+            continue
+        found.append(
+            MailFile(
+                filename=filename or _name_for(part),
+                content_type=part.get_content_type(),
+                content=payload,
+                content_id=content_id,
+            )
+        )
+        if len(found) >= FILES_MAX:
+            break
+    return found
+
+
+def _name_for(part: EmailMessage) -> str:
+    subtype = part.get_content_subtype()
+    return f'{part.get_content_maintype()}.{subtype}' if subtype.isalnum() else 'file'
 
 
 def _content(part: EmailMessage) -> str:

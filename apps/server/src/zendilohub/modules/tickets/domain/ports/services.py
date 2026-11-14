@@ -1,4 +1,5 @@
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
+from datetime import datetime
 from typing import Protocol
 
 from zendilohub.core.domain.queue_rights import QueueRight
@@ -53,4 +54,18 @@ class TicketWriter(Protocol):
 
     async def write(self, request: AssistInput) -> str:
         """The text; raises AssistantFailedError when the model does not answer usefully."""
+        ...
+
+
+class FileStore(Protocol):
+    """Where the content of attachments lives (files on disk); keyed by organization and attachment id."""
+
+    async def put(self, tenant_id: str, file_id: str, content: bytes) -> None: ...
+
+    async def get(self, tenant_id: str, file_id: str) -> bytes | None: ...
+
+    async def delete(self, tenant_id: str, file_id: str) -> None: ...
+
+    def stored(self, older_than: datetime) -> Iterable[tuple[str, str]]:
+        """(tenant, file) of the files last written before `older_than`."""
         ...
