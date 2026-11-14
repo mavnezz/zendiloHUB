@@ -11,6 +11,7 @@ import { customerRoutes } from '@/modules/customers/routes'
 import { helpCenterRoutes, knowledgeRoutes } from '@/modules/knowledge/routes'
 import { integrationRoutes } from '@/modules/integrations/routes'
 import { mcpRoutes } from '@/modules/mcp/routes'
+import { portalRoutes, portalSettingsRoutes } from '@/modules/portal/routes'
 import { reportingRoutes } from '@/modules/reporting/routes'
 import { serviceRoutes } from '@/modules/service/routes'
 import { ticketRoutes } from '@/modules/tickets/routes'
@@ -68,6 +69,7 @@ export function createAppRouter(history: RouterHistory = createWebHistory()): Ro
           ...reportingRoutes,
           ...integrationRoutes,
           ...mcpRoutes,
+          ...portalSettingsRoutes,
           ...tenantRoutes,
           ...accessRoutes,
           ...complianceRoutes,
@@ -80,6 +82,7 @@ export function createAppRouter(history: RouterHistory = createWebHistory()): Ro
           ...identityRoutes,
           ...tenancyRoutes,
           ...helpCenterRoutes,
+          ...portalRoutes,
           {
             path: 'account',
             name: 'account',

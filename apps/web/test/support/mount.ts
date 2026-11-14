@@ -68,6 +68,7 @@ export function testRouter(): Router {
         'knowledgeBase',
         'aiAssistants',
         'webhooks',
+        'customerPortal',
       ].map((name) => ({
         path: `/t/:tenantId/${name}`,
         name,
@@ -75,6 +76,9 @@ export function testRouter(): Router {
       })),
       { path: '/help/:tenantId', name: 'helpCenter', component: Page },
       { path: '/help/:tenantId/:articleId', name: 'helpArticle', component: Page },
+      { path: '/portal/:tenantId', name: 'portal', component: Page },
+      { path: '/portal/:tenantId/verify', name: 'portalVerify', component: Page },
+      { path: '/portal/:tenantId/tickets/:ticketId', name: 'portalTicket', component: Page },
       { path: '/admin/tenants', name: 'admin-tenants', component: Page },
       { path: '/admin/users', name: 'admin-users', component: Page },
       { path: '/admin/audit-log', name: 'admin-audit', component: Page },

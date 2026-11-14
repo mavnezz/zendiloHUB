@@ -34,6 +34,8 @@ import PriorityBadge from '../components/PriorityBadge.vue'
 import StateBadge from '../components/StateBadge.vue'
 import ChecklistCard from '../components/ChecklistCard.vue'
 import SlaBox from '../components/SlaBox.vue'
+import AssistCard from '../components/AssistCard.vue'
+import SimilarTickets from '../components/SimilarTickets.vue'
 import TicketFields from '../components/TicketFields.vue'
 import { useDirectory } from '../directory'
 
@@ -347,8 +349,10 @@ async function remove(): Promise<void> {
         </Tabs>
         <aside class="grid content-start gap-4">
           <SlaBox :ticket-id="ticket.id" :updated-at="ticket.updated_at" />
+          <AssistCard :ticket-id="ticket.id" />
           <TicketFields :ticket="ticket" @change="change" @unlink="unlink" />
           <ChecklistCard :ticket-id="ticket.id" :editable="rights.includes('edit') && !merged" />
+          <SimilarTickets :ticket-id="ticket.id" />
         </aside>
       </div>
     </template>

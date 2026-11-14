@@ -34,6 +34,7 @@ export const VIEWS: readonly TicketView[] = [
 export type TicketField = Schemas['FieldResponse']
 export type ChecklistItem = Schemas['ChecklistItemResponse']
 export type Viewer = Schemas['ViewerResponse']
+export type AssistTask = Schemas['AssistTask']
 export const SETTABLE_STATES: readonly SettableState[] = ['new', 'open', 'pending_reminder', 'pending_close', 'closed']
 export const PENDING_STATES: readonly TicketState[] = ['pending_reminder', 'pending_close']
 export const PRIORITIES: readonly Priority[] = ['low', 'normal', 'high', 'urgent']
@@ -108,6 +109,14 @@ export const ticketsApi = {
 
   presence: (tenantId: string, id: string, writing: boolean) =>
     http.put<Viewer[]>(`${one(tenantId, id)}/presence`, { writing }),
+
+  /** Tickets about the same thing (words of the subject). */
+  similar: (tenantId: string, id: string) => http.get<TicketPage>(`${one(tenantId, id)}/similar`),
+  /** Whether the AI assistant is set up on this server. */
+  assistant: (tenantId: string) => http.get<Schemas['AssistantResponse']>(`${base(tenantId)}/assistant`),
+  /** A summary or a draft reply by the AI assistant; nothing is saved. */
+  assist: (tenantId: string, id: string, task: AssistTask) =>
+    http.post<Schemas['AssistResponse']>(`${one(tenantId, id)}/assist`, { task }),
 }
 
 /** `2026-11-13T09:00` (a datetime-local input) → an ISO date with the browser's offset. */

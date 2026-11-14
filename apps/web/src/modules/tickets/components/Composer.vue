@@ -19,6 +19,7 @@ import {
 import { channelsApi } from '@/modules/channels/api'
 import { fill, knowledgeApi, type Article, type TextModule } from '@/modules/knowledge/api'
 import { useTenants } from '@/modules/tenancy/tenants'
+import { useAssistant } from '../assistant'
 import { useDirectory } from '../directory'
 
 /**
@@ -122,6 +123,22 @@ async function findArticles(): Promise<void> {
     ? (await knowledgeApi.articles(tenants.current.value!.id, { q: query }).catch(() => ({ articles: [] }))).articles
     : []
 }
+/** The AI assistant drafts the reply; the agent reads and changes it before sending. */
+const assistant = useAssistant(tenants.current.value!.id)
+const drafting = ref(false)
+async function draftWithAi(): Promise<void> {
+  drafting.value = true
+  try {
+    const answer = await ticketsApi.assist(tenants.current.value!.id, props.ticket.id, 'reply')
+    body.value =
+      !body.value.trim() || body.value === draft.value ? answer.text : `${body.value.trimEnd()}\n\n${answer.text}`
+  } catch (caught) {
+    notify.error(caught)
+  } finally {
+    drafting.value = false
+  }
+}
+
 function insertArticle(article: Article): void {
   body.value = body.value ? `${body.value.replace(/\s+$/, '')}\n\n${article.body}` : article.body
   articleSearch.value = null
@@ -186,6 +203,17 @@ async function send(): Promise<void> {
         data-test="find-article"
         @click="articleSearch = articleSearch === null ? '' : null"
         >{{ $t('tickets.composer.article') }}</Button
+      >
+      <Button
+        v-if="assistant && mode === 'reply'"
+        type="button"
+        variant="ghost"
+        size="sm"
+        class="h-7 px-2 text-xs"
+        :disabled="drafting"
+        data-test="draft-ai"
+        @click="draftWithAi"
+        >{{ drafting ? $t('tickets.assist.working') : $t('tickets.assist.draft') }}</Button
       >
       <form v-if="articleSearch !== null" class="flex flex-1 gap-1" @submit.prevent="findArticles">
         <Input

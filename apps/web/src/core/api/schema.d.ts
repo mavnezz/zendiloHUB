@@ -382,6 +382,129 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/v1/portal/{tenant_id}/login': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Login
+     * @description Sends a sign-in link if the address belongs to a contact (the answer is the same either way).
+     */
+    post: operations['login_api_v1_portal__tenant_id__login_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/portal/{tenant_id}/logout': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Logout */
+    post: operations['logout_api_v1_portal__tenant_id__logout_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/portal/{tenant_id}/me': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Me */
+    get: operations['me_api_v1_portal__tenant_id__me_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/portal/{tenant_id}/tickets': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Tickets */
+    get: operations['tickets_api_v1_portal__tenant_id__tickets_get']
+    put?: never
+    /** Create */
+    post: operations['create_api_v1_portal__tenant_id__tickets_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/portal/{tenant_id}/tickets/{ticket_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Thread */
+    get: operations['thread_api_v1_portal__tenant_id__tickets__ticket_id__get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/portal/{tenant_id}/tickets/{ticket_id}/messages': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Answer */
+    post: operations['answer_api_v1_portal__tenant_id__tickets__ticket_id__messages_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/portal/{tenant_id}/verify': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Verify */
+    post: operations['verify_api_v1_portal__tenant_id__verify_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/v1/setup': {
     parameters: {
       query?: never
@@ -538,6 +661,26 @@ export interface paths {
     head?: never
     /** Update */
     patch: operations['update_api_v1_tenants__tenant_id__articles__article_id__patch']
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/assistant': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Assistant
+     * @description Whether the AI assistant is set up on this server (`ZENDILOHUB_ANTHROPIC_API_KEY`).
+     */
+    get: operations['assistant_api_v1_tenants__tenant_id__assistant_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
     trace?: never
   }
   '/api/v1/tenants/{tenant_id}/audit-log': {
@@ -1143,6 +1286,24 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/api/v1/tenants/{tenant_id}/portal-settings': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Settings */
+    get: operations['settings_api_v1_tenants__tenant_id__portal_settings_get']
+    /** Save */
+    put: operations['save_api_v1_tenants__tenant_id__portal_settings_put']
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/v1/tenants/{tenant_id}/queue-channels': {
     parameters: {
       query?: never
@@ -1648,6 +1809,26 @@ export interface paths {
     patch: operations['update_api_v1_tenants__tenant_id__tickets__ticket_id__patch']
     trace?: never
   }
+  '/api/v1/tenants/{tenant_id}/tickets/{ticket_id}/assist': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Assist
+     * @description A summary of the ticket or a draft reply by the AI assistant; nothing is saved or sent.
+     */
+    post: operations['assist_api_v1_tenants__tenant_id__tickets__ticket_id__assist_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/v1/tenants/{tenant_id}/tickets/{ticket_id}/checklist': {
     parameters: {
       query?: never
@@ -1845,6 +2026,26 @@ export interface paths {
      * @description The ticket's deadlines (null without a service level).
      */
     get: operations['clock_api_v1_tenants__tenant_id__tickets__ticket_id__service_level_get']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/tickets/{ticket_id}/similar': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Similar
+     * @description Up to five tickets with words of this one's subject (e.g. the same problem of another customer).
+     */
+    get: operations['similar_api_v1_tenants__tenant_id__tickets__ticket_id__similar_get']
     put?: never
     post?: never
     delete?: never
@@ -2255,6 +2456,22 @@ export interface components {
        */
       visibility: 'internal' | 'public'
     }
+    /** AssistantResponse */
+    AssistantResponse: {
+      /** Enabled */
+      enabled: boolean
+    }
+    /** AssistRequest */
+    AssistRequest: {
+      task: components['schemas']['AssistTask']
+    }
+    /** AssistResponse */
+    AssistResponse: {
+      /** Text */
+      text: string
+    }
+    /** @enum {string} */
+    AssistTask: 'summary' | 'reply'
     /** AuditEntryResponse */
     AuditEntryResponse: {
       /** Action */
@@ -3114,6 +3331,89 @@ export interface components {
       /** Solution Minutes */
       solution_minutes: number | null
     }
+    /** PortalLinkRequest */
+    PortalLinkRequest: {
+      /** Email */
+      email: string
+    }
+    /** PortalMessageResponse */
+    PortalMessageResponse: {
+      /** Author Name */
+      author_name: string
+      /** Body */
+      body: string
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string
+      /** From Customer */
+      from_customer: boolean
+      /** Id */
+      id: string
+    }
+    /** PortalSettingsBody */
+    PortalSettingsBody: {
+      /**
+       * Company Tickets
+       * @default false
+       */
+      company_tickets: boolean
+      /**
+       * Enabled
+       * @default false
+       */
+      enabled: boolean
+      /** Queue Id */
+      queue_id?: string | null
+    }
+    /** PortalTextRequest */
+    PortalTextRequest: {
+      /** Body */
+      body: string
+    }
+    /** PortalThreadResponse */
+    PortalThreadResponse: {
+      /** Messages */
+      messages: components['schemas']['PortalMessageResponse'][]
+      ticket: components['schemas']['PortalTicketResponse']
+    }
+    /** PortalTicketRequest */
+    PortalTicketRequest: {
+      /** Body */
+      body: string
+      /** Subject */
+      subject: string
+    }
+    /** PortalTicketResponse */
+    PortalTicketResponse: {
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string
+      /** Id */
+      id: string
+      /** Number */
+      number: number
+      /**
+       * State
+       * @enum {string}
+       */
+      state: 'open' | 'waiting' | 'closed'
+      /** Subject */
+      subject: string
+      /**
+       * Updated At
+       * Format: date-time
+       */
+      updated_at: string
+    }
+    /** PortalTokenRequest */
+    PortalTokenRequest: {
+      /** Token */
+      token: string
+    }
     /** PresenceRequest */
     PresenceRequest: {
       /**
@@ -3852,6 +4152,17 @@ export interface components {
       user_id: string
       /** Writing */
       writing: boolean
+    }
+    /** VisitorResponse */
+    VisitorResponse: {
+      /** Company Name */
+      company_name: string | null
+      /** Company Tickets */
+      company_tickets: boolean
+      /** Email */
+      email: string | null
+      /** Name */
+      name: string
     }
     /** WebhookDeliveryResponse */
     WebhookDeliveryResponse: {
@@ -4609,6 +4920,268 @@ export interface operations {
       }
     }
   }
+  login_api_v1_portal__tenant_id__login_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PortalLinkRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      202: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  logout_api_v1_portal__tenant_id__logout_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  me_api_v1_portal__tenant_id__me_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['VisitorResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  tickets_api_v1_portal__tenant_id__tickets_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['PortalTicketResponse'][]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  create_api_v1_portal__tenant_id__tickets_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PortalTicketRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['PortalTicketResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  thread_api_v1_portal__tenant_id__tickets__ticket_id__get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+        ticket_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['PortalThreadResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  answer_api_v1_portal__tenant_id__tickets__ticket_id__messages_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+        ticket_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PortalTextRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['PortalThreadResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  verify_api_v1_portal__tenant_id__verify_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PortalTokenRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['VisitorResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
   status_api_v1_setup_get: {
     parameters: {
       query?: never
@@ -5096,6 +5669,37 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['ArticleResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  assistant_api_v1_tenants__tenant_id__assistant_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['AssistantResponse']
         }
       }
       /** @description Validation Error */
@@ -6755,6 +7359,72 @@ export interface operations {
       }
     }
   }
+  settings_api_v1_tenants__tenant_id__portal_settings_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['PortalSettingsBody']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  save_api_v1_tenants__tenant_id__portal_settings_put: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['PortalSettingsBody']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['PortalSettingsBody']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
   queue_channels_api_v1_tenants__tenant_id__queue_channels_get: {
     parameters: {
       query?: never
@@ -8199,6 +8869,42 @@ export interface operations {
       }
     }
   }
+  assist_api_v1_tenants__tenant_id__tickets__ticket_id__assist_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+        ticket_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AssistRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['AssistResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
   checklist_api_v1_tenants__tenant_id__tickets__ticket_id__checklist_get: {
     parameters: {
       query?: never
@@ -8656,6 +9362,38 @@ export interface operations {
         }
         content: {
           'application/json': components['schemas']['ClockResponse'] | null
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  similar_api_v1_tenants__tenant_id__tickets__ticket_id__similar_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+        ticket_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['TicketPageResponse']
         }
       }
       /** @description Validation Error */

@@ -34,7 +34,7 @@ class Strict(BaseModel):
     model_config = ConfigDict(extra='forbid')
 
 
-class SettingsBody(Strict):
+class PortalSettingsBody(Strict):
     enabled: bool = False
     queue_id: Id | None = None
     """Where new tickets of the portal go."""
@@ -42,19 +42,19 @@ class SettingsBody(Strict):
     """Contacts also see the tickets of their company's other contacts."""
 
 
-class LinkRequest(Strict):
+class PortalLinkRequest(Strict):
     email: str = Field(max_length=254)
 
 
-class TokenRequest(Strict):
+class PortalTokenRequest(Strict):
     token: str = Field(max_length=200)
 
 
-class TextRequest(Strict):
+class PortalTextRequest(Strict):
     body: str = Field(max_length=50_000)
 
 
-class NewTicketRequest(Strict):
+class PortalTicketRequest(Strict):
     subject: str = Field(max_length=250)
     body: str = Field(max_length=50_000)
 
@@ -119,14 +119,14 @@ def portal_settings_routes(bus: CommandBus) -> APIRouter:
     router = APIRouter(prefix='/tenants/{tenant_id}', tags=['portal'])
 
     @router.get('/portal-settings')
-    async def settings(member: Admin) -> SettingsBody:
+    async def settings(member: Admin) -> PortalSettingsBody:
         found = await bus.query(GetSettings(member.tenant_id))
-        return SettingsBody(enabled=found.enabled, queue_id=found.queue_id, company_tickets=found.company_tickets)
+        return PortalSettingsBody(enabled=found.enabled, queue_id=found.queue_id, company_tickets=found.company_tickets)
 
     @router.put('/portal-settings', dependencies=[audited('portal.changed')])
-    async def save(body: SettingsBody, member: Admin) -> SettingsBody:
+    async def save(body: PortalSettingsBody, member: Admin) -> PortalSettingsBody:
         saved = await bus.execute(SaveSettings(PortalSettings(tenant_id=member.tenant_id, **body.model_dump())))
-        return SettingsBody(enabled=saved.enabled, queue_id=saved.queue_id, company_tickets=saved.company_tickets)
+        return PortalSettingsBody(enabled=saved.enabled, queue_id=saved.queue_id, company_tickets=saved.company_tickets)
 
     return router
 
@@ -139,7 +139,7 @@ def portal_routes(bus: CommandBus, config: AppConfig) -> APIRouter:
         return await bus.query(WhoIs(tenant_id, request.cookies.get(COOKIE, '')))
 
     @router.post('/login', status_code=202, response_class=Response, dependencies=[Public, Unaudited])
-    async def login(tenant_id: Id, body: LinkRequest, request: Request) -> None:
+    async def login(tenant_id: Id, body: PortalLinkRequest, request: Request) -> None:
         """Sends a sign-in link if the address belongs to a contact (the answer is the same either way)."""
         await bus.execute(
             RequestLink(
@@ -150,7 +150,7 @@ def portal_routes(bus: CommandBus, config: AppConfig) -> APIRouter:
         )
 
     @router.post('/verify', dependencies=[Public, Unaudited])
-    async def verify(tenant_id: Id, body: TokenRequest, response: Response) -> VisitorResponse:
+    async def verify(tenant_id: Id, body: PortalTokenRequest, response: Response) -> VisitorResponse:
         signed_in = await bus.execute(Verify(body.token))
         response.set_cookie(
             COOKIE,
@@ -178,7 +178,7 @@ def portal_routes(bus: CommandBus, config: AppConfig) -> APIRouter:
         return [PortalTicketResponse.of(each) for each in found]
 
     @router.post('/tickets', status_code=201, dependencies=[Public, Unaudited])
-    async def create(tenant_id: Id, body: NewTicketRequest, request: Request) -> PortalTicketResponse:
+    async def create(tenant_id: Id, body: PortalTicketRequest, request: Request) -> PortalTicketResponse:
         ticket = await bus.execute(OpenTicket(await visitor(request, tenant_id), body.subject, body.body))
         return PortalTicketResponse.of(ticket)
 
@@ -187,7 +187,7 @@ def portal_routes(bus: CommandBus, config: AppConfig) -> APIRouter:
         return PortalThreadResponse.of(await bus.query(MyThread(await visitor(request, tenant_id), ticket_id)))
 
     @router.post('/tickets/{ticket_id}/messages', dependencies=[Public, Unaudited])
-    async def answer(tenant_id: Id, ticket_id: Id, body: TextRequest, request: Request) -> PortalThreadResponse:
+    async def answer(tenant_id: Id, ticket_id: Id, body: PortalTextRequest, request: Request) -> PortalThreadResponse:
         return PortalThreadResponse.of(
             await bus.execute(Answer(await visitor(request, tenant_id), ticket_id, body.body))
         )

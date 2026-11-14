@@ -4,6 +4,7 @@ import { setLocale } from '@/core/i18n/i18n'
 import { useInstance } from '@/core/instance'
 import { useSession } from '@/modules/identity/session'
 import { resetRoles } from '@/modules/tenancy/roles'
+import { resetAssistant } from '@/modules/tickets/assistant'
 import { resetDirectory } from '@/modules/tickets/directory'
 import { useTenants } from '@/modules/tenancy/tenants'
 import { unmountAll } from './mount'
@@ -31,4 +32,5 @@ afterEach(() => {
   useInstance().reset()
   resetRoles()
   resetDirectory()
+  resetAssistant()
 })
