@@ -17,7 +17,7 @@ import {
   type TicketDetail,
 } from '../api'
 import { channelsApi } from '@/modules/channels/api'
-import { fill, knowledgeApi, type TextModule } from '@/modules/knowledge/api'
+import { fill, knowledgeApi, type Article, type TextModule } from '@/modules/knowledge/api'
 import { useTenants } from '@/modules/tenancy/tenants'
 import { useDirectory } from '../directory'
 
@@ -113,6 +113,21 @@ function insert(module: TextModule): void {
 }
 watch(body, (text) => emit('writing', !!text.trim() && text !== draft.value))
 
+/** Articles of the knowledge base, searched and put into the text. */
+const articleSearch = ref<string | null>(null)
+const articles = ref<Article[]>([])
+async function findArticles(): Promise<void> {
+  const query = articleSearch.value?.trim()
+  articles.value = query
+    ? (await knowledgeApi.articles(tenants.current.value!.id, { q: query }).catch(() => ({ articles: [] }))).articles
+    : []
+}
+function insertArticle(article: Article): void {
+  body.value = body.value ? `${body.value.replace(/\s+$/, '')}\n\n${article.body}` : article.body
+  articleSearch.value = null
+  articles.value = []
+}
+
 /** `@bob` or `@bob@example.org` in a note: members to notify. */
 function mentions(text: string): string[] {
   const names = [...text.matchAll(/@([\w.+-]+(?:@[\w.-]+)?)/g)].map((match) => (match[1] ?? '').toLowerCase())
@@ -162,6 +177,37 @@ async function send(): Promise<void> {
       :class="mode === 'note' ? 'bg-amber-50 dark:bg-amber-950/30' : ''"
       data-test="composer-body"
     />
+    <div class="flex flex-wrap items-center gap-2">
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        class="h-7 px-2 text-xs"
+        data-test="find-article"
+        @click="articleSearch = articleSearch === null ? '' : null"
+        >{{ $t('tickets.composer.article') }}</Button
+      >
+      <form v-if="articleSearch !== null" class="flex flex-1 gap-1" @submit.prevent="findArticles">
+        <Input
+          v-model="articleSearch"
+          class="h-7 text-xs"
+          :placeholder="$t('articles.search')"
+          data-test="article-search"
+        />
+      </form>
+    </div>
+    <div v-if="articles.length" class="grid gap-1" data-test="article-results">
+      <button
+        v-for="article in articles"
+        :key="article.id"
+        type="button"
+        class="rounded-md border px-2 py-1 text-left text-xs hover:bg-muted"
+        :data-test="`insert-article-${article.id}`"
+        @click="insertArticle(article)"
+      >
+        {{ article.title }}
+      </button>
+    </div>
     <div v-if="suggestions.length" class="flex flex-wrap gap-1" data-test="suggestions">
       <button
         v-for="module in suggestions"

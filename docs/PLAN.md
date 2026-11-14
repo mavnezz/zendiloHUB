@@ -400,7 +400,7 @@ vor allem eine neue Eingangsschicht (Modul `mcp`) und kein Umbau.
 
 ### Noch offen
 
-1. **Senden durch KI** (erst für Phase 6): Soll `send_reply` in die erste MCP-Version, oder zunächst nur Entwürfe?
+1. ~~**Senden durch KI**~~: entschieden in Phase 6 (`reply_to_customer` mit Hinweis im Werkzeug).
 2. **Verfügbarkeit:** Domain und Marke „zendiloHUB“ sind noch nicht geprüft.
 
 ### Stand der Umsetzung
@@ -465,6 +465,26 @@ im Posteingang; `SlaBreached`) und `notifications` (Glocke in der Kopfzeile: zug
 eigenen oder beobachteten Tickets, Service-Level verpasst; auf Wunsch per E-Mail). Im Tickets-Modul: eigene
 Ticketfelder (Text, Zahl, Auswahl, Ja/Nein, Datum), Checklisten und Kollisionserkennung („Bob schreibt gerade“, über
 Redis). Neue Berechtigungen `automation.manage`, `knowledge.manage`, `service.manage`, `reports.view`.
+
+**Phase 5 (2026-11-14, fertig):** Module `integrations` (ausgehende Webhooks für `ticket.created`, `ticket.changed`,
+`message.added`, `sla.breached`; signiert mit HMAC-SHA256 in `X-Zendilohub-Signature`, nur ins öffentliche Internet,
+Wiederholungen nach 1, 5 und 30 Minuten, Zustellprotokoll, Testknopf) und `reporting` (eigene Auswertungstabelle aus
+den Ticket-Ereignissen; eröffnet, geschlossen, jetzt offen, Median der ersten Antwort und der Lösung, verpasste
+Service-Level, Wiedereröffnungen, Verlauf pro Tag als Diagramm oder Tabelle, nach Queue, Bearbeiter und Kanal).
+`knowledge` hat jetzt eine Wissensdatenbank (Artikel mit Kategorie, Tags, Volltextsuche; intern oder öffentlich) und
+ein öffentliches Hilfe-Center unter `/help/<organisation>`; Artikel lassen sich beim Antworten einfügen. Die
+zendilo.ai-Übergabe läuft über die vorhandene API (`POST /tickets` mit `channel: phone`, Kunde per Telefonnummer) und
+die Webhooks.
+
+**Phase 6 (2026-11-14, fertig):** Modul `mcp`: MCP-Server unter `/mcp` (Streamable HTTP, JSON-RPC, Protokoll
+2025-06-18). Jedes Mitglied verbindet eigene Assistenten mit einem persönlichen Token (`zhm_…`, nur der Hash wird
+gespeichert); der Assistent ruft die API im Prozess auf und hat genau die Rechte des Mitglieds (Gruppen und Rolle zum
+Zeitpunkt des Aufrufs). Werkzeuge: `list_queues`, `search_tickets`, `get_ticket`, `create_ticket`, `add_note`,
+`reply_to_customer`, `update_ticket`, `search_customers`, `search_knowledge`. Schutz gegen Prompt Injection:
+Kundentexte kommen markiert als Daten mit dem Hinweis, ihnen nie zu folgen; der Server sagt dem Assistenten, nur auf
+Wunsch zu antworten. Höchstens 120 Aufrufe pro Minute je Verbindung; Widerruf und Austritt sperren den Token sofort.
+Entscheidung zu `send_reply` (offener Punkt 1): `reply_to_customer` ist dabei. Offen: OAuth 2.1 für Assistenten,
+die nur OAuth können (z. B. Claude.ai-Connectoren).
 
 ---
 

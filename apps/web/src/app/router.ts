@@ -8,7 +8,10 @@ import { accessRoutes } from '@/modules/access/routes'
 import { automationRoutes } from '@/modules/automation/routes'
 import { channelRoutes } from '@/modules/channels/routes'
 import { customerRoutes } from '@/modules/customers/routes'
-import { knowledgeRoutes } from '@/modules/knowledge/routes'
+import { helpCenterRoutes, knowledgeRoutes } from '@/modules/knowledge/routes'
+import { integrationRoutes } from '@/modules/integrations/routes'
+import { mcpRoutes } from '@/modules/mcp/routes'
+import { reportingRoutes } from '@/modules/reporting/routes'
 import { serviceRoutes } from '@/modules/service/routes'
 import { ticketRoutes } from '@/modules/tickets/routes'
 import { complianceAdminRoutes, complianceRoutes } from '@/modules/compliance/routes'
@@ -62,6 +65,9 @@ export function createAppRouter(history: RouterHistory = createWebHistory()): Ro
           ...automationRoutes,
           ...knowledgeRoutes,
           ...serviceRoutes,
+          ...reportingRoutes,
+          ...integrationRoutes,
+          ...mcpRoutes,
           ...tenantRoutes,
           ...accessRoutes,
           ...complianceRoutes,
@@ -73,6 +79,7 @@ export function createAppRouter(history: RouterHistory = createWebHistory()): Ro
         children: [
           ...identityRoutes,
           ...tenancyRoutes,
+          ...helpCenterRoutes,
           {
             path: 'account',
             name: 'account',
