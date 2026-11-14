@@ -119,6 +119,12 @@ class Member:
     def via_api_key(self) -> bool:
         return self.principal.api_key is not None
 
+    @property
+    def acts_for_person(self) -> bool:
+        """A member, or an AI assistant acting for one (with their groups); not an organization's API key."""
+        key = self.principal.api_key
+        return key is None or key.key_id != self.principal.user_id
+
     def require(self, permission: Permission) -> None:
         if not self.can(permission):
             raise PermissionDeniedError(permission)

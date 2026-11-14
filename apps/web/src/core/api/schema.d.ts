@@ -988,6 +988,47 @@ export interface paths {
     patch: operations['update_filter_api_v1_tenants__tenant_id__mail_filters__filter_id__patch']
     trace?: never
   }
+  '/api/v1/tenants/{tenant_id}/mcp-connections': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Connections
+     * @description The caller's connected AI assistants in this organization.
+     */
+    get: operations['connections_api_v1_tenants__tenant_id__mcp_connections_get']
+    put?: never
+    /**
+     * Connect
+     * @description A token for an AI assistant: it works with the caller's rights, as long as they are a member.
+     */
+    post: operations['connect_api_v1_tenants__tenant_id__mcp_connections_post']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/v1/tenants/{tenant_id}/mcp-connections/{connection_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /** Disconnect */
+    delete: operations['disconnect_api_v1_tenants__tenant_id__mcp_connections__connection_id__delete']
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/api/v1/tenants/{tenant_id}/me/email-settings': {
     parameters: {
       query?: never
@@ -2419,6 +2460,29 @@ export interface components {
     }
     /** @enum {string} */
     ConditionOperator: 'is' | 'is_not' | 'contains' | 'not_contains' | 'is_set' | 'is_not_set'
+    /** ConnectionResponse */
+    ConnectionResponse: {
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string
+      /** Id */
+      id: string
+      /** Last Used At */
+      last_used_at: string | null
+      /** Name */
+      name: string
+      /** Start */
+      start: string
+      /** Token */
+      token?: string | null
+    }
+    /** ConnectRequest */
+    ConnectRequest: {
+      /** Name */
+      name: string
+    }
     /** ContactPageResponse */
     ContactPageResponse: {
       /** Items */
@@ -6285,6 +6349,102 @@ export interface operations {
         content: {
           'application/json': components['schemas']['FilterResponse']
         }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  connections_api_v1_tenants__tenant_id__mcp_connections_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ConnectionResponse'][]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  connect_api_v1_tenants__tenant_id__mcp_connections_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ConnectRequest']
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ConnectionResponse']
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['HTTPValidationError']
+        }
+      }
+    }
+  }
+  disconnect_api_v1_tenants__tenant_id__mcp_connections__connection_id__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        connection_id: string
+        tenant_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
       }
       /** @description Validation Error */
       422: {

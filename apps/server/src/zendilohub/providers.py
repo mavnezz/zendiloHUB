@@ -7,6 +7,7 @@ from .modules.customers.customers_module import create_customers_module
 from .modules.identity.identity_module import create_identity_module
 from .modules.integrations.integrations_module import create_integrations_module
 from .modules.knowledge.knowledge_module import create_knowledge_module
+from .modules.mcp.mcp_module import create_mcp_module
 from .modules.notifications.notifications_module import create_notifications_module
 from .modules.reporting.reporting_module import create_reporting_module
 from .modules.service.service_module import create_service_module
@@ -27,5 +28,6 @@ providers: list[ModuleFactory] = [
     create_notifications_module,
     create_integrations_module,
     create_reporting_module,
+    create_mcp_module,
     create_compliance_module,
 ]

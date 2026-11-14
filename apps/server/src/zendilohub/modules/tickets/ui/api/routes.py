@@ -82,7 +82,7 @@ def actor_of(member: Member) -> Actor:
         user_id=member.user_id,
         name=member.principal.email,
         all_queues=member.can('queues.all'),
-        person=not member.via_api_key,
+        person=member.acts_for_person,
     )
 
 
