@@ -146,4 +146,18 @@
   body {
     @apply bg-background text-foreground antialiased;
   }
+
+  /*
+   * The open list of a native select: some browsers (Chromium on Linux) draw it light even in dark mode, and the
+   * options would inherit the light text of the dark theme. Explicit colors keep them readable in both themes.
+   */
+  select option,
+  select optgroup {
+    background-color: var(--popover);
+    color: var(--popover-foreground);
+  }
+
+  select option:disabled {
+    color: var(--muted-foreground);
+  }
 }
